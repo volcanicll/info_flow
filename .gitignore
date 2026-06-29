@@ -12,6 +12,12 @@
 .swiftpm/
 migrate_working_dir/
 
+# Pub 备份文件
+pubspec-*.yaml
+
+# 工具产物
+.codefree/
+
 # IntelliJ related
 *.iml
 *.ipr
