@@ -1,23 +1,26 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/state/subscription_store.dart';
 import '../../../feed/data/rss_sources.dart';
 
 /// 订阅管理页
 ///
 /// 展示真实可订阅的 RSS 源，按分类分组。
 /// 顶部为快捷操作区，下方为分组源列表（含 favicon 图标、分类色、未读占位）。
-class SubscriptionPage extends StatelessWidget {
+class SubscriptionPage extends ConsumerWidget {
   const SubscriptionPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final subscribed = ref.watch(subscriptionStoreProvider);
     return Scaffold(
       appBar: AppBar(title: const Text('订阅管理'), actions: [
         IconButton(
           icon: const Icon(Icons.add_rounded),
-          onPressed: () => _showAddSubscription(context),
+          onPressed: () => _showAddSubscription(context, ref),
         ),
       ]),
       body: ListView(
@@ -31,7 +34,7 @@ class SubscriptionPage extends StatelessWidget {
                 _QuickAction(
                   icon: Icons.rss_feed_rounded,
                   label: '添加 RSS',
-                  onTap: () => _showAddSubscription(context),
+                  onTap: () => _showAddSubscription(context, ref),
                 ),
                 const SizedBox(width: 12),
                 _QuickAction(
@@ -67,8 +70,8 @@ class SubscriptionPage extends StatelessWidget {
                 children: [
                   Expanded(
                     child: _StatCell(
-                      value: '${RssSources.all.length}',
-                      label: '可用源',
+                      value: '${subscribed.length}',
+                      label: '已订阅',
                     ),
                   ),
                   Container(
@@ -97,17 +100,20 @@ class SubscriptionPage extends StatelessWidget {
             _SubscriptionGroup(
               category: category,
               sources: RssSources.byCategory(category),
+              subscribed: subscribed,
+              onToggle: (id) =>
+                  ref.read(subscriptionStoreProvider.notifier).toggle(id),
             ),
         ],
       ),
     );
   }
 
-  void _showAddSubscription(BuildContext context) {
+  void _showAddSubscription(BuildContext context, WidgetRef ref) {
     final urlController = TextEditingController();
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         title: const Text('添加订阅'),
         content: TextField(
           controller: urlController,
@@ -119,11 +125,40 @@ class SubscriptionPage extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(ctx),
             child: const Text('取消'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              final url = urlController.text.trim();
+              if (url.isEmpty) return;
+              final uri = Uri.tryParse(url);
+              if (uri == null || !uri.hasScheme) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('请输入有效的 URL')),
+                );
+                return;
+              }
+              Navigator.pop(ctx);
+              final matched = RssSources.all.where(
+                (s) =>
+                    s.feedUrl == url ||
+                    s.siteUrl == url ||
+                    s.siteUrl.startsWith(url),
+              );
+              if (matched.isNotEmpty) {
+                for (final s in matched) {
+                  ref.read(subscriptionStoreProvider.notifier).toggle(s.id);
+                }
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('已订阅 ${matched.first.name}')),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('暂不支持自定义 RSS 地址，请从下方列表中选择')),
+                );
+              }
+            },
             child: const Text('添加'),
           ),
         ],
@@ -206,8 +241,15 @@ class _QuickAction extends StatelessWidget {
 class _SubscriptionGroup extends StatelessWidget {
   final FeedCategory category;
   final List<RssSource> sources;
+  final Set<String> subscribed;
+  final void Function(String sourceId) onToggle;
 
-  const _SubscriptionGroup({required this.category, required this.sources});
+  const _SubscriptionGroup({
+    required this.category,
+    required this.sources,
+    required this.subscribed,
+    required this.onToggle,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -256,7 +298,12 @@ class _SubscriptionGroup extends StatelessWidget {
             ],
           ),
         ),
-        for (final source in sources) _SourceTile(source: source),
+        for (final source in sources)
+          _SourceTile(
+            source: source,
+            isSubscribed: subscribed.contains(source.id),
+            onToggle: () => onToggle(source.id),
+          ),
       ],
     );
   }
@@ -264,13 +311,21 @@ class _SubscriptionGroup extends StatelessWidget {
 
 class _SourceTile extends StatelessWidget {
   final RssSource source;
-  const _SourceTile({required this.source});
+  final bool isSubscribed;
+  final VoidCallback onToggle;
+
+  const _SourceTile({
+    required this.source,
+    required this.isSubscribed,
+    required this.onToggle,
+  });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      onTap: onToggle,
       leading: _SourceAvatar(source: source),
       title: Text(
         source.name,
@@ -284,15 +339,19 @@ class _SourceTile extends StatelessWidget {
       trailing: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color: theme.colorScheme.primary,
+          color: isSubscribed
+              ? theme.colorScheme.surfaceContainerHighest
+              : theme.colorScheme.primary,
           borderRadius: BorderRadius.circular(20),
         ),
-        child: const Text(
-          '订阅',
+        child: Text(
+          isSubscribed ? '已订阅' : '订阅',
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w700,
-            color: Colors.white,
+            color: isSubscribed
+                ? theme.colorScheme.onSurfaceVariant
+                : Colors.white,
           ),
         ),
       ),

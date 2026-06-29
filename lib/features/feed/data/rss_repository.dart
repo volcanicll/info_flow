@@ -10,11 +10,11 @@ import 'rss_sources.dart';
 ///
 /// 直接从真实 RSS/Atom 源拉取数据，用 xml 库解析为 Article 实体。
 /// 不依赖第三方 RSS 库（避免 intl 版本冲突），兼容 RSS 2.0 与 Atom。
-/// 单源解析失败 / 超时 / 无网络时静默跳过，保证整体信息流可用。
 class RssRepository {
   RssRepository(this._dio);
 
   final Dio _dio;
+  int failedCount = 0;
 
   /// 抓取单个源的全部条目
   Future<List<Article>> fetchSource(RssSource source) async {
@@ -39,6 +39,7 @@ class RssRepository {
 
       return _parse(body, source);
     } catch (_) {
+      failedCount++;
       return [];
     }
   }
@@ -46,6 +47,7 @@ class RssRepository {
   /// 并发抓取多个源，去重合并后按时间倒序返回
   Future<List<Article>> fetchSources(List<RssSource> sources) async {
     if (sources.isEmpty) return [];
+    failedCount = 0;
     final results = await Future.wait(sources.map(fetchSource));
     final merged = <Article>[];
     final seenUrls = <String>{};

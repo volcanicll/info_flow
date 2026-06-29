@@ -30,17 +30,17 @@ class FeedTabBar extends StatelessWidget implements PreferredSizeWidget {
       unselectedLabelColor: theme.textTheme.bodySmall?.color,
       indicatorSize: TabBarIndicatorSize.label,
       labelPadding: const EdgeInsets.symmetric(horizontal: 12),
-      indicator: _UnderlinePillIndicator(color: theme.colorScheme.primary),
+      indicator: UnderlinePillIndicator(color: theme.colorScheme.primary),
       dividerColor: Colors.transparent,
       overlayColor: WidgetStateProperty.all(Colors.transparent),
     );
   }
 }
 
-/// 圆角胶囊下划线指示器
-class _UnderlinePillIndicator extends Decoration {
+/// 圆角胶囊下划线指示器（公开，可供其他 Tab 栏复用）
+class UnderlinePillIndicator extends Decoration {
   final Color color;
-  const _UnderlinePillIndicator({required this.color});
+  const UnderlinePillIndicator({required this.color});
 
   @override
   BoxPainter createBoxPainter([VoidCallback? onChanged]) {
@@ -49,7 +49,7 @@ class _UnderlinePillIndicator extends Decoration {
 }
 
 class _Painter extends BoxPainter {
-  final _UnderlinePillIndicator decoration;
+  final UnderlinePillIndicator decoration;
   _Painter(this.decoration, VoidCallback? onChanged) : super(onChanged);
 
   @override

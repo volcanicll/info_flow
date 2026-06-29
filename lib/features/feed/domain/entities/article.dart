@@ -19,6 +19,8 @@ class Article {
   final bool isLiked;
   final bool isBookmarked;
   final bool isRead;
+  /// 是否标记为「稍后阅读」
+  final bool isReadLater;
 
   const Article({
     required this.id,
@@ -38,6 +40,7 @@ class Article {
     this.isLiked = false,
     this.isBookmarked = false,
     this.isRead = false,
+    this.isReadLater = false,
   });
 
   /// 来源颜色的 Color 对象
@@ -48,6 +51,7 @@ class Article {
     bool? isLiked,
     bool? isBookmarked,
     bool? isRead,
+    bool? isReadLater,
     String? summary,
     List<String>? keyPoints,
   }) {
@@ -69,6 +73,40 @@ class Article {
       isLiked: isLiked ?? this.isLiked,
       isBookmarked: isBookmarked ?? this.isBookmarked,
       isRead: isRead ?? this.isRead,
+      isReadLater: isReadLater ?? this.isReadLater,
     );
   }
+
+  /// 序列化为 JSON（用于收藏持久化）
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'feedId': feedId,
+        'feedName': feedName,
+        'feedIconUrl': feedIconUrl,
+        'feedColor': feedColor,
+        'title': title,
+        'url': url,
+        'summary': summary,
+        'coverImageUrl': coverImageUrl,
+        'publishedAt': publishedAt?.toIso8601String(),
+        'likeCount': likeCount,
+        'isReadLater': isReadLater,
+      };
+
+  factory Article.fromJson(Map<String, dynamic> json) => Article(
+        id: json['id'] as String,
+        feedId: json['feedId'] as String,
+        feedName: json['feedName'] as String,
+        feedIconUrl: json['feedIconUrl'] as String?,
+        feedColor: json['feedColor'] as int?,
+        title: json['title'] as String,
+        url: json['url'] as String,
+        summary: json['summary'] as String?,
+        coverImageUrl: json['coverImageUrl'] as String?,
+        publishedAt: json['publishedAt'] != null
+            ? DateTime.tryParse(json['publishedAt'] as String)
+            : null,
+        likeCount: json['likeCount'] as int?,
+        isReadLater: json['isReadLater'] as bool? ?? false,
+      );
 }

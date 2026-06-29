@@ -1,26 +1,28 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme.dart';
+import '../../../../core/state/library_store.dart';
 import '../../domain/entities/article.dart';
 
 /// 文章卡片
 ///
-/// 设计要点：
-/// - 无边框 + 柔和品牌色阴影，营造悬浮感
-/// - 来源头像支持 favicon 加载，失败回退到来源主色渐变 + 首字
-/// - 有封面图时采用「左文右图」紧凑布局，无图时纯文字
-/// - AI 摘要胶囊使用品牌渐变，强化「智能」标识
-class ArticleCard extends StatelessWidget {
+/// 点赞 / 收藏按钮接入全局 libraryStoreProvider，与收藏页、阅读器联动。
+class ArticleCard extends ConsumerWidget {
   final Article article;
   final VoidCallback? onTap;
 
   const ArticleCard({super.key, required this.article, this.onTap});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final hasCover = article.coverImageUrl != null;
+    final library = ref.watch(libraryStoreProvider);
+    final isLiked = library.isLiked(article.id);
+    final isBookmarked = library.isBookmarked(article.id);
+    final isRead = library.isRead(article.id);
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
@@ -34,20 +36,28 @@ class ArticleCard extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(20),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _FeedHeader(article: article),
-                const SizedBox(height: 12),
-                if (hasCover)
-                  _CompactLayout(article: article, theme: theme)
-                else
-                  _TextLayout(article: article, theme: theme),
-                const SizedBox(height: 12),
-                _ArticleActions(article: article, theme: theme),
-              ],
+          child: Opacity(
+            opacity: isRead ? 0.6 : 1.0,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _FeedHeader(article: article),
+                  const SizedBox(height: 12),
+                  if (hasCover)
+                    _CompactLayout(article: article, theme: theme)
+                  else
+                    _TextLayout(article: article, theme: theme),
+                  const SizedBox(height: 12),
+                  _ArticleActions(
+                    article: article,
+                    theme: theme,
+                    isLiked: isLiked,
+                    isBookmarked: isBookmarked,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -90,7 +100,6 @@ class _FeedHeader extends StatelessWidget {
   }
 }
 
-/// 有封面图：左文右图紧凑布局
 class _CompactLayout extends StatelessWidget {
   final Article article;
   final ThemeData theme;
@@ -149,7 +158,6 @@ class _CompactLayout extends StatelessWidget {
   }
 }
 
-/// 无封面图：纯文字布局
 class _TextLayout extends StatelessWidget {
   final Article article;
   final ThemeData theme;
@@ -234,39 +242,54 @@ class _AiSummaryChip extends StatelessWidget {
 class _ArticleActions extends StatelessWidget {
   final Article article;
   final ThemeData theme;
-  const _ArticleActions({required this.article, required this.theme});
+  final bool isLiked;
+  final bool isBookmarked;
+  const _ArticleActions({
+    required this.article,
+    required this.theme,
+    required this.isLiked,
+    required this.isBookmarked,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        _ActionButton(
-          icon: Icons.thumb_up_outlined,
-          activeIcon: Icons.thumb_up,
-          label: _formatCount(article.likeCount),
-          isActive: article.isLiked,
-          onTap: () {},
-        ),
-        const SizedBox(width: 18),
-        _ActionButton(
-          icon: Icons.chat_bubble_outline_rounded,
-          label: '评论',
-          onTap: () {},
-        ),
-        const SizedBox(width: 18),
-        _ActionButton(
-          icon: Icons.share_outlined,
-          label: '分享',
-          onTap: () {},
-        ),
-        const Spacer(),
-        _ActionButton(
-          icon: Icons.bookmark_outline_rounded,
-          activeIcon: Icons.bookmark_rounded,
-          isActive: article.isBookmarked,
-          onTap: () {},
-        ),
-      ],
+    return Consumer(
+      builder: (context, ref, _) {
+        return Row(
+          children: [
+            _ActionButton(
+              icon: Icons.thumb_up_outlined,
+              activeIcon: Icons.thumb_up,
+              label: _formatCount(article.likeCount),
+              isActive: isLiked,
+              onTap: () => ref
+                  .read(libraryStoreProvider.notifier)
+                  .toggleLike(article.id),
+            ),
+            const SizedBox(width: 18),
+            _ActionButton(
+              icon: Icons.chat_bubble_outline_rounded,
+              label: '评论',
+              onTap: () {},
+            ),
+            const SizedBox(width: 18),
+            _ActionButton(
+              icon: Icons.share_outlined,
+              label: '分享',
+              onTap: () {},
+            ),
+            const Spacer(),
+            _ActionButton(
+              icon: Icons.bookmark_outline_rounded,
+              activeIcon: Icons.bookmark_rounded,
+              isActive: isBookmarked,
+              onTap: () => ref
+                  .read(libraryStoreProvider.notifier)
+                  .toggleBookmark(article),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -294,8 +317,7 @@ class _FeedAvatar extends StatelessWidget {
             image: DecorationImage(image: provider, fit: BoxFit.cover),
           ),
         ),
-        errorWidget: (_, _, _) =>
-            _fallback(context, size),
+        errorWidget: (_, _, _) => _fallback(context, size),
         placeholder: (_, _) => _fallback(context, size),
       );
     }
@@ -306,7 +328,6 @@ class _FeedAvatar extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final colors = [color ?? Theme.of(context).colorScheme.primary];
     if (color != null) {
-      // 用来源色做单色渐变，更有质感
       colors.add(Color.lerp(color, Colors.white, isDark ? 0.05 : 0.25)!);
     } else if (isDark) {
       colors.add(AppTheme.brandGradientDark.last);
@@ -356,7 +377,9 @@ class _ActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = isActive ? theme.colorScheme.primary : theme.textTheme.bodySmall?.color;
+    final color = isActive
+        ? theme.colorScheme.primary
+        : theme.textTheme.bodySmall?.color;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),

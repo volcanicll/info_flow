@@ -1,5 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../../core/state/subscription_store.dart';
 import '../../data/rss_repository.dart';
 import '../../data/rss_sources.dart';
 import '../../domain/entities/article.dart';
@@ -20,12 +21,16 @@ class FeedController extends _$FeedController {
   bool _hasMore = true;
   bool _isLoadingMore = false;
   static const int _pageSize = 12;
+  Set<String>? _subscribedIds;
 
   @override
   FutureOr<List<Article>> build(FeedType feedType) {
     _all = [];
     _hasMore = true;
     _isLoadingMore = false;
+    _subscribedIds = feedType == FeedType.following
+        ? ref.watch(subscriptionStoreProvider)
+        : null;
     return _loadArticles();
   }
 
@@ -34,6 +39,9 @@ class FeedController extends _$FeedController {
     final sources = _sourcesForType(feedType);
     final articles = await repo.fetchSources(sources);
     _all = articles;
+    if (articles.isEmpty && sources.isNotEmpty && repo.failedCount == sources.length) {
+      throw Exception('所有订阅源均加载失败，请检查网络连接');
+    }
     if (articles.length <= _pageSize) _hasMore = false;
     return _paginate(articles, 1);
   }
@@ -43,12 +51,13 @@ class FeedController extends _$FeedController {
       case FeedType.recommend:
         return RssSources.all;
       case FeedType.following:
-        return RssSources.defaultSubscribedIds
+        final ids = _subscribedIds;
+        if (ids == null || ids.isEmpty) return RssSources.defaultSubscribedIds
             .map(RssSources.byId)
             .whereType<RssSource>()
             .toList();
+        return ids.map(RssSources.byId).whereType<RssSource>().toList();
       case FeedType.hot:
-        // 热榜：聚焦活跃社区与媒体
         return [
           RssSources.byId('hackernews'),
           RssSources.byId('36kr'),
