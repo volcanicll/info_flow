@@ -9,6 +9,7 @@ import '../../features/ai_chat/presentation/pages/ai_chat_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/search/presentation/pages/search_page.dart';
 import '../../features/bookmark/presentation/pages/bookmark_page.dart';
+import '../../features/crypto_radar/presentation/pages/crypto_radar_page.dart';
 import '../shared/widgets/main_shell.dart';
 
 part 'router.g.dart';
@@ -83,6 +84,11 @@ GoRouter goRouter(Ref ref) {
         path: '/search',
         name: 'search',
         builder: (context, state) => const SearchPage(),
+      ),
+      GoRoute(
+        path: '/crypto-radar',
+        name: 'cryptoRadar',
+        builder: (context, state) => const CryptoRadarPage(),
       ),
     ],
   );

@@ -154,6 +154,13 @@ class ProfilePage extends ConsumerWidget {
                   title: '离线下载',
                   subtitle: '即将推出',
                 ),
+                _Divider(),
+                _SettingItem(
+                  icon: Icons.radar_rounded,
+                  title: '庄家雷达',
+                  subtitle: '币安合约市场扫描',
+                  onTap: () => context.push('/crypto-radar'),
+                ),
               ],
             ),
           ),
