@@ -6,7 +6,7 @@ part of 'library_store.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$libraryStoreHash() => r'1e7f1a8bc576815260e7f4e2d7bb2082c3938ac7';
+String _$libraryStoreHash() => r'13445aab2c4d639a67d5150af01f6804a07a3e08';
 
 /// 用户库状态：收藏 / 点赞 / 已读 / 稍后阅读
 ///

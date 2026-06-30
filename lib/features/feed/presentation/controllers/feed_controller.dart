@@ -9,18 +9,14 @@ part 'feed_controller.g.dart';
 
 enum FeedType { recommend, following, hot }
 
-/// 信息流控制器
-///
-/// 数据来自真实 RSS 源（见 [RssSources]）：
-/// - recommend：全部默认订阅源，按时间倒序
-/// - following：精选关注的源
-/// - hot：按发布时间近 + 来源热度排序
 @riverpod
 class FeedController extends _$FeedController {
   List<Article> _all = [];
   bool _hasMore = true;
   bool _isLoadingMore = false;
   static const int _pageSize = 12;
+  static const int _maxPerSource = 10;
+  static const int _batchSize = 3;
   Set<String>? _subscribedIds;
 
   @override
@@ -37,13 +33,38 @@ class FeedController extends _$FeedController {
   Future<List<Article>> _loadArticles() async {
     final repo = ref.read(rssRepositoryProvider);
     final sources = _sourcesForType(feedType);
-    final articles = await repo.fetchSources(sources);
-    _all = articles;
-    if (articles.isEmpty && sources.isNotEmpty && repo.failedCount == sources.length) {
+    if (sources.isEmpty) return [];
+
+    _all = [];
+    final seenUrls = <String>{};
+
+    for (int i = 0; i < sources.length; i += _batchSize) {
+      final batch =
+          sources.sublist(i, (i + _batchSize).clamp(0, sources.length));
+      final results = await Future.wait(
+          batch.map((s) => repo.fetchSource(s, maxItems: _maxPerSource)));
+
+      for (final articles in results) {
+        for (final a in articles) {
+          final key = a.url.isEmpty ? a.title : a.url;
+          if (seenUrls.add(key)) _all.add(a);
+        }
+      }
+    }
+
+    _all.sort((a, b) {
+      final ta = a.publishedAt ?? DateTime(2000);
+      final tb = b.publishedAt ?? DateTime(2000);
+      return tb.compareTo(ta);
+    });
+
+    if (_all.isEmpty &&
+        sources.isNotEmpty &&
+        repo.failedCount == sources.length) {
       throw Exception('所有订阅源均加载失败，请检查网络连接');
     }
-    if (articles.length <= _pageSize) _hasMore = false;
-    return _paginate(articles, 1);
+    if (_all.length <= _pageSize) _hasMore = false;
+    return _paginate(_all, 1);
   }
 
   List<RssSource> _sourcesForType(FeedType type) {
@@ -52,11 +73,17 @@ class FeedController extends _$FeedController {
         return RssSources.all;
       case FeedType.following:
         final ids = _subscribedIds;
-        if (ids == null || ids.isEmpty) return RssSources.defaultSubscribedIds
-            .map(RssSources.byId)
+        if (ids == null || ids.isEmpty) {
+          return RssSources.defaultSubscribedIds
+              .map(RssSources.byId)
+              .whereType<RssSource>()
+              .toList();
+        }
+        return ids
+            .map((id) =>
+                ref.read(subscriptionStoreProvider.notifier).resolveSource(id))
             .whereType<RssSource>()
             .toList();
-        return ids.map(RssSources.byId).whereType<RssSource>().toList();
       case FeedType.hot:
         return [
           RssSources.byId('hackernews'),
@@ -78,8 +105,13 @@ class FeedController extends _$FeedController {
 
   Future<void> refresh() async {
     _hasMore = true;
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() => _loadArticles());
+    final currentData = state.valueOrNull;
+    final result = await AsyncValue.guard(() => _loadArticles());
+    if (result.hasValue) {
+      state = result;
+    } else if (currentData != null && state.hasError) {
+      state = AsyncError(result.error!, result.stackTrace!);
+    }
   }
 
   Future<void> loadMore() async {
@@ -113,7 +145,8 @@ class FeedController extends _$FeedController {
     if (index == -1) return;
 
     final article = articles[index];
-    final updated = article.copyWith(isBookmarked: !article.isBookmarked);
+    final updated =
+        article.copyWith(isBookmarked: !article.isBookmarked);
     articles[index] = updated;
     state = AsyncData(List.from(articles));
   }

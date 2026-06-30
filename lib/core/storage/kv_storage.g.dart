@@ -6,24 +6,7 @@ part of 'kv_storage.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$sharedPreferencesHash() => r'50d46e3f8d9f32715d0f3efabdce724e4b2593b4';
-
-/// See also [sharedPreferences].
-@ProviderFor(sharedPreferences)
-final sharedPreferencesProvider = FutureProvider<SharedPreferences>.internal(
-  sharedPreferences,
-  name: r'sharedPreferencesProvider',
-  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-      ? null
-      : _$sharedPreferencesHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
-
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-typedef SharedPreferencesRef = FutureProviderRef<SharedPreferences>;
-String _$themeModeNotifierHash() => r'ad07a6e13ae82b7955a4aeb0287009744b703bc8';
+String _$themeModeNotifierHash() => r'6d138544a5cf7144195a8b87829b81704ad88b96';
 
 /// See also [ThemeModeNotifier].
 @ProviderFor(ThemeModeNotifier)
@@ -39,7 +22,7 @@ final themeModeNotifierProvider =
     );
 
 typedef _$ThemeModeNotifier = AutoDisposeNotifier<ThemeMode>;
-String _$fontSizeNotifierHash() => r'73e6f5c779a3244ae3a991c854405e06a1a18531';
+String _$fontSizeNotifierHash() => r'af2cecae79af5dfee7d26e7122b68052e5510ff3';
 
 /// See also [FontSizeNotifier].
 @ProviderFor(FontSizeNotifier)

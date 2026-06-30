@@ -6,14 +6,9 @@ part of 'subscription_store.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$subscriptionStoreHash() => r'9f2623602cb97b37388972d48c3f6a2a18371297';
+String _$subscriptionStoreHash() => r'd723e13c2b8f7c8bb7cd902b4b83f016d72f3bed';
 
-/// 订阅状态：持久化用户已订阅的源 id 集合
-///
-/// 订阅页切换、关注 tab 取源均依赖此 provider。
-/// 首次安装时用默认源初始化，之后完全由用户控制。
-///
-/// Copied from [SubscriptionStore].
+/// See also [SubscriptionStore].
 @ProviderFor(SubscriptionStore)
 final subscriptionStoreProvider =
     NotifierProvider<SubscriptionStore, Set<String>>.internal(

@@ -1,97 +1,90 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// 应用主题配置
-///
-/// 设计理念：
-/// - 主色采用深紫罗兰（Indigo-Violet），传递专业、现代、智能的调性
-/// - 辅助色采用品红（Magenta），用于强调与点缀
-/// - 中性色采用冷灰阶，层次细腻
-/// - 卡片采用柔和阴影 + 微圆角，营造轻盈的卡片悬浮感
 class AppTheme {
   AppTheme._();
 
-  // ============ 亮色模式 ============
-  // 品牌色：深紫罗兰
-  static const Color _primary = Color(0xFF5B5BD6);
-  // 辅助色：品红
-  static const Color _secondary = Color(0xFFE84A8A);
-  // 强调色（渐变终点）
-  static const Color _accent = Color(0xFF8B5CF6);
+  // Design tokens from design.html (OKLCH → hex)
+  static const _canvasLight = Color(0xFFF8F7FC);
+  static const _surfaceLight = Color(0xFFFFFFFF);
+  static const _surface2Light = Color(0xFFF2F1F7);
+  static const _tintLight = Color(0xFFEAE8F5);
+  static const _brandLight = Color(0xFF5B5BD6);
+  // static const _brandPressLight = Color(0xFF4A4AC0);
+  static const _t1Light = Color(0xFF2D2D3A);
+  static const _t2Light = Color(0xFF6B6B7D);
+  static const _t3Light = Color(0xFF9898A8);
+  static const _hairLight = Color(0xFFE5E4EC);
+  static const _hairStrongLight = Color(0xFFD0CFDC);
 
-  // 语义色
-  static const Color _error = Color(0xFFEF4444);
-  static const Color _success = Color(0xFF10B981);
-  static const Color _warning = Color(0xFFF59E0B);
-  static const Color _info = Color(0xFF3B82F6);
+  static const _canvasDark = Color(0xFF20202E);
+  static const _surfaceDark = Color(0xFF282838);
+  static const _surface2Dark = Color(0xFF303044);
+  static const _tintDark = Color(0xFF3B3860);
+  static const _brandDark = Color(0xFF8989F0);
+  // static const _brandPressDark = Color(0xFF7575E0);
+  static const _t1Dark = Color(0xFFE8E8F0);
+  static const _t2Dark = Color(0xFFA0A0B8);
+  static const _t3Dark = Color(0xFF707088);
+  static const _hairDark = Color(0xFF3A3A4E);
+  static const _hairStrongDark = Color(0xFF4A4A60);
 
-  // 中性色（冷灰阶）
-  static const Color _textPrimary = Color(0xFF1A1D29);
-  static const Color _textSecondary = Color(0xFF6B7280);
-  static const Color _textHint = Color(0xFF9CA3AF);
-  static const Color _divider = Color(0xFFEDEEF2);
-  static const Color _surface = Color(0xFFFFFFFF);
-  static const Color _surfaceAlt = Color(0xFFF7F7FB);
-  static const Color _background = Color(0xFFF4F4F8);
+  static const _loveLight = Color(0xFFD6446A);
+  static const _loveDark = Color(0xFFF06292);
+  static const _upLight = Color(0xFF2DB88A);
+  static const _upDark = Color(0xFF4DD4A8);
+  static const _downLight = Color(0xFFD64444);
+  static const _downDark = Color(0xFFF0625E);
+  static const _warnLight = Color(0xFFD6A040);
+  static const _warnDark = Color(0xFFE0B850);
 
-  // ============ 暗色模式 ============
-  static const Color _darkPrimary = Color(0xFF9B9BF5);
-  static const Color _darkSecondary = Color(0xFFF06292);
-  static const Color _darkAccent = Color(0xFFA78BFA);
+  static ThemeData get lightTheme => _build(Brightness.light);
+  static ThemeData get darkTheme => _build(Brightness.dark);
 
-  static const Color _darkTextPrimary = Color(0xFFECECF1);
-  static const Color _darkTextSecondary = Color(0xFFA0A3B1);
-  static const Color _darkTextHint = Color(0xFF6B6E7A);
-  static const Color _darkDivider = Color(0xFF2A2D3A);
-  static const Color _darkSurface = Color(0xFF1E2030);
-  static const Color _darkSurfaceAlt = Color(0xFF262838);
-  static const Color _darkBackground = Color(0xFF15161F);
-
-  /// 品牌渐变（用于按钮、胶囊标签等强调元素）
-  static const List<Color> brandGradient = [_primary, _accent];
-  static const List<Color> brandGradientDark = [_darkPrimary, _darkAccent];
-
-  static ThemeData get lightTheme => _buildTheme(Brightness.light);
-  static ThemeData get darkTheme => _buildTheme(Brightness.dark);
-
-  static ThemeData _buildTheme(Brightness brightness) {
+  static ThemeData _build(Brightness brightness) {
     final isDark = brightness == Brightness.dark;
-    final primary = isDark ? _darkPrimary : _primary;
-    final onPrimary = isDark ? const Color(0xFF15161F) : Colors.white;
+    final canvas = isDark ? _canvasDark : _canvasLight;
+    final surface = isDark ? _surfaceDark : _surfaceLight;
+    final surface2 = isDark ? _surface2Dark : _surface2Light;
+    final brand = isDark ? _brandDark : _brandLight;
+    final onBrand = isDark ? _canvasDark : Colors.white;
+    final t1 = isDark ? _t1Dark : _t1Light;
+    final t2 = isDark ? _t2Dark : _t2Light;
+    final t3 = isDark ? _t3Dark : _t3Light;
+    final hair = isDark ? _hairDark : _hairLight;
+    // final hairStrong = isDark ? _hairStrongDark : _hairStrongLight;
 
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: primary,
+    final colorScheme = ColorScheme(
       brightness: brightness,
-      primary: primary,
-      secondary: isDark ? _darkSecondary : _secondary,
-      surface: isDark ? _darkSurface : _surface,
-      error: isDark ? const Color(0xFFF87171) : _error,
-    ).copyWith(
-      surfaceContainerHighest:
-          isDark ? _darkSurfaceAlt : _surfaceAlt,
-      outline: isDark ? _darkDivider : _divider,
+      primary: brand,
+      onPrimary: onBrand,
+      secondary: isDark ? _loveDark : _loveLight,
+      onSecondary: Colors.white,
+      error: isDark ? _downDark : _downLight,
+      onError: Colors.white,
+      surface: surface,
+      onSurface: t1,
     );
 
     return ThemeData(
       useMaterial3: true,
       brightness: brightness,
       colorScheme: colorScheme,
-      scaffoldBackgroundColor: isDark ? _darkBackground : _background,
+      scaffoldBackgroundColor: canvas,
       splashFactory: InkRipple.splashFactory,
       visualDensity: VisualDensity.adaptivePlatformDensity,
 
-      // 状态栏
       appBarTheme: AppBarTheme(
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
-        backgroundColor: isDark ? _darkBackground : _background,
+        backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
-        foregroundColor: isDark ? _darkTextPrimary : _textPrimary,
+        foregroundColor: t1,
         titleTextStyle: TextStyle(
-          color: isDark ? _darkTextPrimary : _textPrimary,
-          fontSize: 22,
-          fontWeight: FontWeight.w700,
+          color: t1,
+          fontSize: 24,
+          fontWeight: FontWeight.w800,
           letterSpacing: -0.3,
         ),
         systemOverlayStyle: isDark
@@ -99,43 +92,26 @@ class AppTheme {
             : SystemUiOverlayStyle.dark,
       ),
 
-      // 卡片：柔和阴影 + 微圆角
       cardTheme: CardThemeData(
         elevation: 0,
-        color: isDark ? _darkSurface : _surface,
+        color: surface,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(22),
         ),
+        surfaceTintColor: Colors.transparent,
+        shadowColor: Colors.transparent,
       ),
 
       dividerTheme: DividerThemeData(
-        color: isDark ? _darkDivider : _divider,
+        color: hair,
         thickness: 0.5,
         space: 0,
       ),
 
-      listTileTheme: ListTileThemeData(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-        titleTextStyle: TextStyle(
-          fontSize: 15,
-          fontWeight: FontWeight.w600,
-          color: isDark ? _darkTextPrimary : _textPrimary,
-        ),
-        subtitleTextStyle: TextStyle(
-          fontSize: 13,
-          color: isDark ? _darkTextSecondary : _textSecondary,
-        ),
-      ),
-
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         type: BottomNavigationBarType.fixed,
-        backgroundColor: isDark ? _darkSurface : _surface,
-        selectedItemColor: primary,
-        unselectedItemColor: isDark ? _darkTextHint : _textHint,
-        selectedLabelStyle:
-            const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
-        unselectedLabelStyle: const TextStyle(fontSize: 11),
+        backgroundColor: surface.withValues(alpha: 0.88),
         elevation: 0,
       ),
 
@@ -148,46 +124,45 @@ class AppTheme {
 
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: isDark ? _darkSurfaceAlt : _surfaceAlt,
+        fillColor: surface2,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(999),
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide.none,
+          borderRadius: BorderRadius.circular(999),
+          borderSide: BorderSide(color: hair, width: 1),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: primary, width: 1.5),
+          borderRadius: BorderRadius.circular(999),
+          borderSide: BorderSide(color: brand, width: 1.5),
         ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
         hintStyle: TextStyle(
-          color: isDark ? _darkTextHint : _textHint,
-          fontSize: 15,
+          color: t3,
+          fontSize: 14.5,
         ),
       ),
 
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: primary,
-          foregroundColor: onPrimary,
+          backgroundColor: brand,
+          foregroundColor: onBrand,
           elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 13),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(999),
           ),
           textStyle: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ),
 
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: primary,
+          foregroundColor: brand,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
@@ -195,84 +170,107 @@ class AppTheme {
       ),
 
       textTheme: TextTheme(
-        // 大标题
         headlineLarge: TextStyle(
-          fontSize: 30,
-          fontWeight: FontWeight.w800,
-          letterSpacing: -0.5,
-          color: isDark ? _darkTextPrimary : _textPrimary,
-          height: 1.2,
-        ),
-        headlineMedium: TextStyle(
           fontSize: 24,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w800,
           letterSpacing: -0.3,
-          color: isDark ? _darkTextPrimary : _textPrimary,
+          color: t1,
           height: 1.25,
         ),
-        // 卡片标题
+        headlineMedium: TextStyle(
+          fontSize: 21,
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.3,
+          color: t1,
+          height: 1.35,
+        ),
         titleLarge: TextStyle(
-          fontSize: 18,
+          fontSize: 17,
           fontWeight: FontWeight.w700,
-          letterSpacing: -0.2,
-          color: isDark ? _darkTextPrimary : _textPrimary,
-          height: 1.3,
+          letterSpacing: -0.1,
+          color: t1,
+          height: 1.38,
         ),
         titleMedium: TextStyle(
-          fontSize: 16,
+          fontSize: 15,
           fontWeight: FontWeight.w600,
-          color: isDark ? _darkTextPrimary : _textPrimary,
+          color: t2,
           height: 1.35,
         ),
         titleSmall: TextStyle(
           fontSize: 14,
-          fontWeight: FontWeight.w600,
-          color: isDark ? _darkTextPrimary : _textPrimary,
+          fontWeight: FontWeight.w700,
+          color: t1,
         ),
-        // 正文
         bodyLarge: TextStyle(
           fontSize: 15,
-          color: isDark ? _darkTextPrimary : _textPrimary,
-          height: 1.5,
+          color: t1,
+          height: 1.55,
         ),
         bodyMedium: TextStyle(
           fontSize: 13,
-          color: isDark ? _darkTextSecondary : _textSecondary,
+          color: t2,
           height: 1.5,
         ),
         bodySmall: TextStyle(
           fontSize: 12,
-          color: isDark ? _darkTextHint : _textHint,
+          color: t3,
+          fontWeight: FontWeight.w600,
         ),
         labelLarge: TextStyle(
           fontSize: 14,
-          fontWeight: FontWeight.w700,
-          color: primary,
+          fontWeight: FontWeight.w600,
+          color: brand,
+        ),
+        labelSmall: TextStyle(
+          fontSize: 10.5,
+          fontWeight: FontWeight.w600,
+          color: t3,
         ),
       ),
     );
   }
 
-  // 语义色访问
-  static Color error(Brightness brightness) =>
-      brightness == Brightness.dark ? const Color(0xFFF87171) : _error;
-  static Color success(Brightness brightness) =>
-      brightness == Brightness.dark ? const Color(0xFF34D399) : _success;
-  static Color warning(Brightness brightness) =>
-      brightness == Brightness.dark ? const Color(0xFFFBBF24) : _warning;
-  static Color info(Brightness brightness) =>
-      brightness == Brightness.dark ? _darkPrimary : _info;
-
-  /// 卡片阴影
+  // Shared shadow styles
   static List<BoxShadow> cardShadow(Brightness brightness) {
     return [
       BoxShadow(
         color: brightness == Brightness.dark
             ? Colors.black.withValues(alpha: 0.3)
-            : const Color(0xFF5B5BD6).withValues(alpha: 0.06),
-        blurRadius: 20,
-        offset: const Offset(0, 6),
+            : const Color(0xFF5B5BD6).withValues(alpha: 0.04),
+        blurRadius: 2,
+        offset: const Offset(0, 1),
+      ),
+      BoxShadow(
+        color: brightness == Brightness.dark
+            ? Colors.black.withValues(alpha: 0.24)
+            : const Color(0xFF5B5BD6).withValues(alpha: 0.12),
+        blurRadius: 24,
+        offset: const Offset(0, 8),
       ),
     ];
   }
+
+  static List<BoxShadow> floatShadow(Brightness brightness) {
+    return [
+      BoxShadow(
+        color: brightness == Brightness.dark
+            ? Colors.black.withValues(alpha: 0.5)
+            : const Color(0xFF1C1E2C).withValues(alpha: 0.24),
+        blurRadius: 48,
+        offset: const Offset(0, 16),
+      ),
+    ];
+  }
+
+  // Semantic colors
+  static Color love(Brightness b) => b == Brightness.dark ? _loveDark : _loveLight;
+  static Color up(Brightness b) => b == Brightness.dark ? _upDark : _upLight;
+  static Color down(Brightness b) => b == Brightness.dark ? _downDark : _downLight;
+  static Color warn(Brightness b) => b == Brightness.dark ? _warnDark : _warnLight;
+  static Color tint(Brightness b) => b == Brightness.dark ? _tintDark : _tintLight;
+  static Color surface2(Brightness b) => b == Brightness.dark ? _surface2Dark : _surface2Light;
+  static Color hair(Brightness b) => b == Brightness.dark ? _hairDark : _hairLight;
+  static Color hairStrong(Brightness b) => b == Brightness.dark ? _hairStrongDark : _hairStrongLight;
+  static Color canvas(Brightness b) => b == Brightness.dark ? _canvasDark : _canvasLight;
 }

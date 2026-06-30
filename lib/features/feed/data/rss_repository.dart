@@ -6,18 +6,14 @@ import 'package:xml/xml.dart';
 import '../domain/entities/article.dart';
 import 'rss_sources.dart';
 
-/// RSS/Atom 抓取与解析仓库
-///
-/// 直接从真实 RSS/Atom 源拉取数据，用 xml 库解析为 Article 实体。
-/// 不依赖第三方 RSS 库（避免 intl 版本冲突），兼容 RSS 2.0 与 Atom。
 class RssRepository {
   RssRepository(this._dio);
 
   final Dio _dio;
   int failedCount = 0;
 
-  /// 抓取单个源的全部条目
-  Future<List<Article>> fetchSource(RssSource source) async {
+  Future<List<Article>> fetchSource(RssSource source,
+      {int? maxItems}) async {
     try {
       final resp = await _dio.get<String>(
         source.feedUrl,
@@ -37,18 +33,27 @@ class RssRepository {
       final body = resp.data;
       if (body == null || body.trim().isEmpty) return [];
 
-      return _parse(body, source);
+      final articles = _parse(body, source);
+      if (maxItems != null && articles.length > maxItems) {
+        return articles.take(maxItems).toList();
+      }
+      return articles;
     } catch (_) {
       failedCount++;
       return [];
     }
   }
 
-  /// 并发抓取多个源，去重合并后按时间倒序返回
-  Future<List<Article>> fetchSources(List<RssSource> sources) async {
+  Future<List<Article>> fetchSources(List<RssSource> sources,
+      {int? maxItems}) async {
     if (sources.isEmpty) return [];
     failedCount = 0;
-    final results = await Future.wait(sources.map(fetchSource));
+    final results = await Future.wait(
+        sources.map((s) => fetchSource(s, maxItems: maxItems)));
+    return _merge(results);
+  }
+
+  List<Article> _merge(List<List<Article>> results) {
     final merged = <Article>[];
     final seenUrls = <String>{};
     for (final list in results) {
@@ -65,12 +70,10 @@ class RssRepository {
     return merged;
   }
 
-  /// 解析 RSS 2.0 或 Atom XML
   List<Article> _parse(String xmlString, RssSource source) {
     final document = XmlDocument.parse(xmlString);
     final articles = <Article>[];
 
-    // RSS 2.0: rss > channel > item
     final rssItems = document.findAllElements('item');
     if (rssItems.isNotEmpty) {
       for (final item in rssItems) {
@@ -79,7 +82,6 @@ class RssRepository {
       return articles;
     }
 
-    // Atom: feed > entry
     final atomEntries = document.findAllElements('entry');
     for (final entry in atomEntries) {
       articles.add(_fromAtomEntry(entry, source));
@@ -92,7 +94,6 @@ class RssRepository {
     final link = _text(item, 'link');
     final description = _text(item, 'description');
     final pubDateStr = _text(item, 'pubDate');
-    // content:encoded
     final contentEncoded = item
         .findAllElements('encoded')
         .map((e) => e.innerText)
@@ -119,7 +120,6 @@ class RssRepository {
 
   Article _fromAtomEntry(XmlElement entry, RssSource source) {
     final title = _text(entry, 'title');
-    // Atom 的 link 取 rel=alternate 或第一个 link 的 href
     String link = '';
     final links = entry.findElements('link');
     for (final l in links) {
@@ -136,7 +136,8 @@ class RssRepository {
         : _text(entry, 'updated');
 
     final plain = _stripHtml(contentStr.isNotEmpty ? contentStr : summary);
-    final cover = _extractFirstImage(contentStr.isNotEmpty ? contentStr : summary);
+    final cover =
+        _extractFirstImage(contentStr.isNotEmpty ? contentStr : summary);
 
     return Article(
       id: '${source.id}_${link.isNotEmpty ? link : title}'.hashCode.toString(),
@@ -163,7 +164,6 @@ class RssRepository {
     final parsed = html_parser.parse(raw);
     final text = parsed.body?.text.trim();
     if (text == null || text.isEmpty) return null;
-    // 压缩多余空白
     return text.replaceAll(RegExp(r'\s+'), ' ');
   }
 
@@ -185,7 +185,6 @@ class RssRepository {
 
   DateTime? _parseDate(String? raw) {
     if (raw == null || raw.isEmpty) return null;
-    // RFC822 (RSS): "Wed, 02 Oct 2024 10:30:00 +0800"
     try {
       return HttpDateParser.parseRfc822(raw) ?? DateTime.parse(raw);
     } catch (_) {
@@ -198,7 +197,6 @@ class RssRepository {
   }
 }
 
-/// 简易 RFC822 日期解析，避免依赖 intl
 class HttpDateParser {
   static final _months = {
     'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
@@ -206,11 +204,9 @@ class HttpDateParser {
   };
 
   static DateTime? parseRfc822(String input) {
-    // "Wed, 02 Oct 2024 10:30:00 +0800"
     final parts = input.trim().split(RegExp(r'[\s,]+'));
     if (parts.length < 6) return null;
     try {
-      // 去掉可能的星期前缀
       int i = 0;
       if (parts[0].length > 2 && int.tryParse(parts[0]) == null) i = 1;
       final day = int.parse(parts[i]);
@@ -229,7 +225,6 @@ class HttpDateParser {
 }
 
 final rssRepositoryProvider = Provider<RssRepository>((ref) {
-  // 使用独立的无拦截器 Dio，避免全局 baseUrl / auth 干扰 RSS 抓取
   final dio = Dio(BaseOptions(
     connectTimeout: const Duration(seconds: 10),
     receiveTimeout: const Duration(seconds: 12),

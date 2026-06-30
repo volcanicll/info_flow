@@ -6,7 +6,7 @@ part of 'feed_controller.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$feedControllerHash() => r'3b6421acc63493d6e43280001330f6cf1c08f0c9';
+String _$feedControllerHash() => r'caead5e89c7eb46bae75c1666b19c2134c4fe301';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -36,44 +36,16 @@ abstract class _$FeedController
   FutureOr<List<Article>> build(FeedType feedType);
 }
 
-/// 信息流控制器
-///
-/// 数据来自真实 RSS 源（见 [RssSources]）：
-/// - recommend：全部默认订阅源，按时间倒序
-/// - following：精选关注的源
-/// - hot：按发布时间近 + 来源热度排序
-///
-/// Copied from [FeedController].
+/// See also [FeedController].
 @ProviderFor(FeedController)
 const feedControllerProvider = FeedControllerFamily();
 
-/// 信息流控制器
-///
-/// 数据来自真实 RSS 源（见 [RssSources]）：
-/// - recommend：全部默认订阅源，按时间倒序
-/// - following：精选关注的源
-/// - hot：按发布时间近 + 来源热度排序
-///
-/// Copied from [FeedController].
+/// See also [FeedController].
 class FeedControllerFamily extends Family<AsyncValue<List<Article>>> {
-  /// 信息流控制器
-  ///
-  /// 数据来自真实 RSS 源（见 [RssSources]）：
-  /// - recommend：全部默认订阅源，按时间倒序
-  /// - following：精选关注的源
-  /// - hot：按发布时间近 + 来源热度排序
-  ///
-  /// Copied from [FeedController].
+  /// See also [FeedController].
   const FeedControllerFamily();
 
-  /// 信息流控制器
-  ///
-  /// 数据来自真实 RSS 源（见 [RssSources]）：
-  /// - recommend：全部默认订阅源，按时间倒序
-  /// - following：精选关注的源
-  /// - hot：按发布时间近 + 来源热度排序
-  ///
-  /// Copied from [FeedController].
+  /// See also [FeedController].
   FeedControllerProvider call(FeedType feedType) {
     return FeedControllerProvider(feedType);
   }
@@ -100,25 +72,11 @@ class FeedControllerFamily extends Family<AsyncValue<List<Article>>> {
   String? get name => r'feedControllerProvider';
 }
 
-/// 信息流控制器
-///
-/// 数据来自真实 RSS 源（见 [RssSources]）：
-/// - recommend：全部默认订阅源，按时间倒序
-/// - following：精选关注的源
-/// - hot：按发布时间近 + 来源热度排序
-///
-/// Copied from [FeedController].
+/// See also [FeedController].
 class FeedControllerProvider
     extends
         AutoDisposeAsyncNotifierProviderImpl<FeedController, List<Article>> {
-  /// 信息流控制器
-  ///
-  /// 数据来自真实 RSS 源（见 [RssSources]）：
-  /// - recommend：全部默认订阅源，按时间倒序
-  /// - following：精选关注的源
-  /// - hot：按发布时间近 + 来源热度排序
-  ///
-  /// Copied from [FeedController].
+  /// See also [FeedController].
   FeedControllerProvider(FeedType feedType)
     : this._internal(
         () => FeedController()..feedType = feedType,

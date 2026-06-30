@@ -2,40 +2,83 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/theme.dart';
 import '../../../../core/state/library_store.dart';
 import '../../../feed/domain/entities/article.dart';
 import '../../../feed/presentation/widgets/article_card.dart';
-import '../widgets/bookmark_tab_bar.dart';
 
-/// 收藏页
-///
-/// 监听全局 libraryStoreProvider，展示真实持久化的收藏文章。
-/// 三个 tab：全部 / 文章 / 稍后阅读。
-class BookmarkPage extends ConsumerWidget {
+class BookmarkPage extends ConsumerStatefulWidget {
   const BookmarkPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return DefaultTabController(
-      length: 3,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('收藏'),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.search_rounded),
-              onPressed: () => context.push('/search'),
+  ConsumerState<BookmarkPage> createState() => _BookmarkPageState();
+}
+
+class _BookmarkPageState extends ConsumerState<BookmarkPage>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final t1 = theme.textTheme.headlineLarge?.color ?? Colors.black;
+    final t3 = theme.textTheme.bodySmall?.color ?? Colors.grey;
+    final brand = theme.colorScheme.primary;
+
+    return Scaffold(
+      body: Column(
+        children: [
+          _PageHeader(title: '收藏'),
+          SizedBox(
+            height: 44,
+            child: TabBar(
+              controller: _tabController,
+              indicatorColor: brand,
+              indicatorWeight: 3,
+              indicatorSize: TabBarIndicatorSize.label,
+              labelColor: t1,
+              unselectedLabelColor: t3,
+              labelStyle: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+              ),
+              unselectedLabelStyle: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+              ),
+              dividerColor: Colors.transparent,
+              splashFactory: NoSplash.splashFactory,
+              overlayColor: WidgetStateProperty.all(Colors.transparent),
+              tabs: const [
+                Tab(text: '全部'),
+                Tab(text: '文章'),
+                Tab(text: '稍后阅读'),
+              ],
             ),
-          ],
-          bottom: const BookmarkTabBar(),
-        ),
-        body: const TabBarView(
-          children: [
-            _BookmarkList(filter: BookmarkFilter.all),
-            _BookmarkList(filter: BookmarkFilter.articles),
-            _BookmarkList(filter: BookmarkFilter.readLater),
-          ],
-        ),
+          ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _BookmarkList(filter: BookmarkFilter.all),
+                _BookmarkList(filter: BookmarkFilter.articles),
+                _BookmarkList(filter: BookmarkFilter.readLater),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -43,17 +86,46 @@ class BookmarkPage extends ConsumerWidget {
 
 enum BookmarkFilter { all, articles, readLater }
 
-class _BookmarkList extends ConsumerWidget {
+class _BookmarkList extends ConsumerStatefulWidget {
   final BookmarkFilter filter;
   const _BookmarkList({required this.filter});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_BookmarkList> createState() => _BookmarkListState();
+}
+
+class _BookmarkListState extends ConsumerState<_BookmarkList>
+    with AutomaticKeepAliveClientMixin {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    // Bookmark data is fully local so no additional loading needed
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
     final library = ref.watch(libraryStoreProvider);
     final theme = Theme.of(context);
 
     List<Article> items;
-    switch (filter) {
+    switch (widget.filter) {
       case BookmarkFilter.all:
         items = library.bookmarks;
         break;
@@ -66,16 +138,44 @@ class _BookmarkList extends ConsumerWidget {
     }
 
     if (items.isEmpty) {
-      return _buildEmpty(context, theme);
+      return SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height * 0.5,
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(40),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.bookmark_border_rounded,
+                      size: 48,
+                      color: AppTheme.hairStrong(theme.brightness)),
+                  const SizedBox(height: 14),
+                  Text('还没有收藏', style: theme.textTheme.titleMedium),
+                  const SizedBox(height: 6),
+                  Text(
+                    '点击文章卡片的收藏按钮，内容会保存在这里',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontSize: 13,
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
     }
 
     return RefreshIndicator(
-      onRefresh: () async {
-        // 收藏列表无需远程刷新，这里仅做 UI 反馈
-        return;
-      },
+      onRefresh: () async {},
       child: ListView.builder(
-        padding: const EdgeInsets.only(top: 6, bottom: 16),
+        controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(top: 6, bottom: 32),
         itemCount: items.length,
         itemBuilder: (context, index) {
           final article = items[index];
@@ -87,42 +187,22 @@ class _BookmarkList extends ConsumerWidget {
       ),
     );
   }
+}
 
-  Widget _buildEmpty(BuildContext context, ThemeData theme) {
-    String hint;
-    IconData icon;
-    switch (filter) {
-      case BookmarkFilter.readLater:
-        icon = Icons.access_time_rounded;
-        hint = '在阅读文章时选择「稍后阅读」即可在此查看';
-        break;
-      default:
-        icon = Icons.bookmark_border_rounded;
-        hint = '点击文章卡片的收藏按钮，内容会保存在这里';
-    }
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, size: 40, color: theme.colorScheme.primary),
-            ),
-            const SizedBox(height: 20),
-            Text('还没有收藏', style: theme.textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Text(hint,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium),
-          ],
-        ),
+class _PageHeader extends StatelessWidget {
+  final String title;
+  const _PageHeader({required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 6, 18, 12),
+      child: Row(
+        children: [
+          Text(title, style: theme.textTheme.headlineLarge),
+          const Spacer(),
+        ],
       ),
     );
   }

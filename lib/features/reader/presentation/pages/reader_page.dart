@@ -4,15 +4,12 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
+import '../../../../app/theme.dart';
 import '../../../../core/state/article_cache.dart';
 import '../../../../core/state/library_store.dart';
 import '../../../../core/state/reading_stats.dart';
 import '../../../feed/domain/entities/article.dart';
 
-/// 文章阅读器
-///
-/// 从文章缓存取真实文章，用 WebView 加载原文。
-/// 自动标记已读、累计阅读时长、收藏/分享联动全局状态。
 class ReaderPage extends ConsumerStatefulWidget {
   final String articleId;
 
@@ -44,9 +41,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
   void _setup() {
     final article = _article;
     if (article != null) {
-      // 标记已读
       ref.read(libraryStoreProvider.notifier).markRead(article.id);
-      // 初始化 WebView
       _initWebView(article);
     }
   }
@@ -67,7 +62,6 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
             _loadingProgress = 100;
           }),
           onWebResourceError: (e) {
-            // 仅当页面从未成功加载过才视为失败，避免子资源错误覆盖正常页面
             if (!_pageLoaded && mounted) {
               setState(() => _loadFailed = true);
             }
@@ -75,9 +69,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
         ),
       )
       ..loadRequest(uri);
-    setState(() {
-      _controller = controller;
-    });
+    setState(() => _controller = controller);
   }
 
   @override
@@ -95,27 +87,27 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final brightness = theme.brightness;
     final article = _article;
     final library = ref.watch(libraryStoreProvider);
 
-    // 文章不在缓存中（如深链直入）
     if (article == null) {
       return Scaffold(
-        appBar: AppBar(),
+        appBar: AppBar(
+          leading: _IconBtn(
+            icon: Icons.arrow_back_rounded,
+            onTap: () => Navigator.pop(context),
+          ),
+        ),
         body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.article_outlined,
-                    size: 48, color: theme.colorScheme.outline),
-                const SizedBox(height: 16),
-                Text('文章未加载', style: theme.textTheme.titleMedium),
-                const SizedBox(height: 8),
-                Text('请从信息流进入阅读', style: theme.textTheme.bodyMedium),
-              ],
-            ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.article_outlined,
+                  size: 48, color: AppTheme.hairStrong(brightness)),
+              const SizedBox(height: 16),
+              Text('文章未加载', style: theme.textTheme.titleMedium),
+            ],
           ),
         ),
       );
@@ -124,77 +116,117 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     final isBookmarked = library.isBookmarked(article.id);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(article.feedName,
-            style: const TextStyle(fontSize: 16), maxLines: 1,
-            overflow: TextOverflow.ellipsis),
-        actions: [
-          IconButton(
-            icon: Icon(isBookmarked
-                ? Icons.bookmark_rounded
-                : Icons.bookmark_outline_rounded),
-            color: isBookmarked ? theme.colorScheme.primary : null,
-            tooltip: '收藏',
-            onPressed: () =>
-                ref.read(libraryStoreProvider.notifier).toggleBookmark(article),
-          ),
-          IconButton(
-            icon: const Icon(Icons.share_outlined),
-            tooltip: '分享',
-            onPressed: () => Share.share(
-              '${article.title}\n${article.url}',
-              subject: article.title,
-            ),
-          ),
-          PopupMenuButton<String>(
-            onSelected: (value) async {
-              if (value == 'read_later') {
-                await ref
-                    .read(libraryStoreProvider.notifier)
-                    .toggleReadLater(article);
-              } else if (value == 'open_browser') {
-                _launchUrl(article.url);
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                  value: 'read_later', child: Text('稍后阅读')),
-              const PopupMenuItem(
-                  value: 'open_browser', child: Text('在浏览器中打开')),
-            ],
-          ),
-        ],
-      ),
       body: Column(
         children: [
-          // 文章元信息条
-          _ArticleMetaBar(article: article),
-          // 加载进度
-          if (_controller != null &&
-              !_pageLoaded &&
-              !_loadFailed &&
-              _loadingProgress < 100)
+          // Reader header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(10, 6, 10, 12),
+            child: Row(
+              children: [
+                _IconBtn(
+                  icon: Icons.arrow_back_rounded,
+                  onTap: () => Navigator.pop(context),
+                ),
+                const Spacer(),
+                _IconBtn(
+                  icon: isBookmarked
+                      ? Icons.bookmark_rounded
+                      : Icons.bookmark_border_rounded,
+                  color: isBookmarked ? theme.colorScheme.primary : null,
+                  onTap: () =>
+                      ref.read(libraryStoreProvider.notifier).toggleBookmark(article),
+                ),
+                _IconBtn(
+                  icon: Icons.share_outlined,
+                  onTap: () => Share.share(
+                    '${article.title}\n${article.url}',
+                    subject: article.title,
+                  ),
+                ),
+                _IconBtn(
+                  icon: Icons.more_horiz_rounded,
+                  onTap: () => _showMoreMenu(context, article),
+                ),
+              ],
+            ),
+          ),
+          // Article meta
+          Container(
+            padding: const EdgeInsets.fromLTRB(20, 6, 20, 14),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: AppTheme.hair(brightness), width: 1),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  article.title,
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    fontSize: 21,
+                    fontWeight: FontWeight.w800,
+                    height: 1.35,
+                  ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Icon(Icons.schedule_rounded,
+                        size: 13, color: theme.textTheme.bodySmall?.color),
+                    const SizedBox(width: 4),
+                    Text(_formatTime(article.publishedAt),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w400,
+                        )),
+                    const SizedBox(width: 12),
+                    Icon(Icons.link_rounded,
+                        size: 13, color: theme.textTheme.bodySmall?.color),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        Uri.tryParse(article.url)?.host ?? article.feedName,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w400,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          // Loading progress
+          if (_controller != null && !_pageLoaded && !_loadFailed && _loadingProgress < 100)
             LinearProgressIndicator(
               value: _loadingProgress / 100,
               minHeight: 2,
-              backgroundColor: theme.colorScheme.surfaceContainerHighest,
+              backgroundColor: AppTheme.surface2(brightness),
             ),
-          // 正文
+          // Content / WebView
           Expanded(child: _buildBody(article)),
         ],
       ),
       floatingActionButton: article.summary != null
           ? FloatingActionButton.extended(
               onPressed: () => _showSummary(context, article),
-              icon: const Icon(Icons.auto_awesome, size: 20),
+              backgroundColor: theme.colorScheme.primary,
+              foregroundColor: theme.colorScheme.onPrimary,
+              icon: Icon(Icons.auto_awesome, size: 17),
               label: const Text('AI 摘要'),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(999),
+              ),
             )
           : null,
     );
   }
 
   Widget _buildBody(Article article) {
-    final theme = Theme.of(context);
     if (_loadFailed || article.url.isEmpty) {
       return _buildError(article);
     }
@@ -207,7 +239,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
         if (!_pageLoaded)
           Positioned.fill(
             child: Container(
-              color: theme.scaffoldBackgroundColor,
+              color: Theme.of(context).scaffoldBackgroundColor,
               child: const Center(child: CircularProgressIndicator()),
             ),
           ),
@@ -224,7 +256,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.web_asset_off_rounded,
-                size: 48, color: theme.colorScheme.outline),
+                size: 48, color: theme.textTheme.bodySmall?.color),
             const SizedBox(height: 16),
             Text('无法加载原文', style: theme.textTheme.titleMedium),
             const SizedBox(height: 8),
@@ -247,6 +279,39 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
     );
   }
 
+  void _showMoreMenu(BuildContext context, Article article) {
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.access_time_rounded),
+                title: const Text('稍后阅读'),
+                onTap: () {
+                  ref.read(libraryStoreProvider.notifier).toggleReadLater(article);
+                  Navigator.pop(ctx);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.open_in_new_rounded),
+                title: const Text('在浏览器中打开'),
+                onTap: () {
+                  _launchUrl(article.url);
+                  Navigator.pop(ctx);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showSummary(BuildContext context, Article article) {
     showModalBottomSheet(
       context: context,
@@ -262,7 +327,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
               Row(
                 children: [
                   Icon(Icons.auto_awesome,
-                      color: Theme.of(context).colorScheme.primary),
+                      size: 18, color: Theme.of(context).colorScheme.primary),
                   const SizedBox(width: 8),
                   Text('AI 智能摘要',
                       style: Theme.of(context).textTheme.titleLarge),
@@ -271,26 +336,25 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
               const SizedBox(height: 16),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(15),
                 decoration: BoxDecoration(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .primary
-                      .withValues(alpha: 0.06),
-                  borderRadius: BorderRadius.circular(14),
+                  color: AppTheme.tint(Theme.of(context).brightness),
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 child: Text(
                   article.summary ?? '该文章暂无摘要内容。',
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(height: 1.6),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    height: 1.65,
+                    fontSize: 14,
+                  ),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 11),
               Text(
                 '· 摘要来自订阅源提供的文章简介',
-                style: Theme.of(context).textTheme.bodySmall,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w400,
+                ),
               ),
             ],
           ),
@@ -306,71 +370,37 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
   }
-}
-
-class _ArticleMetaBar extends StatelessWidget {
-  final Article article;
-  const _ArticleMetaBar({required this.article});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-      decoration: BoxDecoration(
-        color: theme.scaffoldBackgroundColor,
-        border:
-            Border(bottom: BorderSide(color: theme.dividerColor, width: 0.5)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            article.title,
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w800,
-              height: 1.35,
-            ),
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Icon(Icons.schedule_rounded,
-                  size: 13, color: theme.textTheme.bodySmall?.color),
-              const SizedBox(width: 4),
-              Text(
-                _formatTime(article.publishedAt),
-                style: theme.textTheme.bodySmall,
-              ),
-              const SizedBox(width: 12),
-              Icon(Icons.link_rounded,
-                  size: 13, color: theme.textTheme.bodySmall?.color),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  Uri.tryParse(article.url)?.host ?? article.feedName,
-                  style: theme.textTheme.bodySmall,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 
   String _formatTime(DateTime? time) {
     if (time == null) return '未知时间';
     final diff = DateTime.now().difference(time);
     if (diff.isNegative || diff.inMinutes < 1) return '刚刚';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}分钟前';
-    if (diff.inHours < 24) return '${diff.inHours}小时前';
-    if (diff.inDays < 7) return '${diff.inDays}天前';
+    if (diff.inMinutes < 60) return '${diff.inMinutes} 分钟前';
+    if (diff.inHours < 24) return '${diff.inHours} 小时前';
+    if (diff.inDays < 7) return '${diff.inDays} 天前';
     return '${time.month}/${time.day}';
+  }
+}
+
+class _IconBtn extends StatelessWidget {
+  final IconData icon;
+  final Color? color;
+  final VoidCallback onTap;
+  const _IconBtn({required this.icon, this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          width: 40, height: 40,
+          alignment: Alignment.center,
+          child: Icon(icon, size: 22, color: color),
+        ),
+      ),
+    );
   }
 }

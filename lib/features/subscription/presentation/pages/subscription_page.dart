@@ -2,121 +2,122 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../app/theme.dart';
 import '../../../../core/state/subscription_store.dart';
 import '../../../feed/data/rss_sources.dart';
 
-/// 订阅管理页
-///
-/// 展示真实可订阅的 RSS 源，按分类分组。
-/// 顶部为快捷操作区，下方为分组源列表（含 favicon 图标、分类色、未读占位）。
-class SubscriptionPage extends ConsumerWidget {
+class SubscriptionPage extends ConsumerStatefulWidget {
   const SubscriptionPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final subscribed = ref.watch(subscriptionStoreProvider);
-    return Scaffold(
-      appBar: AppBar(title: const Text('订阅管理'), actions: [
-        IconButton(
-          icon: const Icon(Icons.add_rounded),
-          onPressed: () => _showAddSubscription(context, ref),
-        ),
-      ]),
-      body: ListView(
-        padding: const EdgeInsets.only(bottom: 24),
-        children: [
-          // 快捷操作
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: Row(
-              children: [
-                _QuickAction(
-                  icon: Icons.rss_feed_rounded,
-                  label: '添加 RSS',
-                  onTap: () => _showAddSubscription(context, ref),
-                ),
-                const SizedBox(width: 12),
-                _QuickAction(
-                  icon: Icons.upload_file_rounded,
-                  label: '导入 OPML',
-                  onTap: () {},
-                ),
-                const SizedBox(width: 12),
-                _QuickAction(
-                  icon: Icons.explore_rounded,
-                  label: '发现源',
-                  onTap: () {},
-                ),
-              ],
-            ),
-          ),
-          // 统计概览
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: theme.brightness == Brightness.dark
-                      ? AppThemeBrand.brandGradientDark
-                      : AppThemeBrand.brandGradient,
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
+  ConsumerState<SubscriptionPage> createState() => _SubscriptionPageState();
+}
+
+class _SubscriptionPageState extends ConsumerState<SubscriptionPage> {
+  void _showAddSourceSheet() {
+    final nameCtrl = TextEditingController();
+    final urlCtrl = TextEditingController();
+    String selectedCategory = 'tech';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetCtx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                  20, 0, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: _StatCell(
-                      value: '${subscribed.length}',
-                      label: '已订阅',
+                  Text('添加自定义订阅源',
+                      style: Theme.of(ctx).textTheme.titleLarge),
+                  const SizedBox(height: 4),
+                  Text(
+                    '输入任意 RSS/Atom 订阅地址，订阅后将出现在信息流中。',
+                    style: Theme.of(ctx).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: nameCtrl,
+                    decoration: const InputDecoration(
+                      labelText: '名称',
+                      hintText: '例如：阮一峰的网络日志',
                     ),
                   ),
-                  Container(
-                      width: 1,
-                      height: 28,
-                      color: Colors.white.withValues(alpha: 0.3)),
-                  Expanded(
-                    child: _StatCell(
-                      value: '${FeedCategory.values.length}',
-                      label: '分类',
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: urlCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'RSS 地址',
+                      hintText: 'https://example.com/feed.xml',
                     ),
+                    keyboardType: TextInputType.url,
+                    textInputAction: TextInputAction.done,
                   ),
-                  Container(
-                      width: 1,
-                      height: 28,
-                      color: Colors.white.withValues(alpha: 0.3)),
-                  const Expanded(
-                    child: _StatCell(value: '∞', label: '实时更新'),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: selectedCategory,
+                    decoration: const InputDecoration(labelText: '分类'),
+                    items: FeedCategory.values
+                        .map((c) => DropdownMenuItem(
+                              value: c.name,
+                              child: Text(c.label),
+                            ))
+                        .toList(),
+                    onChanged: (v) {
+                      if (v != null) {
+                        setSheetState(() => selectedCategory = v);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text('取消'),
+                      ),
+                      const Spacer(),
+                      FilledButton(
+                        onPressed: () async {
+                          final name = nameCtrl.text.trim();
+                          final url = urlCtrl.text.trim();
+                          if (name.isEmpty || url.isEmpty) return;
+                          await ref
+                              .read(subscriptionStoreProvider.notifier)
+                              .addCustomSource(name, url, selectedCategory);
+                          final id =
+                              'custom_${name.hashCode}_${url.hashCode}';
+                          await ref
+                              .read(subscriptionStoreProvider.notifier)
+                              .toggle(id);
+                          if (ctx.mounted) Navigator.pop(ctx);
+                        },
+                        child: const Text('添加并订阅'),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ),
-          ),
-          // 分类源列表
-          for (final category in FeedCategory.values)
-            _SubscriptionGroup(
-              category: category,
-              sources: RssSources.byCategory(category),
-              subscribed: subscribed,
-              onToggle: (id) =>
-                  ref.read(subscriptionStoreProvider.notifier).toggle(id),
-            ),
-        ],
-      ),
+            );
+          },
+        );
+      },
     );
   }
 
-  void _showAddSubscription(BuildContext context, WidgetRef ref) {
-    final urlController = TextEditingController();
+  void _showMatchDialog() {
+    final urlCtrl = TextEditingController();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('添加订阅'),
+        title: const Text('添加 RSS'),
         content: TextField(
-          controller: urlController,
+          controller: urlCtrl,
           autofocus: true,
           decoration: const InputDecoration(
             hintText: '输入 RSS 地址或网站 URL',
@@ -130,7 +131,7 @@ class SubscriptionPage extends ConsumerWidget {
           ),
           FilledButton(
             onPressed: () {
-              final url = urlController.text.trim();
+              final url = urlCtrl.text.trim();
               if (url.isEmpty) return;
               final uri = Uri.tryParse(url);
               if (uri == null || !uri.hasScheme) {
@@ -154,9 +155,7 @@ class SubscriptionPage extends ConsumerWidget {
                   SnackBar(content: Text('已订阅 ${matched.first.name}')),
                 );
               } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('暂不支持自定义 RSS 地址，请从下方列表中选择')),
-                );
+                _showAddSourceSheet();
               }
             },
             child: const Text('添加'),
@@ -165,13 +164,260 @@ class SubscriptionPage extends ConsumerWidget {
       ),
     );
   }
+
+  void _showSourceOptions(BuildContext ctx, CustomSourceData source) {
+    showModalBottomSheet(
+      context: ctx,
+      showDragHandle: true,
+      builder: (sheetCtx) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(source.name,
+                  style: Theme.of(ctx).textTheme.titleMedium),
+              const SizedBox(height: 4),
+              Text(
+                source.feedUrl,
+                style: Theme.of(ctx).textTheme.bodySmall
+                    ?.copyWith(fontSize: 12),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    ref
+                        .read(subscriptionStoreProvider.notifier)
+                        .removeCustomSource(source.id);
+                    Navigator.pop(sheetCtx);
+                  },
+                  icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                  label: const Text('删除此订阅源'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor:
+                        AppTheme.love(Theme.of(ctx).brightness),
+                    side: BorderSide(
+                      color: AppTheme.love(Theme.of(ctx).brightness)
+                          .withValues(alpha: 0.3),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final brightness = theme.brightness;
+    final subscribed = ref.watch(subscriptionStoreProvider);
+    final store = ref.read(subscriptionStoreProvider.notifier);
+    final customSources = store.customSources;
+
+    return Scaffold(
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: _PageHeader(
+              title: '订阅管理',
+              trailing: _IconBtn(
+                icon: Icons.add_rounded,
+                onTap: _showAddSourceSheet,
+              ),
+            ),
+          ),
+          // Quick actions
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _QuickAction(
+                      icon: Icons.rss_feed_rounded,
+                      label: '添加 RSS',
+                      onTap: _showMatchDialog,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _QuickAction(
+                      icon: Icons.upload_file_rounded,
+                      label: '导入 OPML',
+                      onTap: () {},
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _QuickAction(
+                      icon: Icons.explore_rounded,
+                      label: '发现源',
+                      onTap: () {},
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Stats card
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
+              child: Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: brightness == Brightness.dark
+                        ? _brandGradientDark
+                        : _brandGradient,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(22),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _StatCell(
+                        value: '${subscribed.length}',
+                        label: '已订阅',
+                      ),
+                    ),
+                    Container(
+                      width: 1,
+                      height: 28,
+                      color: Colors.white.withValues(alpha: 0.3),
+                    ),
+                    Expanded(
+                      child: _StatCell(
+                        value: '${FeedCategory.values.length}',
+                        label: '分类',
+                      ),
+                    ),
+                    Container(
+                      width: 1,
+                      height: 28,
+                      color: Colors.white.withValues(alpha: 0.3),
+                    ),
+                    const Expanded(
+                      child: _StatCell(value: '∞', label: '实时更新'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // Categories
+          for (final category in FeedCategory.values)
+            ..._buildCategory(context, category, subscribed, customSources),
+          const SliverPadding(padding: EdgeInsets.only(bottom: 24)),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildCategory(
+    BuildContext context,
+    FeedCategory category,
+    Set<String> subscribed,
+    List<CustomSourceData> customSources,
+  ) {
+    final builtInSources = RssSources.byCategory(category);
+    final customInCategory = customSources
+        .where((c) => c.categoryName == category.name)
+        .map((c) => c.toRssSource())
+        .toList();
+    final sources = [...builtInSources, ...customInCategory];
+    if (sources.isEmpty) return [];
+
+    final theme = Theme.of(context);
+    return [
+      SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 6, 18, 10),
+          child: Row(
+            children: [
+              Container(
+                width: 4,
+                height: 14,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                category.label,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '${sources.length}',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      SliverList(
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            final source = sources[index];
+            final isSub = subscribed.contains(source.id);
+            final isCustom = source.id.startsWith('custom_');
+            return _SourceItem(
+              source: source,
+              isSubscribed: isSub,
+              isCustom: isCustom,
+              onToggle: () => ref
+                  .read(subscriptionStoreProvider.notifier)
+                  .toggle(source.id),
+              onLongPress: isCustom
+                  ? () {
+                      final store =
+                          ref.read(subscriptionStoreProvider.notifier);
+                      final customSrc = store.customSources
+                          .where((c) => c.id == source.id)
+                          .firstOrNull;
+                      if (customSrc != null) {
+                        _showSourceOptions(context, customSrc);
+                      }
+                    }
+                  : null,
+            );
+          },
+          childCount: sources.length,
+        ),
+      ),
+    ];
+  }
 }
 
-/// 用于订阅页内访问品牌渐变（避免循环依赖，本地别名）
-class AppThemeBrand {
-  static const List<Color> brandGradient = [Color(0xFF5B5BD6), Color(0xFF8B5CF6)];
-  static const List<Color> brandGradientDark = [Color(0xFF9B9BF5), Color(0xFFA78BFA)];
-}
+const _brandGradient = [Color(0xFF5B5BD6), Color(0xFF8B5CF6)];
+const _brandGradientDark = [Color(0xFF9B9BF5), Color(0xFFA78BFA)];
 
 class _StatCell extends StatelessWidget {
   final String value;
@@ -209,202 +455,235 @@ class _QuickAction extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-
-  const _QuickAction({required this.icon, required this.label, required this.onTap});
+  const _QuickAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Expanded(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            children: [
-              Icon(icon, color: theme.colorScheme.primary, size: 24),
-              const SizedBox(height: 6),
-              Text(label, style: theme.textTheme.bodySmall),
-            ],
-          ),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: theme.colorScheme.primary, size: 22),
+            const SizedBox(height: 5),
+            Text(label, style: theme.textTheme.bodySmall),
+          ],
         ),
       ),
     );
   }
 }
 
-class _SubscriptionGroup extends StatelessWidget {
-  final FeedCategory category;
-  final List<RssSource> sources;
-  final Set<String> subscribed;
-  final void Function(String sourceId) onToggle;
+class _SourceItem extends StatelessWidget {
+  final RssSource source;
+  final bool isSubscribed;
+  final bool isCustom;
+  final VoidCallback onToggle;
+  final VoidCallback? onLongPress;
 
-  const _SubscriptionGroup({
-    required this.category,
-    required this.sources,
-    required this.subscribed,
+  const _SourceItem({
+    required this.source,
+    required this.isSubscribed,
+    this.isCustom = false,
     required this.onToggle,
+    this.onLongPress,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (sources.isEmpty) return const SizedBox.shrink();
     final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+    final brightness = theme.brightness;
+    final brand = theme.colorScheme.primary;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: GestureDetector(
+        onLongPress: onLongPress,
+        child: Container(
+          padding: const EdgeInsets.all(13),
+          decoration: BoxDecoration(
+            color: theme.cardTheme.color,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppTheme.hair(brightness)),
+          ),
           child: Row(
             children: [
-              Container(
-                width: 4,
-                height: 14,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primary,
-                  borderRadius: BorderRadius.circular(2),
+              _SourceIcon(source: source),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            source.name,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (isCustom) ...[
+                          const SizedBox(width: 5),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 5, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: AppTheme.tint(brightness),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              '自定义',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w600,
+                                color: brand,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      source.description,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w400,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 8),
-              Text(
-                category.label,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: theme.textTheme.titleLarge?.color,
-                ),
-              ),
-              const SizedBox(width: 6),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  '${sources.length}',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: theme.colorScheme.primary,
+              GestureDetector(
+                onTap: onToggle,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: isSubscribed
+                        ? AppTheme.surface2(brightness)
+                        : brand,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    isSubscribed ? '已订阅' : '订阅',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: isSubscribed
+                          ? theme.textTheme.bodySmall?.color
+                          : Colors.white,
+                    ),
                   ),
                 ),
               ),
             ],
           ),
         ),
-        for (final source in sources)
-          _SourceTile(
-            source: source,
-            isSubscribed: subscribed.contains(source.id),
-            onToggle: () => onToggle(source.id),
-          ),
-      ],
-    );
-  }
-}
-
-class _SourceTile extends StatelessWidget {
-  final RssSource source;
-  final bool isSubscribed;
-  final VoidCallback onToggle;
-
-  const _SourceTile({
-    required this.source,
-    required this.isSubscribed,
-    required this.onToggle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-      onTap: onToggle,
-      leading: _SourceAvatar(source: source),
-      title: Text(
-        source.name,
-        style: const TextStyle(fontWeight: FontWeight.w600),
-      ),
-      subtitle: Text(
-        source.description,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      trailing: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: isSubscribed
-              ? theme.colorScheme.surfaceContainerHighest
-              : theme.colorScheme.primary,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          isSubscribed ? '已订阅' : '订阅',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            color: isSubscribed
-                ? theme.colorScheme.onSurfaceVariant
-                : Colors.white,
-          ),
-        ),
       ),
     );
   }
 }
 
-class _SourceAvatar extends StatelessWidget {
+class _SourceIcon extends StatelessWidget {
   final RssSource source;
-  const _SourceAvatar({required this.source});
+  const _SourceIcon({required this.source});
 
   @override
   Widget build(BuildContext context) {
-    return CachedNetworkImage(
-      imageUrl: source.faviconUrl,
-      width: 40,
-      height: 40,
-      imageBuilder: (context, provider) => Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          image: DecorationImage(image: provider, fit: BoxFit.cover),
-        ),
+    final brightness = Theme.of(context).brightness;
+    final size = 40.0;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(11),
+      child: CachedNetworkImage(
+        imageUrl: source.faviconUrl,
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+        errorWidget: (ctx, __, ___) => _fallback(ctx, size, brightness),
+        placeholder: (ctx, __) => _fallback(ctx, size, brightness),
       ),
-      placeholder: (_, _) => _fallback(context),
-      errorWidget: (_, _, _) => _fallback(context),
     );
   }
 
-  Widget _fallback(BuildContext context) {
+  Widget _fallback(BuildContext ctx, double size, Brightness brightness) {
     return Container(
-      width: 40,
-      height: 40,
+      width: size,
+      height: size,
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            source.color,
-            Color.lerp(source.color, Colors.white, 0.25)!,
-          ],
-        ),
-        borderRadius: BorderRadius.circular(12),
+        color: AppTheme.tint(brightness),
+        borderRadius: BorderRadius.circular(11),
       ),
       child: Center(
         child: Text(
           source.name.isNotEmpty ? source.name[0] : '?',
-          style: const TextStyle(
-            fontSize: 18,
+          style: TextStyle(
+            fontSize: 15,
             fontWeight: FontWeight.w800,
-            color: Colors.white,
+            color: Theme.of(ctx).colorScheme.primary,
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PageHeader extends StatelessWidget {
+  final String title;
+  final Widget? trailing;
+  const _PageHeader({required this.title, this.trailing});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 6, 18, 12),
+      child: Row(
+        children: [
+          Text(title, style: theme.textTheme.headlineLarge),
+          const Spacer(),
+          if (trailing != null) trailing!,
+        ],
+      ),
+    );
+  }
+}
+
+class _IconBtn extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  const _IconBtn({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          width: 40,
+          height: 40,
+          alignment: Alignment.center,
+          child: Icon(icon, size: 22),
         ),
       ),
     );

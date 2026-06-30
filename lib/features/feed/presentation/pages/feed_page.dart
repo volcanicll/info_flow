@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../shared/widgets/article_card_shimmer.dart';
 import '../controllers/feed_controller.dart';
 import '../widgets/article_card.dart';
-import '../widgets/feed_tab_bar.dart';
 
 class FeedPage extends ConsumerStatefulWidget {
   const FeedPage({super.key});
@@ -21,33 +21,102 @@ class _FeedPageState extends ConsumerState<FeedPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(_onTabChanged);
+  }
+
+  void _onTabChanged() {
+    if (!_tabController.indexIsChanging) setState(() {});
   }
 
   @override
   void dispose() {
+    _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final canvas = theme.scaffoldBackgroundColor;
+    final brand = theme.colorScheme.primary;
+    final t1 = theme.textTheme.headlineLarge?.color ?? Colors.black;
+    final t3 = theme.textTheme.bodySmall?.color ?? Colors.grey;
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('InfoFlow'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () => context.push('/search'),
-          ),
-        ],
-        bottom: FeedTabBar(controller: _tabController),
-      ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Column(
         children: [
-          _ArticleList(feedType: FeedType.recommend),
-          _ArticleList(feedType: FeedType.following),
-          _ArticleList(feedType: FeedType.hot),
+          Container(
+            color: canvas,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 6),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
+                  child: Row(
+                    children: [
+                      Text('InfoFlow',
+                          style: theme.textTheme.headlineLarge),
+                      const Spacer(),
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => context.push('/search'),
+                          borderRadius: BorderRadius.circular(999),
+                          child: const SizedBox(
+                            width: 40, height: 40,
+                            child: Icon(Icons.search_rounded, size: 22),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(
+                  height: 40,
+                  child: TabBar(
+                    controller: _tabController,
+                    indicatorColor: brand,
+                    indicatorWeight: 3,
+                    indicatorSize: TabBarIndicatorSize.label,
+                    indicatorPadding:
+                        const EdgeInsets.symmetric(horizontal: 0),
+                    labelColor: t1,
+                    unselectedLabelColor: t3,
+                    labelStyle: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    unselectedLabelStyle: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    dividerColor: Colors.transparent,
+                    splashFactory: NoSplash.splashFactory,
+                    overlayColor:
+                        WidgetStateProperty.all(Colors.transparent),
+                    tabs: const [
+                      Tab(text: '推荐'),
+                      Tab(text: '关注'),
+                      Tab(text: '热榜'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              physics: const ClampingScrollPhysics(),
+              children: [
+                _ArticleList(feedType: FeedType.recommend),
+                _ArticleList(feedType: FeedType.following),
+                _ArticleList(feedType: FeedType.hot),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -56,15 +125,18 @@ class _FeedPageState extends ConsumerState<FeedPage>
 
 class _ArticleList extends ConsumerStatefulWidget {
   final FeedType feedType;
-
   const _ArticleList({required this.feedType});
 
   @override
   ConsumerState<_ArticleList> createState() => _ArticleListState();
 }
 
-class _ArticleListState extends ConsumerState<_ArticleList> {
+class _ArticleListState extends ConsumerState<_ArticleList>
+    with AutomaticKeepAliveClientMixin {
   final ScrollController _scrollController = ScrollController();
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -82,45 +154,109 @@ class _ArticleListState extends ConsumerState<_ArticleList> {
   void _onScroll() {
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
-      ref.read(feedControllerProvider(widget.feedType).notifier).loadMore();
+      ref
+          .read(feedControllerProvider(widget.feedType).notifier)
+          .loadMore();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final articlesAsync = ref.watch(feedControllerProvider(widget.feedType));
-    final notifier = ref.read(feedControllerProvider(widget.feedType).notifier);
+    super.build(context);
+    final articlesAsync =
+        ref.watch(feedControllerProvider(widget.feedType));
+    final notifier =
+        ref.read(feedControllerProvider(widget.feedType).notifier);
 
     return RefreshIndicator(
       onRefresh: () => notifier.refresh(),
       child: articlesAsync.when(
-        loading: () => const _LoadingList(),
-        error: (err, stack) => _ErrorView(
-          message: err.toString(),
-          onRetry: () => ref.invalidate(feedControllerProvider(widget.feedType)),
+        loading: () => ListView.builder(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.only(top: 4, bottom: 16),
+          itemCount: 4,
+          itemBuilder: (_, __) => const ArticleCardShimmer(),
+        ),
+        error: (err, stack) => ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.only(top: 120),
+          children: [
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  children: [
+                    Icon(Icons.wifi_off_rounded,
+                        size: 48,
+                        color: theme.textTheme.bodySmall?.color),
+                    const SizedBox(height: 16),
+                    Text('加载失败', style: theme.textTheme.titleMedium),
+                    const SizedBox(height: 8),
+                    Text('网络连接异常，请检查后重试',
+                        style: theme.textTheme.bodyMedium),
+                    const SizedBox(height: 16),
+                    FilledButton.icon(
+                      onPressed: () => ref.invalidate(
+                          feedControllerProvider(widget.feedType)),
+                      icon: const Icon(Icons.refresh_rounded, size: 18),
+                      label: const Text('重试'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
         data: (articles) {
           if (articles.isEmpty) {
-            return const _EmptyView();
+            return ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.only(top: 120),
+              children: [
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      children: [
+                        Icon(Icons.article_outlined,
+                            size: 48,
+                            color: theme.textTheme.bodySmall?.color),
+                        const SizedBox(height: 16),
+                        Text('暂无内容',
+                            style: theme.textTheme.titleMedium),
+                        const SizedBox(height: 8),
+                        Text('下拉刷新或添加订阅源',
+                            style: theme.textTheme.bodyMedium),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            );
           }
           return ListView.builder(
             controller: _scrollController,
             physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.only(top: 4, bottom: 16),
             itemCount: articles.length + 1,
             itemBuilder: (context, index) {
               if (index == articles.length) {
                 return const Padding(
                   padding: EdgeInsets.all(16),
-                  child: Center(child: SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )),
+                  child: Center(
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child:
+                          CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
                 );
               }
               return ArticleCard(
                 article: articles[index],
-                onTap: () => context.push('/reader/${articles[index].id}'),
+                onTap: () =>
+                    context.push('/reader/${articles[index].id}'),
               );
             },
           );
@@ -128,165 +264,6 @@ class _ArticleListState extends ConsumerState<_ArticleList> {
       ),
     );
   }
-}
 
-class _LoadingList extends StatelessWidget {
-  const _LoadingList();
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView.builder(
-      physics: const AlwaysScrollableScrollPhysics(),
-      itemCount: 5,
-      itemBuilder: (context, index) => const _ShimmerCard(),
-    );
-  }
-}
-
-class _ShimmerCard extends StatelessWidget {
-  const _ShimmerCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: double.infinity,
-              height: 16,
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              width: MediaQuery.sizeOf(context).width * 0.7,
-              height: 14,
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  width: 80,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ErrorView extends StatelessWidget {
-  final String message;
-  final VoidCallback onRetry;
-
-  const _ErrorView({required this.message, required this.onRetry});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      children: [
-        SizedBox(height: MediaQuery.sizeOf(context).height * 0.25),
-        Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.error.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(Icons.wifi_off_rounded,
-                      size: 40, color: theme.colorScheme.error),
-                ),
-                const SizedBox(height: 20),
-                Text('加载失败', style: theme.textTheme.titleMedium),
-                const SizedBox(height: 8),
-                Text('网络连接异常，请检查后重试',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodyMedium),
-                const SizedBox(height: 20),
-                FilledButton.icon(
-                  onPressed: onRetry,
-                  icon: const Icon(Icons.refresh_rounded, size: 18),
-                  label: const Text('重试'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _EmptyView extends StatelessWidget {
-  const _EmptyView();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      children: [
-        SizedBox(height: MediaQuery.sizeOf(context).height * 0.25),
-        Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(Icons.article_outlined,
-                      size: 40, color: theme.colorScheme.primary),
-                ),
-                const SizedBox(height: 20),
-                Text('暂无内容', style: theme.textTheme.titleMedium),
-                const SizedBox(height: 8),
-                Text('下拉刷新或添加订阅源获取个性化内容',
-                    style: theme.textTheme.bodyMedium),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+  ThemeData get theme => Theme.of(context);
 }
