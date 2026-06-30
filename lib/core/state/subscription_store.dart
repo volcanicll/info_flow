@@ -4,7 +4,7 @@ import 'dart:ui';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../features/feed/data/rss_sources.dart';
+import 'package:info_flow/features/feed/data/rss_sources.dart';
 
 part 'subscription_store.g.dart';
 

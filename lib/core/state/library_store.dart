@@ -1,10 +1,9 @@
 import 'dart:convert';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../features/feed/domain/entities/article.dart';
+import 'package:info_flow/features/feed/domain/entities/article.dart';
 
 part 'library_store.g.dart';
 

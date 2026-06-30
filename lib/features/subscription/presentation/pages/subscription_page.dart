@@ -60,7 +60,7 @@ class _SubscriptionPageState extends ConsumerState<SubscriptionPage> {
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    value: selectedCategory,
+                    initialValue: selectedCategory,
                     decoration: const InputDecoration(labelText: '分类'),
                     items: FeedCategory.values
                         .map((c) => DropdownMenuItem(
@@ -660,7 +660,7 @@ class _PageHeader extends StatelessWidget {
         children: [
           Text(title, style: theme.textTheme.headlineLarge),
           const Spacer(),
-          if (trailing != null) trailing!,
+          ?trailing,
         ],
       ),
     );

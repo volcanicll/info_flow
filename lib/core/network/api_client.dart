@@ -39,19 +39,11 @@ class _AuthInterceptor extends Interceptor {
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    // TODO: 从本地存储读取 token
-    // final token = _ref.read(authTokenProvider);
-    // if (token != null) {
-    //   options.headers['Authorization'] = 'Bearer $token';
-    // }
     handler.next(options);
   }
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
-    if (err.response?.statusCode == 401) {
-      // TODO: token 过期处理，刷新或跳转登录
-    }
     handler.next(err);
   }
 }

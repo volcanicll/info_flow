@@ -1,9 +1,9 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../../../core/state/subscription_store.dart';
-import '../../data/rss_repository.dart';
-import '../../data/rss_sources.dart';
-import '../../domain/entities/article.dart';
+import 'package:info_flow/core/state/subscription_store.dart';
+import 'package:info_flow/features/feed/data/rss_repository.dart';
+import 'package:info_flow/features/feed/data/rss_sources.dart';
+import 'package:info_flow/features/feed/domain/entities/article.dart';
 
 part 'feed_controller.g.dart';
 

@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../core/state/ai_config.dart';
+import '../../../../core/state/article_cache.dart';
+import '../../../../shared/widgets/icon_btn.dart';
 import '../../data/ai_service.dart';
 
 class AiChatPage extends ConsumerStatefulWidget {
@@ -85,7 +87,7 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
         children: [
           _PageHeader(
             title: 'AI 助手',
-            trailing: _IconBtn(
+            trailing: IconBtn(
               icon: Icons.auto_awesome_rounded,
               onTap: () => _showSettings(context),
             ),
@@ -93,7 +95,7 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
             child: Text(
-              '本地规则引擎 · 已抓取 142 篇文章可检索',
+              '本地规则 · ${ref.watch(articleCacheProvider).length} 篇文章可检索',
               style: theme.textTheme.bodySmall?.copyWith(
                 fontSize: 12, fontWeight: FontWeight.w400,
               ),
@@ -123,6 +125,8 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
                     _QuickChip(label: '今日要闻', icon: Icons.whatshot_rounded, onTap: () => _sendMessage('今日要闻有哪些？')),
                     _QuickChip(label: '推荐订阅源', icon: Icons.rss_feed_rounded, onTap: () => _sendMessage('推荐一些优质订阅源')),
                     _QuickChip(label: '总结 GPT-5', icon: Icons.auto_awesome_rounded, onTap: () => _sendMessage('总结 GPT-5 文章')),
+                    _QuickChip(label: '新闻亮点', icon: Icons.auto_awesome_rounded, onTap: () => _sendMessage('今天有什么新闻亮点？')),
+                    _QuickChip(label: '今日洞察', icon: Icons.insights_rounded, onTap: () => _sendMessage('总结一下今日趋势洞察')),
                     _QuickChip(label: '加密市场异动', icon: Icons.trending_up_rounded, onTap: () => _sendMessage('加密市场有什么异动？')),
                   ],
                 ),
@@ -241,30 +245,8 @@ class _PageHeader extends StatelessWidget {
         children: [
           Text(title, style: theme.textTheme.headlineLarge),
           const Spacer(),
-          if (trailing != null) trailing!,
+          ?trailing,
         ],
-      ),
-    );
-  }
-}
-
-class _IconBtn extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-  const _IconBtn({required this.icon, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(999),
-        child: Container(
-          width: 40, height: 40,
-          alignment: Alignment.center,
-          child: Icon(icon, size: 22),
-        ),
       ),
     );
   }

@@ -62,6 +62,18 @@ class _FeedPageState extends ConsumerState<FeedPage>
                       Material(
                         color: Colors.transparent,
                         child: InkWell(
+                          onTap: () => context.push('/feed/subscription'),
+                          borderRadius: BorderRadius.circular(999),
+                          child: const SizedBox(
+                            width: 40, height: 40,
+                            child: Icon(Icons.rss_feed_rounded, size: 20),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 2),
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
                           onTap: () => context.push('/search'),
                           borderRadius: BorderRadius.circular(999),
                           child: const SizedBox(

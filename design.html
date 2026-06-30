@@ -1,0 +1,858 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>InfoFlow · Refined Indigo 原型</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+/* ============ TOKENS ============ */
+:root{
+  --r-xs:8px; --r-sm:12px; --r-md:16px; --r-lg:22px; --r-xl:28px; --pill:999px;
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px; --sp-6:24px; --sp-8:32px;
+  --ease:cubic-bezier(0.16,1,0.3,1);
+  --font-ui:'Hanken Grotesk','Noto Sans SC',-apple-system,'PingFang SC',sans-serif;
+}
+:root[data-theme="light"]{
+  --canvas:oklch(0.985 0.005 278);
+  --surface:oklch(1 0 0);
+  --surface-2:oklch(0.967 0.006 278);
+  --tint:oklch(0.95 0.035 278);
+  --tint-2:oklch(0.93 0.05 278);
+  --hair:oklch(0.92 0.008 278);
+  --hair-strong:oklch(0.88 0.01 278);
+  --brand:oklch(0.55 0.205 278);
+  --brand-press:oklch(0.49 0.21 278);
+  --t1:oklch(0.23 0.025 278);
+  --t2:oklch(0.52 0.02 278);
+  --t3:oklch(0.68 0.015 278);
+  --love:oklch(0.64 0.205 12);
+  --up:oklch(0.55 0.15 152);
+  --down:oklch(0.58 0.205 25);
+  --warn:oklch(0.62 0.16 55);
+  --stage:oklch(0.90 0.012 278);
+  --shadow-card:0 1px 2px rgba(28,30,44,0.04),0 8px 24px -10px rgba(91,91,214,0.12);
+  --shadow-float:0 16px 48px -16px rgba(28,30,44,0.24);
+  --on-brand:#fff;
+}
+:root[data-theme="dark"]{
+  --canvas:oklch(0.165 0.012 278);
+  --surface:oklch(0.205 0.014 278);
+  --surface-2:oklch(0.24 0.016 278);
+  --tint:oklch(0.30 0.055 278);
+  --tint-2:oklch(0.34 0.07 278);
+  --hair:rgba(255,255,255,0.07);
+  --hair-strong:rgba(255,255,255,0.12);
+  --brand:oklch(0.70 0.16 278);
+  --brand-press:oklch(0.64 0.17 278);
+  --t1:oklch(0.94 0.008 278);
+  --t2:oklch(0.72 0.014 278);
+  --t3:oklch(0.56 0.014 278);
+  --love:oklch(0.72 0.18 12);
+  --up:oklch(0.72 0.16 152);
+  --down:oklch(0.68 0.20 25);
+  --warn:oklch(0.78 0.15 55);
+  --stage:oklch(0.12 0.014 278);
+  --shadow-card:0 1px 2px rgba(0,0,0,0.3);
+  --shadow-float:0 24px 60px -20px rgba(0,0,0,0.6);
+  --on-brand:oklch(0.16 0.012 278);
+}
+
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  font-family:var(--font-ui);
+  background:var(--stage);
+  color:var(--t1);
+  display:flex;align-items:center;justify-content:center;
+  gap:48px;flex-wrap:wrap;padding:32px 20px;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  font-feature-settings:"tnum" off;
+  transition:background .4s var(--ease);
+}
+.num{font-variant-numeric:tabular-nums}
+
+/* ============ STAGE / DEVICE ============ */
+.stage{display:flex;align-items:center;justify-content:center;gap:48px;flex-wrap:wrap}
+.device{
+  position:relative;width:390px;height:844px;flex:none;
+  background:var(--canvas);border-radius:46px;
+  box-shadow:0 2px 4px rgba(0,0,0,.12),0 40px 90px -30px rgba(20,20,40,.5),inset 0 0 0 1.5px rgba(0,0,0,.08);
+  overflow:hidden;transition:background .4s var(--ease);
+}
+.device::before{ /* notch */
+  content:"";position:absolute;top:11px;left:50%;transform:translateX(-50%);
+  width:118px;height:32px;background:#000;border-radius:20px;z-index:60;
+}
+.screen{position:absolute;inset:0;display:flex;flex-direction:column}
+.statusbar{
+  height:50px;flex:none;display:flex;align-items:flex-end;justify-content:space-between;
+  padding:0 28px 7px;font-size:14px;font-weight:700;color:var(--t1);
+  font-variant-numeric:tabular-nums;z-index:50;
+}
+.statusbar .icons{display:flex;gap:6px;align-items:center}
+.statusbar svg{width:17px;height:17px}
+
+/* scroll region */
+.viewport{flex:1;overflow-y:auto;overflow-x:hidden;position:relative;scrollbar-width:none}
+.viewport::-webkit-scrollbar{display:none}
+
+/* ============ APPBAR ============ */
+.appbar{
+  position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:12px;
+  padding:6px 18px 12px;background:color-mix(in oklch,var(--canvas) 88%,transparent);
+  backdrop-filter:saturate(1.4) blur(12px);
+}
+.appbar .title{font-size:24px;font-weight:800;letter-spacing:-0.018em;color:var(--t1)}
+.appbar .grow{flex:1}
+.icon-btn{
+  width:40px;height:40px;border:none;background:transparent;border-radius:var(--pill);
+  display:grid;place-items:center;color:var(--t1);cursor:pointer;flex:none;
+  transition:transform .18s var(--ease),background .2s;
+}
+.icon-btn svg{width:22px;height:22px}
+.icon-btn:active{transform:scale(0.92)}
+@media(hover:hover){.icon-btn:hover{background:var(--surface-2)}}
+
+/* ============ TABS (feed/bookmark) ============ */
+.segtabs{display:flex;gap:6px;padding:0 18px 12px;position:sticky;top:58px;z-index:20}
+.segtab{
+  font-size:15px;font-weight:700;color:var(--t3);padding:6px 4px;cursor:pointer;
+  position:relative;background:none;border:none;font-family:inherit;
+}
+.segtab.active{color:var(--t1)}
+.segtab.active::after{
+  content:"";position:absolute;left:50%;bottom:-2px;transform:translateX(-50%);
+  width:20px;height:3px;border-radius:2px;background:var(--brand);
+}
+
+/* ============ PAGES ============ */
+.page{display:none;padding-bottom:32px;animation:enter .42s var(--ease)}
+.page.active{display:block}
+@keyframes enter{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.page{animation:none}}
+
+/* ============ ARTICLE CARD ============ */
+.card{
+  margin:0 16px 10px;background:var(--surface);border:1px solid var(--hair);
+  border-radius:var(--r-lg);padding:15px 16px 11px;box-shadow:var(--shadow-card);
+  cursor:pointer;transition:transform .2s var(--ease),box-shadow .2s,border-color .2s;
+  animation:enter .5s var(--ease) both;
+}
+.card:active{transform:scale(0.985)}
+@media(hover:hover){.card:hover{border-color:var(--hair-strong);box-shadow:0 1px 2px rgba(28,30,44,.05),0 14px 34px -14px rgba(91,91,214,.2)}}
+.card.read{opacity:.55}
+.feed-row{display:flex;align-items:center;gap:8px;margin-bottom:11px}
+.avatar{width:22px;height:22px;border-radius:7px;flex:none;display:grid;place-items:center;
+  background:var(--tint);color:var(--brand);font-size:12px;font-weight:800;line-height:1}
+.avatar img{width:100%;height:100%;border-radius:7px;object-fit:cover}
+.feed-name{font-size:13px;font-weight:600;color:var(--t2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.feed-time{font-size:12px;color:var(--t3);font-variant-numeric:tabular-nums}
+.card-main{display:flex;gap:13px;align-items:flex-start}
+.card-body{flex:1;min-width:0}
+.card-title{font-size:16.5px;font-weight:700;line-height:1.38;letter-spacing:-0.01em;color:var(--t1);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card-summary{margin-top:6px;font-size:13px;line-height:1.5;color:var(--t2);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ai-chip{
+  display:inline-flex;align-items:center;gap:4px;margin-top:9px;
+  padding:3px 8px 3px 7px;border-radius:var(--r-xs);background:var(--tint);color:var(--brand);
+  font-size:11px;font-weight:600;letter-spacing:.02em;
+}
+.ai-chip svg{width:11px;height:11px}
+.cover{
+  width:112px;height:88px;flex:none;border-radius:var(--r-sm);object-fit:cover;
+  background:var(--surface-2);outline:1px solid rgba(0,0,0,.08);outline-offset:-1px;
+}
+:root[data-theme="dark"] .cover{outline-color:rgba(255,255,255,.08)}
+.actions{display:flex;align-items:center;gap:20px;margin-top:13px}
+.act{display:flex;align-items:center;gap:5px;background:none;border:none;cursor:pointer;
+  padding:4px;color:var(--t3);font-family:inherit;font-size:12px;font-variant-numeric:tabular-nums;
+  transition:transform .16s var(--ease),color .2s}
+.act svg{width:17px;height:17px}
+.act:active{transform:scale(0.9)}
+.act.on{color:var(--love)}
+.act.on svg{fill:var(--love);stroke:var(--love)}
+.act.save{margin-left:auto;color:var(--t3)}
+.act.save.on{color:var(--brand)}
+.act.save.on svg{fill:var(--brand);stroke:var(--brand)}
+
+/* segment divider pill (hot badge) */
+.hot-badge{display:inline-flex;align-items:center;gap:3px;color:var(--down);font-weight:700}
+
+/* ============ SUBSCRIPTION ============ */
+.sub-hero{margin:0 16px 18px;padding:18px;background:var(--surface);border:1px solid var(--hair);
+  border-radius:var(--r-lg);box-shadow:var(--shadow-card)}
+.sub-hero h2{font-size:17px;font-weight:700;letter-spacing:-0.005em}
+.sub-hero p{margin-top:6px;font-size:13px;color:var(--t2);line-height:1.5}
+.sub-cat-title{display:flex;align-items:baseline;gap:8px;padding:4px 18px 10px;margin-top:6px}
+.sub-cat-title h3{font-size:14px;font-weight:700;color:var(--t1)}
+.sub-cat-title span{font-size:12px;color:var(--t3);font-variant-numeric:tabular-nums}
+.sub-item{display:flex;align-items:center;gap:12px;margin:0 16px 8px;padding:11px 13px;
+  background:var(--surface);border:1px solid var(--hair);border-radius:var(--r-md);cursor:pointer;
+  transition:transform .18s var(--ease),border-color .2s}
+.sub-item:active{transform:scale(0.98)}
+@media(hover:hover){.sub-item:hover{border-color:var(--hair-strong)}}
+.sub-icon{width:40px;height:40px;border-radius:11px;flex:none;display:grid;place-items:center;
+  background:var(--tint);color:var(--brand);font-weight:800;font-size:15px}
+.sub-meta{flex:1;min-width:0}
+.sub-meta .n{font-size:14.5px;font-weight:600;color:var(--t1)}
+.sub-meta .d{font-size:12px;color:var(--t3);margin-top:1px;font-variant-numeric:tabular-nums}
+.sub-follow{font-size:13px;font-weight:600;color:var(--brand);background:var(--tint);
+  border:none;padding:7px 14px;border-radius:var(--pill);cursor:pointer;font-family:inherit;
+  transition:transform .16s var(--ease)}
+.sub-follow:active{transform:scale(0.94)}
+.sub-follow.on{background:var(--surface-2);color:var(--t2)}
+
+/* ============ AI CHAT ============ */
+.chat-wrap{display:flex;flex-direction:column;min-height:100%}
+.chat-scroll{flex:1;padding:8px 16px 16px}
+.chat-hint{text-align:center;font-size:12px;color:var(--t3);padding:14px 0 18px}
+.msg{display:flex;margin-bottom:14px;animation:enter .4s var(--ease) both}
+.msg.user{justify-content:flex-end}
+.msg-bubble{max-width:80%;padding:11px 15px;font-size:14.5px;line-height:1.55;border-radius:18px}
+.msg.ai .msg-bubble{background:var(--surface);border:1px solid var(--hair);color:var(--t1);
+  border-bottom-left-radius:6px;box-shadow:var(--shadow-card)}
+.msg.user .msg-bubble{background:var(--brand);color:var(--on-brand);border-bottom-right-radius:6px}
+.msg.ai{flex-direction:column;gap:8px}
+.ai-source{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--t2);
+  background:var(--surface-2);border-radius:var(--r-sm);padding:8px 11px;max-width:80%;cursor:pointer}
+.ai-source .avatar{width:18px;height:18px;border-radius:5px;font-size:10px}
+.quick-row{display:flex;gap:8px;padding:0 16px 12px;overflow-x:auto;scrollbar-width:none}
+.quick-row::-webkit-scrollbar{display:none}
+.quick{flex:none;font-size:13px;font-weight:500;color:var(--brand);background:var(--tint);
+  border:1px solid transparent;padding:9px 14px;border-radius:var(--pill);cursor:pointer;font-family:inherit;
+  transition:transform .16s var(--ease)}
+.quick:active{transform:scale(0.95)}
+.chat-input{display:flex;gap:9px;padding:10px 14px 16px;border-top:1px solid var(--hair);
+  background:var(--surface);align-items:center}
+.chat-input input{flex:1;background:var(--surface-2);border:1px solid var(--hair);
+  border-radius:var(--pill);padding:11px 16px;font-size:14.5px;color:var(--t1);font-family:inherit;outline:none}
+.chat-input input:focus{border-color:var(--brand)}
+.chat-send{width:42px;height:42px;flex:none;border:none;border-radius:var(--pill);
+  background:var(--brand);color:var(--on-brand);display:grid;place-items:center;cursor:pointer;
+  transition:transform .16s var(--ease)}
+.chat-send:active{transform:scale(0.92);background:var(--brand-press)}
+.chat-send svg{width:19px;height:19px}
+.typing{display:flex;gap:4px;padding:14px 16px}
+.typing span{width:7px;height:7px;border-radius:50%;background:var(--t3);animation:blink 1.2s infinite}
+.typing span:nth-child(2){animation-delay:.2s}.typing span:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,60%,100%{opacity:.3}30%{opacity:1}}
+
+/* ============ BOOKMARK ============ */
+.empty{text-align:center;padding:120px 40px;color:var(--t3)}
+.empty svg{width:48px;height:48px;color:var(--hair-strong);margin-bottom:14px}
+.empty h3{font-size:16px;font-weight:600;color:var(--t2);margin-bottom:6px}
+.empty p{font-size:13px;line-height:1.5}
+
+/* ============ PROFILE ============ */
+.prof-user{margin:0 16px 14px;padding:18px;background:var(--surface);border:1px solid var(--hair);
+  border-radius:var(--r-lg);display:flex;align-items:center;gap:15px;box-shadow:var(--shadow-card);cursor:pointer;
+  transition:transform .2s var(--ease)}
+.prof-user:active{transform:scale(0.99)}
+.prof-pic{width:60px;height:60px;border-radius:var(--r-lg);flex:none;display:grid;place-items:center;
+  background:var(--tint);color:var(--brand)}
+.prof-pic svg{width:30px;height:30px}
+.prof-user .n{font-size:17px;font-weight:700;color:var(--t1)}
+.prof-user .d{font-size:13px;color:var(--t2);margin-top:3px}
+.chev{color:var(--t3);flex:none}
+.chev svg{width:20px;height:20px}
+.stat-card{margin:0 16px 14px;padding:18px;background:var(--surface);border:1px solid var(--hair);
+  border-radius:var(--r-lg);box-shadow:var(--shadow-card)}
+.stat-card .lbl{font-size:14px;font-weight:700;color:var(--t1);margin-bottom:4px}
+.stat-row{display:flex;justify-content:space-around;margin-top:14px}
+.stat{text-align:center}
+.stat .v{font-size:22px;font-weight:800;color:var(--brand);font-variant-numeric:tabular-nums;letter-spacing:-0.01em}
+.stat .k{font-size:12px;color:var(--t3);margin-top:3px}
+.set-card{margin:0 16px 12px;background:var(--surface);border:1px solid var(--hair);
+  border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--shadow-card)}
+.set-item{display:flex;align-items:center;gap:13px;padding:14px 15px;cursor:pointer;
+  transition:background .18s;outline:none}
+@media(hover:hover){.set-item:hover{background:var(--surface-2)}}
+.set-item:not(:last-child){border-bottom:1px solid var(--hair)}
+.set-ico{width:30px;height:30px;border-radius:9px;flex:none;display:grid;place-items:center;
+  background:var(--tint);color:var(--brand)}
+.set-ico svg{width:17px;height:17px}
+.set-item .t{flex:1;font-size:14.5px;font-weight:500;color:var(--t1)}
+.set-item .sub{font-size:12px;color:var(--t3)}
+.set-trail{font-size:13px;color:var(--t2);display:flex;align-items:center;gap:3px}
+.seg-3{display:inline-flex;background:var(--surface-2);border-radius:var(--r-sm);padding:2px}
+.seg-3 button{border:none;background:none;font-family:inherit;font-size:12px;font-weight:600;
+  color:var(--t3);padding:5px 10px;border-radius:8px;cursor:pointer}
+.seg-3 button.on{background:var(--surface);color:var(--brand);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+:root[data-theme="dark"] .seg-3 button.on{background:var(--tint)}
+.badge-soon{font-size:10px;font-weight:600;color:var(--warn);background:color-mix(in oklch,var(--warn) 14%,transparent);
+  padding:3px 7px;border-radius:var(--pill)}
+
+/* ============ TABBAR ============ */
+.tabbar{
+  flex:none;display:flex;justify-content:space-around;align-items:stretch;
+  padding:8px 8px calc(14px + env(safe-area-inset-bottom));background:color-mix(in oklch,var(--surface) 92%,transparent);
+  backdrop-filter:saturate(1.4) blur(14px);border-top:1px solid var(--hair);z-index:40;
+}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0;
+  background:none;border:none;cursor:pointer;color:var(--t3);font-family:inherit;
+  transition:transform .18s var(--ease),color .2s;position:relative}
+.tab svg{width:24px;height:24px;transition:transform .2s var(--ease)}
+.tab span{font-size:10.5px;font-weight:600}
+.tab:active{transform:scale(0.92)}
+.tab.active{color:var(--brand)}
+.tab.active svg{transform:translateY(-1px)}
+.tab.active::before{content:"";position:absolute;top:-8px;width:24px;height:3px;border-radius:2px;background:var(--brand)}
+
+/* ============ OVERLAY (reader/search/crypto) ============ */
+.overlay{position:absolute;inset:0;z-index:70;background:var(--canvas);display:none;
+  flex-direction:column;transform:translateX(8px);opacity:0;transition:transform .34s var(--ease),opacity .28s}
+.overlay.open{display:flex;transform:none;opacity:1}
+.ov-appbar{display:flex;align-items:center;gap:6px;padding:6px 10px 12px}
+.ov-title{font-size:16px;font-weight:700;color:var(--t1);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* reader */
+.reader-meta{padding:6px 20px 14px;border-bottom:1px solid var(--hair)}
+.reader-meta h1{font-size:21px;font-weight:800;line-height:1.35;letter-spacing:-0.015em;color:var(--t1)}
+.reader-meta .info{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:12px;color:var(--t3)}
+.reader-meta .info svg{width:13px;height:13px}
+.reader-body{padding:20px;font-size:15px;line-height:1.72;color:var(--t1)}
+.reader-body p{margin-bottom:16px}
+.reader-body h2{font-size:18px;font-weight:700;letter-spacing:-0.01em;margin:28px 0 12px}
+.reader-body .lead{font-size:16px;color:var(--t2)}
+.fab{
+  position:absolute;right:16px;bottom:24px;display:inline-flex;align-items:center;gap:7px;
+  background:var(--brand);color:var(--on-brand);border:none;padding:13px 18px;border-radius:var(--pill);
+  font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;box-shadow:var(--shadow-float);
+  transition:transform .18s var(--ease)}
+.fab:active{transform:scale(0.95);background:var(--brand-press)}
+.fab svg{width:17px;height:17px}
+.sheet-mask{position:absolute;inset:0;z-index:80;background:rgba(10,12,20,.5);display:none}
+.sheet-mask.open{display:block}
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:81;background:var(--surface);
+  border-radius:var(--r-xl) var(--r-xl) 0 0;padding:10px 20px calc(24px + env(safe-area-inset-bottom));
+  transform:translateY(100%);transition:transform .36s var(--ease);max-height:80%;overflow:auto}
+.sheet.open{transform:none}
+.sheet-grip{width:38px;height:5px;border-radius:3px;background:var(--hair-strong);margin:0 auto 16px}
+.sheet h2{font-size:19px;font-weight:800;display:flex;align-items:center;gap:8px}
+.sheet h2 svg{width:18px;height:18px;color:var(--brand)}
+.sum-box{margin-top:14px;background:var(--tint);border-radius:var(--r-md);padding:15px;font-size:14px;line-height:1.65;color:var(--t1)}
+.sum-note{margin-top:11px;font-size:12px;color:var(--t3)}
+
+/* search */
+.search-input{display:flex;align-items:center;gap:9px;margin:0 16px 14px;background:var(--surface-2);
+  border:1px solid var(--hair);border-radius:var(--r-md);padding:11px 14px}
+.search-input svg{width:19px;height:19px;color:var(--t3)}
+.search-input input{flex:1;background:none;border:none;font-family:inherit;font-size:15px;color:var(--t1);outline:none}
+.search-sec{padding:0 16px 12px}
+.search-sec h4{font-size:13px;font-weight:700;color:var(--t3);margin-bottom:10px}
+.hot-tag{display:inline-flex;align-items:center;gap:5px;margin:0 7px 9px 0;padding:8px 13px;
+  background:var(--surface);border:1px solid var(--hair);border-radius:var(--pill);
+  font-size:13px;color:var(--t1);cursor:pointer;transition:transform .16s var(--ease)}
+.hot-tag:active{transform:scale(0.95)}
+.hot-tag .rk{font-size:11px;font-weight:800;color:var(--down);font-variant-numeric:tabular-nums}
+
+/* crypto radar */
+.radar-ov{margin:0 16px 14px;padding:16px;background:var(--surface);border:1px solid var(--hair);
+  border-radius:var(--r-lg);box-shadow:var(--shadow-card)}
+.radar-ov .h{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700}
+.radar-ov .h svg{width:18px;height:18px;color:var(--brand)}
+.ov-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:13px}
+.ov-cell{background:var(--surface-2);border-radius:var(--r-sm);padding:10px 6px;text-align:center}
+.ov-cell .v{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums}
+.ov-cell .k{font-size:10px;color:var(--t3);margin-top:2px}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--up);display:inline-block;margin-right:5px;
+  animation:pulse 1.6s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.radar-sec{padding:0 16px 12px}
+.radar-sec .t{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:700;margin-bottom:9px;padding:4px 0}
+.radar-sec .t .ct{font-size:11px;color:var(--t3);font-weight:500;font-variant-numeric:tabular-nums}
+.sig-card{display:flex;align-items:center;gap:11px;padding:12px;background:var(--surface-2);
+  border:1px solid var(--hair);border-radius:var(--r-md);margin-bottom:7px}
+.sig-badge{width:44px;height:44px;border-radius:var(--r-sm);flex:none;display:grid;place-items:center;
+  font-size:13px;font-weight:800;font-variant-numeric:tabular-nums}
+.sig-badge.up{background:color-mix(in oklch,var(--up) 14%,transparent);color:var(--up)}
+.sig-badge.warn{background:color-mix(in oklch,var(--warn) 16%,transparent);color:var(--warn)}
+.sig-main{flex:1;min-width:0}
+.sig-top{display:flex;align-items:center;gap:6px}
+.sig-coin{font-size:14px;font-weight:700;color:var(--t1)}
+.sig-dir{font-size:11px;color:var(--t3)}
+.sig-score{margin-left:auto;font-size:13px;font-weight:800;font-variant-numeric:tabular-nums}
+.sig-score.up{color:var(--up)}.sig-score.warn{color:var(--warn)}
+.sig-strat{font-size:11px;color:var(--t3);margin-top:2px}
+.sig-tags{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap}
+.sig-tag{font-size:10px;font-weight:600;color:var(--brand);background:var(--tint);padding:2px 7px;border-radius:6px}
+.sig-tag.up{color:var(--up);background:color-mix(in oklch,var(--up) 13%,transparent)}
+:root[data-theme="dark"] .sig-tag.up{background:color-mix(in oklch,var(--up) 18%,transparent)}
+.heat-row{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--surface-2);
+  border:1px solid var(--hair);border-radius:var(--r-sm);margin-bottom:5px}
+.heat-badge{width:32px;height:32px;border-radius:8px;flex:none;display:grid;place-items:center;
+  font-size:11px;font-weight:800;color:var(--down);background:color-mix(in oklch,var(--down) 12%,transparent)}
+.heat-name{flex:1}.heat-name .n{font-size:13px;font-weight:600;color:var(--t1)}
+.heat-name .h{font-size:10px;color:var(--t3);font-variant-numeric:tabular-nums}
+.heat-chg{font-size:13px;font-weight:800;font-variant-numeric:tabular-nums}
+.up{color:var(--up)}.down{color:var(--down)}
+
+/* ============ SIDE PANEL (desktop only) ============ */
+.side{width:300px;flex:none;color:var(--t1)}
+.side h1{font-size:22px;font-weight:800;letter-spacing:-0.018em;margin-bottom:4px}
+.side .sub{font-size:13px;color:var(--t2);line-height:1.55;margin-bottom:20px}
+.theme-pick{display:flex;gap:8px;margin-bottom:18px}
+.theme-pick button{flex:1;padding:10px;border-radius:var(--r-sm);border:1px solid var(--hair-strong);
+  background:var(--surface);color:var(--t1);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:6px;transition:transform .16s var(--ease)}
+.theme-pick button.on{border-color:var(--brand);color:var(--brand)}
+.theme-pick button svg{width:15px;height:15px}
+.side .legend{font-size:12px;color:var(--t2);line-height:1.6;background:var(--surface);border:1px solid var(--hair);
+  border-radius:var(--r-md);padding:14px}
+.side .legend b{color:var(--t1)}
+.side .legend p{margin-bottom:8px}.side .legend p:last-child{margin-bottom:0}
+.side .sw{display:inline-block;width:11px;height:11px;border-radius:3px;vertical-align:middle;margin-right:5px}
+@media(max-width:880px){.side{display:none}}
+</style>
+</head>
+<body>
+
+<!-- ===== SVG SPRITE ===== -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<symbol id="i-feed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a1 1 0 0 1 1-1h11l4 4v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M8 9h6M8 13h8M8 17h5"/></symbol>
+<symbol id="i-rss" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19a1 1 0 1 0 2 0 1 1 0 0 0-2 0"/><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 5a15 15 0 0 1 15 15"/></symbol>
+<symbol id="i-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M18 14.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/></symbol>
+<symbol id="i-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h9a3 3 0 0 1 3 3v13H9a3 3 0 0 0-3 3"/><path d="M6 4a3 3 0 0 0-3 3v13a3 3 0 0 1 3-3"/></symbol>
+<symbol id="i-person" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></symbol>
+<symbol id="i-heart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.5-9.3-9C1 7 3 4 6 4c2 0 3.2 1.2 4 2.5C10.8 5.2 12 4 14 4c3 0 5 3 3.3 7-2.3 4.5-9.3 9-9.3 9z"/></symbol>
+<symbol id="i-comment" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.5 7.2L4 21l1.8-5.5A8 8 0 1 1 21 12z"/></symbol>
+<symbol id="i-share" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v14"/></symbol>
+<symbol id="i-chev-r" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></symbol>
+<symbol id="i-back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></symbol>
+<symbol id="i-radar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12L2 7"/><circle cx="12" cy="12" r="9"/><path d="M12 12a4 4 0 1 0 4 4"/><circle cx="16" cy="16" r="1.2" fill="currentColor"/></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+<symbol id="i-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 15l6-6"/><path d="M11 6l1-1a4 4 0 0 1 6 6l-1 1"/><path d="M13 18l-1 1a4 4 0 0 1-6-6l1-1"/></symbol>
+<symbol id="i-more" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></symbol>
+<symbol id="i-bolt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></symbol>
+<symbol id="i-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/></symbol>
+<symbol id="i-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></symbol>
+<symbol id="i-fire" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 .5 1 1.5 1.5 2 1 .5-2-1-4 1-7z"/></symbol>
+<symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></symbol>
+<symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14a8 8 0 1 1-9.7-9.7 6.5 6.5 0 0 0 9.7 9.7z"/></symbol>
+<symbol id="i-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"/></symbol>
+<symbol id="i-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l16-8-6 16-2.5-6z"/><path d="M11 14l9-10"/></symbol>
+<symbol id="i-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></symbol>
+<symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 11l5 4 5-4"/><path d="M5 21h14"/></symbol>
+<symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+<symbol id="i-help" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .8-1 1.7M12 17h.01"/></symbol>
+<symbol id="i-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 13a8 8 0 1 1-10-10 7 7 0 0 0 10 10z"/></symbol>
+<symbol id="i-type" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5h16v2M9 19h6M12 5v14"/></symbol>
+<symbol id="i-wifi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M2 9a16 16 0 0 1 20 0M5 12.5a11 11 0 0 1 14 0M8.5 16a6 6 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1" fill="currentColor"/></symbol>
+<symbol id="i-battery" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="8" width="18" height="9" rx="2.5"/><rect x="4" y="10" width="13" height="5" rx="1" fill="currentColor"/><path d="M22 11v3"/></symbol>
+</svg>
+
+<div class="stage">
+<!-- ============ DEVICE ============ -->
+<div class="device" id="device">
+<div class="screen">
+  <div class="statusbar">
+    <span>9:41</span>
+    <span class="icons"><svg><use href="#i-wifi"/></svg><svg><use href="#i-battery"/></svg></span>
+  </div>
+  <div class="viewport" id="viewport">
+
+  <!-- ===== FEED ===== -->
+  <section class="page active" id="page-feed">
+    <div class="appbar">
+      <div class="title">InfoFlow</div>
+      <div class="grow"></div>
+      <button class="icon-btn" onclick="openOverlay('search')" aria-label="搜索"><svg><use href="#i-search"/></svg></button>
+    </div>
+    <div class="segtabs">
+      <button class="segtab active" onclick="seg(this)">推荐</button>
+      <button class="segtab" onclick="seg(this)">关注</button>
+      <button class="segtab" onclick="seg(this)">热榜</button>
+    </div>
+
+    <article class="card" onclick="openReader('GPT-5 正式发布：多模态推理、256K 上下文与全新 Agent 能力','36氪')">
+      <div class="feed-row"><div class="avatar">氪</div><div class="feed-name">36氪</div><div class="feed-time">38 分钟前</div></div>
+      <div class="card-main">
+        <div class="card-body">
+          <div class="card-title">GPT-5 正式发布：多模态推理、256K 上下文与全新 Agent 能力</div>
+          <div class="card-summary">OpenAI 在凌晨的开发者直播中推出 GPT-5，统一了 o 系列的推理能力与 4o 的多模态，编程与数学基准显著领先，API 定价下调约 41%。</div>
+          <span class="ai-chip"><svg><use href="#i-spark"/></svg>AI 摘要</span>
+        </div>
+        <img class="cover" src="https://images.unsplash.com/photo-1677442136019-21780ecad995?w=224&h=176&fit=crop" alt="">
+      </div>
+      <div class="actions">
+        <button class="act on" onclick="toggle(this,event)"><svg><use href="#i-heart"/></svg><span class="num">1.2k</span></button>
+        <button class="act"><svg><use href="#i-comment"/></svg><span>评论</span></button>
+        <button class="act"><svg><use href="#i-share"/></svg><span>分享</span></button>
+        <button class="act save" onclick="toggle(this,event)"><svg><use href="#i-book"/></svg></button>
+      </div>
+    </article>
+
+    <article class="card read">
+      <div class="feed-row"><div class="avatar">派</div><div class="feed-name">少数派</div><div class="feed-time">2 小时前</div></div>
+      <div class="card-main">
+        <div class="card-body">
+          <div class="card-title">用 Raycast 替代 Alfred 的第 90 天：我的工作流改造清单</div>
+          <div class="card-summary">从触发器、片段、快速链接到 AI 命令，我把日常 23 个高频操作全部迁移，平均每周节省约 47 分钟。附迁移过程中踩过的坑。</div>
+        </div>
+        <img class="cover" src="https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=224&h=176&fit=crop" alt="">
+      </div>
+      <div class="actions">
+        <button class="act"><svg><use href="#i-heart"/></svg><span class="num">328</span></button>
+        <button class="act"><svg><use href="#i-comment"/></svg><span>评论</span></button>
+        <button class="act"><svg><use href="#i-share"/></svg><span>分享</span></button>
+        <button class="act save on" onclick="toggle(this,event)"><svg><use href="#i-book"/></svg></button>
+      </div>
+    </article>
+
+    <article class="card" onclick="openReader('比亚迪 Q2 财报：净利润同比增长 38.2%，海外营收首破千亿','虎嗅')">
+      <div class="feed-row"><div class="avatar">嗅</div><div class="feed-name">虎嗅</div><div class="feed-time">3 小时前</div></div>
+      <div class="card-main">
+        <div class="card-body">
+          <div class="card-title">比亚迪 Q2 财报：净利润同比增长 38.2%，海外营收首破千亿</div>
+          <div class="card-summary">上半年累计销量 161 万辆，出口同比增长 73%。欧洲与东南亚成为增量主引擎，单车毛利率回升至 21.4%。</div>
+          <span class="ai-chip"><svg><use href="#i-spark"/></svg>AI 摘要</span>
+        </div>
+        <img class="cover" src="https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=224&h=176&fit=crop" alt="">
+      </div>
+      <div class="actions">
+        <button class="act"><svg><use href="#i-heart"/></svg><span class="num">612</span></button>
+        <button class="act"><svg><use href="#i-comment"/></svg><span>评论</span></button>
+        <button class="act"><svg><use href="#i-share"/></svg><span>分享</span></button>
+        <button class="act save" onclick="toggle(this,event)"><svg><use href="#i-book"/></svg></button>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="feed-row"><div class="avatar">Q</div><div class="feed-name">InfoQ</div><div class="feed-time">5 小时前</div></div>
+      <div class="card-main">
+        <div class="card-body">
+          <div class="card-title">Rust 1.82 稳定：异步闭包正式落地，编译速度提升 17%</div>
+          <div class="card-summary">本次更新稳定了 async closures 与 unsafe 外部块，增量编译缓存重写后大型项目冷编译提速明显。</div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="act"><svg><use href="#i-heart"/></svg><span class="num">94</span></button>
+        <button class="act"><svg><use href="#i-comment"/></svg><span>评论</span></button>
+        <button class="act"><svg><use href="#i-share"/></svg><span>分享</span></button>
+        <button class="act save" onclick="toggle(this,event)"><svg><use href="#i-book"/></svg></button>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="feed-row"><div class="avatar">园</div><div class="feed-name">极客公园</div><div class="feed-time">7 小时前</div></div>
+      <div class="card-main">
+        <div class="card-body">
+          <div class="card-title">Vision Pro 2 传闻汇总：重量减半、定价腰斩，或于明年春季亮相</div>
+          <div class="card-summary">供应链消息称新品改用更轻的显示模组，M5 芯片加持，并引入更平价的非 Pro 版本以扩大出货。</div>
+        </div>
+        <img class="cover" src="https://images.unsplash.com/photo-1593508512255-86ab42a8e620?w=224&h=176&fit=crop" alt="">
+      </div>
+      <div class="actions">
+        <button class="act"><svg><use href="#i-heart"/></svg><span class="num">2.1k</span></button>
+        <button class="act"><svg><use href="#i-comment"/></svg><span>评论</span></button>
+        <button class="act"><svg><use href="#i-share"/></svg><span>分享</span></button>
+        <button class="act save" onclick="toggle(this,event)"><svg><use href="#i-book"/></svg></button>
+      </div>
+    </article>
+  </section>
+
+  <!-- ===== SUBSCRIPTION ===== -->
+  <section class="page" id="page-subscription">
+    <div class="appbar"><div class="title">订阅</div><div class="grow"></div>
+      <button class="icon-btn" aria-label="添加"><svg><use href="#i-rss"/></svg></button></div>
+    <div class="sub-hero">
+      <h2>把信息源收拢到一处</h2>
+      <p>已订阅 18 个来源，今日新增 142 篇。按分类管理，告别多 App 来回切换。</p>
+    </div>
+    <div class="sub-cat-title"><h3>科技</h3><span>6 个源</span></div>
+    <div class="sub-item"><div class="sub-icon">氪</div><div class="sub-meta"><div class="n">36氪</div><div class="d">今日 38 篇 · 已订阅</div></div><button class="sub-follow on" onclick="follow(this,event)">已订阅</button></div>
+    <div class="sub-item"><div class="sub-icon">嗅</div><div class="sub-meta"><div class="n">虎嗅</div><div class="d">今日 21 篇 · 已订阅</div></div><button class="sub-follow on" onclick="follow(this,event)">已订阅</button></div>
+    <div class="sub-item"><div class="sub-icon">园</div><div class="sub-meta"><div class="n">极客公园</div><div class="d">今日 14 篇 · 已订阅</div></div><button class="sub-follow on" onclick="follow(this,event)">已订阅</button></div>
+    <div class="sub-item"><div class="sub-icon">Q</div><div class="sub-meta"><div class="n">InfoQ</div><div class="d">今日 19 篇</div></div><button class="sub-follow" onclick="follow(this,event)">订阅</button></div>
+    <div class="sub-cat-title"><h3>AI 与模型</h3><span>4 个源</span></div>
+    <div class="sub-item"><div class="sub-icon">量</div><div class="sub-meta"><div class="n">量子位</div><div class="d">今日 16 篇 · 已订阅</div></div><button class="sub-follow on" onclick="follow(this,event)">已订阅</button></div>
+    <div class="sub-item"><div class="sub-icon">M</div><div class="sub-meta"><div class="n">Machine Learning Mastery</div><div class="d">每周更新 · 英文</div></div><button class="sub-follow" onclick="follow(this,event)">订阅</button></div>
+    <div class="sub-cat-title"><h3>设计</h3><span>3 个源</span></div>
+    <div class="sub-item"><div class="sub-icon">优</div><div class="sub-meta"><div class="n">优设网</div><div class="d">今日 7 篇</div></div><button class="sub-follow" onclick="follow(this,event)">订阅</button></div>
+  </section>
+
+  <!-- ===== AI CHAT ===== -->
+  <section class="page" id="page-ai">
+    <div class="appbar"><div class="title">AI 助手</div><div class="grow"></div>
+      <button class="icon-btn" aria-label="设置"><svg><use href="#i-spark"/></svg></button></div>
+    <div class="chat-wrap" style="height:calc(100% - 0px)">
+    <div class="chat-scroll">
+      <div class="chat-hint">本地规则引擎 · 已抓取 142 篇文章可检索</div>
+      <div class="msg user"><div class="msg-bubble">今天有哪些值得关注的 AI 新闻？</div></div>
+      <div class="msg ai">
+        <div class="msg-bubble">今天 AI 领域最值得关注的是 OpenAI 发布 <b>GPT-5</b>：统一了推理与多模态，编程基准领先，API 定价下调约 41%。另外 DeepMind 的新论文用一个模型掌握了 12 种棋盘游戏。相关来源已为你整理：</div>
+        <div class="ai-source" onclick="openReader('GPT-5 正式发布：多模态推理、256K 上下文与全新 Agent 能力','36氪')"><div class="avatar">氪</div><span>36氪 · GPT-5 正式发布…</span></div>
+      </div>
+    </div>
+    <div class="quick-row">
+      <button class="quick">今日要闻</button>
+      <button class="quick">推荐订阅源</button>
+      <button class="quick">总结这篇 GPT-5</button>
+      <button class="quick">加密市场异动</button>
+    </div>
+    <div class="chat-input">
+      <input placeholder="问我任何关于你订阅内容的问题…">
+      <button class="chat-send" aria-label="发送"><svg><use href="#i-send"/></svg></button>
+    </div>
+    </div>
+  </section>
+
+  <!-- ===== BOOKMARK ===== -->
+  <section class="page" id="page-bookmark">
+    <div class="appbar"><div class="title">收藏</div></div>
+    <div class="segtabs">
+      <button class="segtab active" onclick="seg(this)">全部</button>
+      <button class="segtab" onclick="seg(this)">文章</button>
+      <button class="segtab" onclick="seg(this)">稍后阅读</button>
+    </div>
+    <article class="card" onclick="openReader('用 Raycast 替代 Alfred 的第 90 天：我的工作流改造清单','少数派')">
+      <div class="feed-row"><div class="avatar">派</div><div class="feed-name">少数派</div><div class="feed-time">收藏于 2 小时前</div></div>
+      <div class="card-main"><div class="card-body">
+        <div class="card-title">用 Raycast 替代 Alfred 的第 90 天：我的工作流改造清单</div>
+        <div class="card-summary">从触发器、片段、快速链接到 AI 命令，我把日常 23 个高频操作全部迁移，平均每周节省约 47 分钟。</div>
+      </div></div>
+    </article>
+    <article class="card" onclick="openReader('Vision Pro 2 传闻汇总：重量减半、定价腰斩','极客公园')">
+      <div class="feed-row"><div class="avatar">园</div><div class="feed-name">极客公园</div><div class="feed-time">收藏于 昨天</div></div>
+      <div class="card-main"><div class="card-body">
+        <div class="card-title">Vision Pro 2 传闻汇总：重量减半、定价腰斩，或于明年春季亮相</div>
+        <div class="card-summary">供应链消息称新品改用更轻的显示模组，M5 芯片加持，并引入更平价的非 Pro 版本。</div>
+      </div>
+        <img class="cover" src="https://images.unsplash.com/photo-1593508512255-86ab42a8e620?w=224&h=176&fit=crop" alt="">
+      </div>
+    </article>
+    <article class="card">
+      <div class="feed-row"><div class="avatar">Q</div><div class="feed-name">InfoQ</div><div class="feed-time">收藏于 3 天前</div></div>
+      <div class="card-main"><div class="card-body">
+        <div class="card-title">Rust 1.82 稳定：异步闭包正式落地，编译速度提升 17%</div>
+        <div class="card-summary">稳定了 async closures 与 unsafe 外部块，增量编译缓存重写后大型项目冷编译提速明显。</div>
+      </div></div>
+    </article>
+  </section>
+
+  <!-- ===== PROFILE ===== -->
+  <section class="page" id="page-profile">
+    <div class="appbar"><div class="title">我的</div></div>
+    <div class="prof-user">
+      <div class="prof-pic"><svg><use href="#i-person"/></svg></div>
+      <div style="flex:1"><div class="n">InfoFlow 用户</div><div class="d">已订阅 18 个来源</div></div>
+      <div class="chev"><svg><use href="#i-chev-r"/></svg></div>
+    </div>
+    <div class="stat-card">
+      <div class="lbl">阅读统计</div>
+      <div class="stat-row">
+        <div class="stat"><div class="v num">142</div><div class="k">已读</div></div>
+        <div class="stat"><div class="v num">6.4h</div><div class="k">阅读时长</div></div>
+        <div class="stat"><div class="v num">23</div><div class="k">收藏</div></div>
+      </div>
+    </div>
+    <div class="set-card">
+      <div class="set-item"><div class="set-ico"><svg><use href="#i-dark"/></svg></div><div class="t">深色模式</div>
+        <div class="seg-3" id="thememode"><button class="on" onclick="thmMode(this)">跟随</button><button onclick="thmMode(this)">浅色</button><button onclick="thmMode(this)">深色</button></div>
+      </div>
+      <div class="set-item"><div class="set-ico"><svg><use href="#i-type"/></svg></div><div class="t">正文字号</div><div class="set-trail">中 · 16pt</div></div>
+      <div class="set-item"><div class="set-ico"><svg><use href="#i-globe"/></svg></div><div class="t">语言</div><div class="set-trail">简体中文</div></div>
+    </div>
+    <div class="set-card">
+      <div class="set-item" onclick="goTab('page-bookmark')"><div class="set-ico"><svg><use href="#i-book"/></svg></div><div class="t">我的收藏</div><div class="chev"><svg><use href="#i-chev-r"/></svg></div></div>
+      <div class="set-item" onclick="goTab('page-subscription')"><div class="set-ico"><svg><use href="#i-rss"/></svg></div><div class="t">订阅管理</div><div class="chev"><svg><use href="#i-chev-r"/></svg></div></div>
+      <div class="set-item"><div class="set-ico"><svg><use href="#i-download"/></svg></div><div class="t">离线下载</div><span class="badge-soon">即将推出</span></div>
+      <div class="set-item" onclick="openOverlay('crypto')"><div class="set-ico"><svg><use href="#i-radar"/></svg></div><div class="t">庄家雷达<div class="sub">币安合约市场扫描</div></div><div class="chev"><svg><use href="#i-chev-r"/></svg></div></div>
+    </div>
+    <div class="set-card">
+      <div class="set-item"><div class="set-ico"><svg><use href="#i-info"/></svg></div><div class="t">关于 InfoFlow</div><div class="set-trail num">v1.0.0</div></div>
+      <div class="set-item"><div class="set-ico"><svg><use href="#i-help"/></svg></div><div class="t">帮助与反馈</div><div class="chev"><svg><use href="#i-chev-r"/></svg></div></div>
+      <div class="set-item"><div class="set-ico"><svg><use href="#i-share"/></svg></div><div class="t">推荐给朋友</div><div class="chev"><svg><use href="#i-chev-r"/></svg></div></div>
+    </div>
+  </section>
+
+  </div><!-- /viewport -->
+
+  <!-- ===== TABBAR ===== -->
+  <nav class="tabbar" role="navigation">
+    <button class="tab active" onclick="goTab('page-feed')"><svg><use href="#i-feed"/></svg><span>信息流</span></button>
+    <button class="tab" onclick="goTab('page-subscription')"><svg><use href="#i-rss"/></svg><span>订阅</span></button>
+    <button class="tab" onclick="goTab('page-ai')"><svg><use href="#i-spark"/></svg><span>AI</span></button>
+    <button class="tab" onclick="goTab('page-bookmark')"><svg><use href="#i-book"/></svg><span>收藏</span></button>
+    <button class="tab" onclick="goTab('page-profile')"><svg><use href="#i-person"/></svg><span>我的</span></button>
+  </nav>
+
+  <!-- ===== READER OVERLAY ===== -->
+  <div class="overlay" id="ov-reader">
+    <div class="ov-appbar">
+      <button class="icon-btn" onclick="closeOverlay('reader')" aria-label="返回"><svg><use href="#i-back"/></svg></button>
+      <div class="ov-title" id="reader-src">36氪</div>
+      <button class="icon-btn" aria-label="收藏"><svg><use href="#i-book"/></svg></button>
+      <button class="icon-btn" aria-label="分享"><svg><use href="#i-share"/></svg></button>
+      <button class="icon-btn" aria-label="更多"><svg><use href="#i-more"/></svg></button>
+    </div>
+    <div class="reader-meta">
+      <h1 id="reader-title">GPT-5 正式发布：多模态推理、256K 上下文与全新 Agent 能力</h1>
+      <div class="info"><svg><use href="#i-clock"/></svg><span>38 分钟前</span><svg style="margin-left:8px"><use href="#i-link"/></svg><span>36kr.com</span></div>
+    </div>
+    <div class="viewport">
+      <div class="reader-body">
+        <p class="lead">OpenAI 在今日凌晨的开发者直播中正式发布 GPT-5，将 o 系列的推理能力与 4o 的实时多模态整合进单一模型，并把上下文窗口提升至 256K。</p>
+        <p>新模型在 SWE-Bench Verified 上达到 71.2%，相较 GPT-4o 提升约 19 个百分点；在 AIME 数学基准上的表现也首次追平了专为推理优化的 o3。API 方面，输入定价为每百万 token 2.74 美元，较 4o 下调约 41%。</p>
+        <h2>统一的推理与多模态</h2>
+        <p>GPT-5 取消了显式的"思考模式"开关，改为模型自主决定推理深度。开发者可通过 reasoning_effort 参数在 latency 与质量之间权衡，最低档位下首 token 延迟控制在 410ms。</p>
+        <p>多模态方面，模型可直接接收图像、音频与短视频片段，并支持在单次会话中跨模态引用。现场演示中，工程师对着白板照片追问代码实现，模型给出了可直接运行的 TypeScript 版本。</p>
+        <h2>Agent 能力与定价</h2>
+        <p>伴随 GPT-5，OpenAI 推出了新的 Codex CLI 与浏览器 Agent 工具包，允许模型在沙箱中执行命令、读写文件并维护长期任务状态。免费用户每周可获得 40 次调用，Plus 与 Team 套餐即刻可用。</p>
+      </div>
+    </div>
+    <button class="fab" onclick="openSheet()"><svg><use href="#i-spark"/></svg>AI 摘要</button>
+    <div class="sheet-mask" id="sheet-mask" onclick="closeSheet()"></div>
+    <div class="sheet" id="sheet">
+      <div class="sheet-grip"></div>
+      <h2><svg><use href="#i-spark"/></svg>AI 智能摘要</h2>
+      <div class="sum-box">OpenAI 发布 GPT-5，统一推理与多模态，上下文扩至 256K。SWE-Bench 达 71.2%，AIME 追平 o3。API 输入定价下调约 41%，并推出 Codex CLI 与浏览器 Agent，免费用户每周 40 次调用。</div>
+      <div class="sum-note">· 摘要来自订阅源提供的文章简介，填入 LLM API key 可获更深度的提炼</div>
+    </div>
+  </div>
+
+  <!-- ===== SEARCH OVERLAY ===== -->
+  <div class="overlay" id="ov-search">
+    <div class="ov-appbar">
+      <button class="icon-btn" onclick="closeOverlay('search')" aria-label="返回"><svg><use href="#i-back"/></svg></button>
+      <div class="search-input"><svg><use href="#i-search"/></svg><input placeholder="搜索已抓取的 142 篇文章…" autofocus></div>
+    </div>
+    <div class="viewport">
+      <div class="search-sec" style="margin-top:14px"><h4>热门搜索</h4>
+        <span class="hot-tag"><span class="rk">1</span>GPT-5</span>
+        <span class="hot-tag"><span class="rk">2</span>比亚迪财报</span>
+        <span class="hot-tag"><span class="rk">3</span>Rust 异步闭包</span>
+        <span class="hot-tag"><span class="rk">4</span>Vision Pro 2</span>
+        <span class="hot-tag"><span class="rk">5</span>DeepMind</span>
+      </div>
+      <div class="search-sec"><h4>搜索历史</h4>
+        <span class="hot-tag">Agent 框架</span>
+        <span class="hot-tag">向量检索</span>
+        <span class="hot-tag">比亚迪 海外</span>
+      </div>
+      <div class="search-sec"><h4 style="color:var(--t2)">最近浏览</h4>
+        <article class="card"><div class="feed-row"><div class="avatar">嗅</div><div class="feed-name">虎嗅</div><div class="feed-time">3 小时前</div></div>
+          <div class="card-main"><div class="card-body"><div class="card-title">比亚迪 Q2 财报：净利润同比增长 38.2%，海外营收首破千亿</div></div></div></article>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CRYPTO RADAR OVERLAY ===== -->
+  <div class="overlay" id="ov-crypto">
+    <div class="ov-appbar">
+      <button class="icon-btn" onclick="closeOverlay('crypto')" aria-label="返回"><svg><use href="#i-back"/></svg></button>
+      <div class="ov-title"><span class="live-dot"></span>庄家雷达</div>
+      <button class="icon-btn" aria-label="刷新"><svg><use href="#i-refresh"/></svg></button>
+    </div>
+    <div class="viewport">
+      <div class="radar-ov">
+        <div class="h"><svg><use href="#i-radar"/></svg>市场概览 · 实时</div>
+        <div class="ov-grid">
+          <div class="ov-cell"><div class="v num" style="color:var(--warn)">2</div><div class="k">追多信号</div></div>
+          <div class="ov-cell"><div class="v num" style="color:var(--brand)">3</div><div class="k">埋伏信号</div></div>
+          <div class="ov-cell"><div class="v num" style="color:var(--up)">5</div><div class="k">综合信号</div></div>
+          <div class="ov-cell"><div class="v num" style="color:var(--down)">12</div><div class="k">热度榜</div></div>
+        </div>
+      </div>
+      <div class="radar-sec"><div class="t"><svg style="width:15px;height:15px;color:var(--warn)"><use href="#i-bolt"/></svg>追多（费率极端）<span class="ct">2 个</span></div>
+        <div class="sig-card"><div class="sig-badge warn">HYPE</div>
+          <div class="sig-main"><div class="sig-top"><span class="sig-coin">HYPE</span><span class="sig-dir">做多</span><span class="sig-score warn">68</span></div>
+            <div class="sig-strat">费率 +0.082% · 多头拥挤</div><div class="sig-tags"><span class="sig-tag up">OI +24%</span><span class="sig-tag">费率极端</span></div></div></div>
+        <div class="sig-card"><div class="sig-badge warn">TRUMP</div>
+          <div class="sig-main"><div class="sig-top"><span class="sig-coin">TRUMP</span><span class="sig-dir">做多</span><span class="sig-score warn">61</span></div>
+            <div class="sig-strat">资金费率连续 8h 为正</div><div class="sig-tags"><span class="sig-tag up">OI +12%</span></div></div></div>
+      </div>
+      <div class="radar-sec"><div class="t"><svg style="width:15px;height:15px;color:var(--brand)"><use href="#i-target"/></svg>埋伏（低市值 + OI）<span class="ct">3 个</span></div>
+        <div class="sig-card"><div class="sig-badge up">RAY</div>
+          <div class="sig-main"><div class="sig-top"><span class="sig-coin">RAY</span><span class="sig-dir">建仓</span><span class="sig-score up">72</span></div>
+            <div class="sig-strat">市值 4.2 亿 · OI/市值 31%</div><div class="sig-tags"><span class="sig-tag">低市值</span><span class="sig-tag">OI 异常</span></div></div></div>
+        <div class="sig-card"><div class="sig-badge up">JUP</div>
+          <div class="sig-main"><div class="sig-top"><span class="sig-coin">JUP</span><span class="sig-dir">观察</span><span class="sig-score up">66</span></div>
+            <div class="sig-strat">市值 8.1 亿 · 静默吸筹</div><div class="sig-tags"><span class="sig-tag">OI 温和</span></div></div></div>
+      </div>
+      <div class="radar-sec"><div class="t"><svg style="width:15px;height:15px;color:var(--up)"><use href="#i-grid"/></svg>综合（四维评分）<span class="ct">5 个</span></div>
+        <div class="sig-card"><div class="sig-badge up">SOL</div>
+          <div class="sig-main"><div class="sig-top"><span class="sig-coin">SOL</span><span class="sig-dir">趋势</span><span class="sig-score up">78</span></div>
+            <div class="sig-strat">OI + 成交量 + 费率 + 动量 综合得分</div><div class="sig-tags"><span class="sig-tag">强趋势</span><span class="sig-tag up">OI +18%</span></div></div></div>
+      </div>
+      <div class="radar-sec"><div class="t"><svg style="width:15px;height:15px;color:var(--down)"><use href="#i-fire"/></svg>热度<span class="ct">12 个币</span></div>
+        <div class="heat-row"><div class="heat-badge">PEPE</div><div class="heat-name"><div class="n">PEPE</div><div class="h">热度 94 · 24h 成交 8.4 亿</div></div><div class="heat-chg up">+7.2%</div></div>
+        <div class="heat-row"><div class="heat-badge">BONK</div><div class="heat-name"><div class="n">BONK</div><div class="h">热度 88 · 24h 成交 3.1 亿</div></div><div class="heat-chg down">-3.1%</div></div>
+        <div class="heat-row"><div class="heat-badge">WIF</div><div class="heat-name"><div class="n">WIF</div><div class="h">热度 81 · 24h 成交 5.7 亿</div></div><div class="heat-chg up">+15.6%</div></div>
+        <div class="heat-row"><div class="heat-badge">FET</div><div class="heat-name"><div class="n">FET</div><div class="h">热度 76 · 24h 成交 2.2 亿</div></div><div class="heat-chg up">+4.3%</div></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /screen -->
+</div><!-- /device -->
+
+<!-- ============ SIDE PANEL ============ -->
+<aside class="side">
+  <h1>InfoFlow · Refined Indigo</h1>
+  <p class="sub">精炼紫罗兰方向的高保真原型。系统性去除紫蓝渐变这一 AI-slop 标志，改用纯色 + 强字阶 + 靛蓝微染中性背景。点击手机框内的导航自由切换。</p>
+  <div class="theme-pick">
+    <button class="on" onclick="setTheme('light',this)"><svg><use href="#i-sun"/></svg>浅色</button>
+    <button onclick="setTheme('dark',this)"><svg><use href="#i-moon"/></svg>深色</button>
+  </div>
+  <div class="legend">
+    <p><b>去渐变化</b>（核心动作）<br>头像、AI chip、Profile 头像原为 <span class="sw" style="background:linear-gradient(135deg,#5B5BD6,#8B5CF6)"></span>紫蓝渐变，现统一为 <span class="sw" style="background:var(--tint)"></span>brand-tint 纯色块。</p>
+    <p><b>导航</b><br>底部 5 tab：信息流 / 订阅 / AI / 收藏 / 我的。从"我的 → 庄家雷达"进入数据看板，卡片点入阅读器。</p>
+    <p><b>验证</b><br>本文件可直接浏览器打开。宽屏并排显示说明，窄屏自动隐藏说明、手机框居中。</p>
+  </div>
+</aside>
+</div><!-- /stage -->
+
+<script>
+function goTab(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.tab').forEach((t,i)=>{
+    t.classList.toggle('active',['page-feed','page-subscription','page-ai','page-bookmark','page-profile'][i]===id);
+  });
+  document.getElementById('viewport').scrollTop=0;
+}
+function seg(el){el.parentElement.querySelectorAll('.segtab').forEach(s=>s.classList.remove('active'));el.classList.add('active')}
+function toggle(el,e){e&&e.stopPropagation();el.classList.toggle('on')}
+function follow(el,e){e&&e.stopPropagation();const on=el.classList.toggle('on');el.textContent=on?'已订阅':'订阅'}
+function setTheme(t,btn){
+  document.documentElement.setAttribute('data-theme',t);
+  document.querySelectorAll('.theme-pick button').forEach(b=>b.classList.remove('on'));
+  btn&&btn.classList.add('on');
+}
+function thmMode(btn){
+  btn.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('on'));btn.classList.add('on');
+  const map={'跟随':'light','浅色':'light','深色':'dark'};
+  if(btn.textContent==='深色')setTheme('dark',null);
+  else if(btn.textContent==='浅色')setTheme('light',null);
+}
+function openOverlay(name){
+  document.getElementById('ov-'+name).classList.add('open');
+}
+function closeOverlay(name){document.getElementById('ov-'+name).classList.remove('open')}
+function openReader(title,src){
+  document.getElementById('reader-title').textContent=title;
+  document.getElementById('reader-src').textContent=src;
+  openOverlay('reader');
+}
+function openSheet(){document.getElementById('sheet').classList.add('open');document.getElementById('sheet-mask').classList.add('open')}
+function closeSheet(){document.getElementById('sheet').classList.remove('open');document.getElementById('sheet-mask').classList.remove('open')}
+
+/* ---- prototype init from URL hash (for headless capture) ---- */
+(function(){
+  const p=new URLSearchParams(location.hash.replace(/^#/,''));
+  if(p.get('theme')) setTheme(p.get('theme'),null);
+  const initPage=p.get('page');
+  if(initPage && initPage!=='page-feed') goTab(initPage);
+  if(p.get('overlay')) openOverlay(p.get('overlay'));
+  if(p.get('reader')) openReader(p.get('reader').split('|')[0],p.get('reader').split('|')[1]||'');
+})();
+</script>
+</body>
+</html>

@@ -6,76 +6,52 @@ import '../../../core/state/article_cache.dart';
 import '../../../features/feed/data/rss_sources.dart';
 import '../../../features/feed/domain/entities/article.dart';
 
-/// AI 回复服务
-///
-/// 优先级：配置了 API key → 调用真实 LLM（OpenAI 兼容接口）；
-/// 否则 → 本地规则引擎，从已抓取文章检索组织回复。
 class AiService {
   AiService(this._ref);
   final Ref _ref;
 
-  /// 生成回复
   Future<String> reply(String userMessage) async {
     final config = _ref.read(aiConfigProvider);
     if (config.apiKey.trim().isNotEmpty) {
       try {
         return await _callLlm(userMessage, config);
       } catch (_) {
-        // LLM 调用失败时回退本地规则
         return _localReply(userMessage);
       }
     }
-    // 本地规则引擎模拟思考耗时
     await Future.delayed(const Duration(milliseconds: 500));
     return _localReply(userMessage);
   }
-
-  // ============ 本地规则引擎 ============
 
   String _localReply(String message) {
     final cache = _ref.read(articleCacheProvider);
     final articles = cache.values.toList();
     final lower = message.toLowerCase();
 
-    // 今日要闻 / 最新
     if (RegExp(r'今日|今天|最新|要闻|热点|新闻').hasMatch(message)) {
-      if (articles.isEmpty) {
-        return '当前还没有加载文章，请先在「信息流」下拉刷新加载内容，我就能为你整理要闻了。';
-      }
-      final latest = (List<Article>.from(articles)
-            ..sort((a, b) {
-              final ta = a.publishedAt ?? DateTime(2000);
-              final tb = b.publishedAt ?? DateTime(2000);
-              return tb.compareTo(ta);
-            }))
-          .take(5)
-          .toList();
-      final lines = latest.asMap().entries.map((e) {
-        return '${e.key + 1}. 【${e.value.feedName}】${e.value.title}'
-            '${e.value.summary != null ? '\n   ${e.value.summary}' : ''}';
-      });
-      return '基于你已订阅的来源，以下是最新要闻：\n\n${lines.join('\n\n')}\n\n需要我详细展开某一条吗？';
+      return _localHighlights(articles);
     }
 
-    // 推荐订阅源
     if (RegExp(r'推荐|订阅|源|rss|关注').hasMatch(lower)) {
-      final groups = <String, List<String>>{};
-      for (final s in RssSources.all) {
-        groups.putIfAbsent(s.category.label, () => []).add('${s.name}（${s.description}）');
-      }
-      final buf = StringBuffer('这里有一些优质订阅源推荐：\n\n');
-      groups.forEach((cat, list) {
-        buf.writeln('【$cat】');
-        for (final l in list) {
-          buf.writeln('· $l');
-        }
-        buf.writeln();
-      });
-      buf.write('前往「订阅管理」即可添加这些源。');
-      return buf.toString();
+      return _localRecommendSources();
     }
 
-    // 关键词检索
+    if (RegExp(r'亮点|头条|精选|重要').hasMatch(message)) {
+      return _localHighlights(articles);
+    }
+
+    if (RegExp(r'总结|摘要|分析|洞察|趋势|insight|digest').hasMatch(message)) {
+      return _localInsight(articles);
+    }
+
+    if (RegExp(r'黄金|贵金属|金价|白银|行情|金属|gold|metal').hasMatch(lower)) {
+      return '关于贵金属行情，建议前往「市场 → 贵金属行情」查看实时金价和银价数据。';
+    }
+
+    if (RegExp(r'模型|API|排行榜|ai模型|hugging').hasMatch(lower)) {
+      return '想了解最新 AI 模型排名？前往「市场 → AI 排行」查看 HuggingFace 趋势模型榜单。';
+    }
+
     final matched = articles.where((a) {
       return a.title.toLowerCase().contains(lower) ||
           (a.summary?.toLowerCase().contains(lower) ?? false) ||
@@ -84,7 +60,10 @@ class AiService {
 
     if (matched.isEmpty) {
       return '我在当前已加载的文章中没找到与「$message」直接相关的内容。\n\n'
-          '你可以：\n• 换个关键词再试\n• 在信息流下拉加载更多文章\n• 问我「今日要闻」或「推荐订阅源」';
+          '你可以：\n'
+          '• 换个关键词再试\n'
+          '• 在信息流下拉加载更多文章\n'
+          '• 问我「今日要闻」或「推荐订阅源」';
     }
 
     final lines = matched.map((a) =>
@@ -92,7 +71,87 @@ class AiService {
     return '找到 ${matched.length} 篇与「$message」相关的文章：\n\n${lines.join('\n\n')}';
   }
 
-  // ============ 真实 LLM 调用 ============
+  String _localHighlights(List<Article> articles) {
+    if (articles.isEmpty) {
+      return '当前还没有加载文章，请先在「信息流」下拉刷新加载内容，我就能为你整理要闻了。';
+    }
+    final sorted = List<Article>.from(articles)
+      ..sort((a, b) {
+        final ta = a.publishedAt ?? DateTime(2000);
+        final tb = b.publishedAt ?? DateTime(2000);
+        return tb.compareTo(ta);
+      });
+    final top = sorted.take(5).toList();
+    final buf = StringBuffer('📰 **今日新闻亮点**\n\n');
+    for (var i = 0; i < top.length; i++) {
+      final a = top[i];
+      buf.writeln('${i + 1}. **【${a.feedName}】** ${a.title}');
+      if (a.summary != null) {
+        buf.writeln('   > ${a.summary}');
+      }
+      buf.writeln();
+    }
+    buf.write('---\n需要我详细解读某条新闻吗？或问我「总结趋势」获取今日洞察。');
+    return buf.toString();
+  }
+
+  String _localInsight(List<Article> articles) {
+    if (articles.length < 3) {
+      return '文章不足，无法生成洞察。请先在信息流加载更多内容。';
+    }
+    final bySource = <String, List<Article>>{};
+    for (final a in articles) {
+      bySource.putIfAbsent(a.feedName, () => []).add(a);
+    }
+    final activeSources = bySource.entries
+        .where((e) => e.value.isNotEmpty)
+        .map((e) => '• **${e.key}**（${e.value.length} 篇）')
+        .join('\n');
+
+    final sorted = List<Article>.from(articles)
+      ..sort((a, b) {
+        final ta = a.publishedAt ?? DateTime(2000);
+        final tb = b.publishedAt ?? DateTime(2000);
+        return tb.compareTo(ta);
+      });
+    final latest = sorted.take(3).map((a) =>
+        '• **${a.feedName}**：${a.title}').join('\n');
+
+    final categories = <String, int>{};
+    for (final a in articles) {
+      categories[a.feedName] = (categories[a.feedName] ?? 0) + 1;
+    }
+    final sortedCats = categories.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final topCat = sortedCats.isNotEmpty ? sortedCats.first.key : '科技';
+
+    return '📊 **今日内容洞察**\n\n'
+        '**活跃来源**\n$activeSources\n\n'
+        '**最新动态**\n$latest\n\n'
+        '**热度分析**\n'
+        '• 今日最活跃来源：**$topCat**\n'
+        '• 共收录 ${articles.length} 篇文章\n'
+        '• 覆盖 ${bySource.length} 个来源\n\n'
+        '---\n前往「信息流」查看更多内容，或问我具体话题。';
+  }
+
+  String _localRecommendSources() {
+    final groups = <String, List<String>>{};
+    for (final s in RssSources.all) {
+      groups.putIfAbsent(s.category.label, () => [])
+          .add('${s.name}（${s.description}）');
+    }
+    final buf = StringBuffer('这里有一些优质订阅源推荐：\n\n');
+    groups.forEach((cat, list) {
+      buf.writeln('【$cat】');
+      for (final l in list) {
+        buf.writeln('· $l');
+      }
+      buf.writeln();
+    });
+    buf.write('前往「信息流 → 订阅管理」即可添加这些源。');
+    return buf.toString();
+  }
 
   Future<String> _callLlm(String userMessage, AiConfigState config) async {
     final dio = Dio(BaseOptions(
@@ -105,10 +164,10 @@ class AiService {
       },
     ));
 
-    // 构造系统提示，附带已抓取文章作为上下文
     final cache = _ref.read(articleCacheProvider);
     final context = cache.values.take(15).map((a) =>
-        '- 【${a.feedName}】${a.title}${a.summary != null ? '：${a.summary}' : ''}').join('\n');
+        '- 【${a.feedName}】${a.title}${a.summary != null ? '：${a.summary}' : ''}')
+        .join('\n');
 
     final resp = await dio.post<Map<String, dynamic>>(
       '/chat/completions',

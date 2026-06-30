@@ -1,8 +1,7 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../features/feed/domain/entities/article.dart';
-import '../../features/feed/presentation/controllers/feed_controller.dart';
+import 'package:info_flow/features/feed/domain/entities/article.dart';
+import 'package:info_flow/features/feed/presentation/controllers/feed_controller.dart';
 
 part 'article_cache.g.dart';
 

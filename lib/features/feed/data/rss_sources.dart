@@ -71,6 +71,9 @@ class RssSources {
   static const Color _cWired = Color(0xFF000000);
   static const Color _cTechCrunch = Color(0xFF00C8FF);
   static const Color _cVerge = Color(0xFF5200FF);
+  static const Color _cV2ex = Color(0xFFE2A63B);
+  static const Color _cProductHunt = Color(0xFFDA552F);
+  static const Color _cHuggingFace = Color(0xFFFFD21E);
 
   static const List<RssSource> all = [
     // ====== 科技 ======
@@ -246,6 +249,39 @@ class RssSources {
       color: _cWired,
       description: '科技如何重塑未来',
     ),
+
+    // ====== V2EX ======
+    RssSource(
+      id: 'v2ex',
+      name: 'V2EX',
+      feedUrl: 'https://www.v2ex.com/index.xml',
+      siteUrl: 'https://www.v2ex.com',
+      category: FeedCategory.tech,
+      color: _cV2ex,
+      description: '创意工作者社区热门话题',
+    ),
+
+    // ====== Product Hunt ======
+    RssSource(
+      id: 'producthunt',
+      name: 'Product Hunt',
+      feedUrl: 'https://rsshub.app/producthunt/today',
+      siteUrl: 'https://www.producthunt.com',
+      category: FeedCategory.product,
+      color: _cProductHunt,
+      description: '每日最佳新产品',
+    ),
+
+    // ====== AI 模型 ======
+    RssSource(
+      id: 'huggingface',
+      name: 'HuggingFace',
+      feedUrl: 'https://rsshub.app/huggingface/daily-papers',
+      siteUrl: 'https://huggingface.co',
+      category: FeedCategory.ai,
+      color: _cHuggingFace,
+      description: 'AI 趋势模型与论文',
+    ),
   ];
 
   /// 按分类获取
@@ -264,6 +300,9 @@ class RssSources {
     'hackernews',
     'github',
     'solidot',
+    'v2ex',
+    'producthunt',
+    'huggingface',
   ];
 
   /// 根据 id 查找

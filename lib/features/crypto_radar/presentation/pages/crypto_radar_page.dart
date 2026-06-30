@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme.dart';
+import '../../../../shared/widgets/icon_btn.dart';
+import '../../data/models/trade_signal.dart';
 import '../../data/repositories/crypto_repository.dart';
 import '../controllers/crypto_radar_controller.dart';
 
@@ -22,7 +24,7 @@ class CryptoRadarPage extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(10, 6, 18, 12),
             child: Row(
               children: [
-                _IconBtn(
+                IconBtn(
                   icon: Icons.arrow_back_rounded,
                   onTap: () => Navigator.pop(context),
                 ),
@@ -48,7 +50,7 @@ class CryptoRadarPage extends ConsumerWidget {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 else
-                  _IconBtn(
+                  IconBtn(
                     icon: Icons.refresh_rounded,
                     onTap: () => notifier.startFullScan(),
                   ),
@@ -278,7 +280,7 @@ class _HighlightsSection extends StatelessWidget {
 
 class _SignalSection extends StatelessWidget {
   final String title;
-  final List<dynamic> signals;
+  final List<TradeSignal> signals;
   final Brightness brightness;
   const _SignalSection({
     required this.title,
@@ -327,19 +329,18 @@ class _SignalSection extends StatelessWidget {
 }
 
 class _SignalCard extends StatelessWidget {
-  final dynamic signal;
+  final TradeSignal signal;
   const _SignalCard({required this.signal});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final brightness = theme.brightness;
-    final ts = signal as dynamic;
-    final coin = ts.coin as String;
-    final direction = ts.direction as String;
-    final score = ts.score as int;
-    final strategy = ts.strategy as String;
-    final tags = (ts.tags as List).cast<String>();
+    final coin = signal.coin;
+    final direction = signal.direction;
+    final score = signal.score;
+    final strategy = signal.strategy;
+    final tags = signal.tags;
     final isUp = score >= 65;
 
     return Container(
@@ -574,24 +575,4 @@ class _HeatRow extends StatelessWidget {
   }
 }
 
-class _IconBtn extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-  const _IconBtn({required this.icon, required this.onTap});
 
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(999),
-        child: Container(
-          width: 40, height: 40,
-          alignment: Alignment.center,
-          child: Icon(icon, size: 22),
-        ),
-      ),
-    );
-  }
-}

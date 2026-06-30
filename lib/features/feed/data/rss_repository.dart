@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:html/parser.dart' as html_parser;
 import 'package:xml/xml.dart';
 
+import '../../../core/utils/news_normalizer.dart';
 import '../domain/entities/article.dart';
 import 'rss_sources.dart';
 
@@ -55,19 +56,16 @@ class RssRepository {
 
   List<Article> _merge(List<List<Article>> results) {
     final merged = <Article>[];
-    final seenUrls = <String>{};
     for (final list in results) {
-      for (final a in list) {
-        final key = a.url.isEmpty ? a.title : a.url;
-        if (seenUrls.add(key)) merged.add(a);
-      }
+      merged.addAll(list);
     }
-    merged.sort((a, b) {
+    final deduped = NewsNormalizer.dedupe(merged);
+    deduped.sort((a, b) {
       final ta = a.publishedAt ?? DateTime(2000);
       final tb = b.publishedAt ?? DateTime(2000);
       return tb.compareTo(ta);
     });
-    return merged;
+    return deduped;
   }
 
   List<Article> _parse(String xmlString, RssSource source) {
