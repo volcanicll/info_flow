@@ -57,6 +57,17 @@ class TickerResolver {
     return refs;
   }
 
+  /// 批量识别：对一组文章分别 resolve，并返回带 tickers 的新 Article（不可变拷贝）。
+  /// 原 Article 的已有 tickers 保留（不重复计算）。
+  List<Article> resolveList(List<Article> articles) {
+    return articles.map((a) {
+      if (a.tickers.isNotEmpty) return a;
+      final refs = resolve(a);
+      if (refs.isEmpty) return a;
+      return a.copyWith(tickers: refs);
+    }).toList();
+  }
+
   String _normalize(String s) => s.toLowerCase().trim();
 
   int _countOccur(String haystack, String needle) {
