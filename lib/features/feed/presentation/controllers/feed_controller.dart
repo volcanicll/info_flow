@@ -1,6 +1,7 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'package:info_flow/core/state/subscription_store.dart';
+import 'package:info_flow/features/signal_hub/data/ticker_resolver.dart';
 import 'package:info_flow/features/feed/data/rss_repository.dart';
 import 'package:info_flow/features/feed/data/rss_sources.dart';
 import 'package:info_flow/features/feed/domain/entities/article.dart';
@@ -51,6 +52,10 @@ class FeedController extends _$FeedController {
         }
       }
     }
+
+    // 注入 tickers（已有 tickers 的文章会被跳过），再排序
+    final resolver = TickerResolver();
+    _all = resolver.resolveList(_all);
 
     _all.sort((a, b) {
       final ta = a.publishedAt ?? DateTime(2000);

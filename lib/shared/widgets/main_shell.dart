@@ -9,7 +9,7 @@ class MainShell extends StatelessWidget {
   const MainShell({super.key, required this.navigationShell});
 
   static const _tabs = [
-    _TabItem(Icons.dashboard_rounded, '市场'),
+    _TabItem(Icons.graphic_eq_rounded, '脉搏'),
     _TabItem(Icons.article_outlined, '信息流'),
     _TabItem(Icons.auto_awesome_outlined, 'AI'),
     _TabItem(Icons.bookmark_border_rounded, '收藏'),

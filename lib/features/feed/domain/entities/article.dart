@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import 'package:info_flow/features/signal_hub/domain/entities/ticker_ref.dart';
+
 class Article {
   final String id;
   final String feedId;
@@ -21,6 +23,8 @@ class Article {
   final bool isRead;
   /// 是否标记为「稍后阅读」
   final bool isReadLater;
+  /// 文章中识别出的标的资产引用
+  final List<TickerRef> tickers;
 
   const Article({
     required this.id,
@@ -41,6 +45,7 @@ class Article {
     this.isBookmarked = false,
     this.isRead = false,
     this.isReadLater = false,
+    this.tickers = const [],
   });
 
   /// 来源颜色的 Color 对象
@@ -54,6 +59,7 @@ class Article {
     bool? isReadLater,
     String? summary,
     List<String>? keyPoints,
+    List<TickerRef>? tickers,
   }) {
     return Article(
       id: id,
@@ -74,6 +80,7 @@ class Article {
       isBookmarked: isBookmarked ?? this.isBookmarked,
       isRead: isRead ?? this.isRead,
       isReadLater: isReadLater ?? this.isReadLater,
+      tickers: tickers ?? this.tickers,
     );
   }
 
@@ -91,6 +98,7 @@ class Article {
         'publishedAt': publishedAt?.toIso8601String(),
         'likeCount': likeCount,
         'isReadLater': isReadLater,
+        'tickers': tickers.map((t) => t.toJson()).toList(),
       };
 
   factory Article.fromJson(Map<String, dynamic> json) => Article(
@@ -108,5 +116,9 @@ class Article {
             : null,
         likeCount: json['likeCount'] as int?,
         isReadLater: json['isReadLater'] as bool? ?? false,
+        tickers: (json['tickers'] as List<dynamic>?)
+                ?.map((e) => TickerRef.fromJson(e as Map<String, dynamic>))
+                .toList() ??
+            const [],
       );
 }

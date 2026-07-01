@@ -2,7 +2,7 @@ import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:info_flow/features/dashboard/presentation/pages/dashboard_page.dart';
+import 'package:info_flow/features/signal_hub/presentation/pages/pulse_page.dart';
 import 'package:info_flow/features/feed/presentation/pages/feed_page.dart';
 import 'package:info_flow/features/reader/presentation/pages/reader_page.dart';
 import 'package:info_flow/features/subscription/presentation/pages/subscription_page.dart';
@@ -33,7 +33,7 @@ GoRouter goRouter(Ref ref) {
               GoRoute(
                 path: '/market',
                 name: 'market',
-                builder: (context, state) => const DashboardPage(),
+                builder: (context, state) => const PulsePage(),
               ),
             ],
           ),

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../core/state/library_store.dart';
+import '../../../../features/signal_hub/presentation/widgets/ticker_chip.dart';
 import '../../domain/entities/article.dart';
 
 class ArticleCard extends ConsumerWidget {
@@ -95,6 +96,18 @@ class ArticleCard extends ConsumerWidget {
                       ],
                     ],
                   ),
+                  // 标的标签行：当文章识别出标的时渲染最多 4 个 TickerChip
+                  if (article.tickers.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: article.tickers
+                          .take(4)
+                          .map((t) => TickerChip(ref: t))
+                          .toList(),
+                    ),
+                  ],
                   const SizedBox(height: 13),
                   // Actions row
                   _ArticleActions(
