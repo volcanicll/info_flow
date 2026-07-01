@@ -14,7 +14,8 @@ void main() {
     addTearDown(container.dispose);
     await tester.pumpWidget(UncontrolledProviderScope(
       container: container,
-      child: const MaterialApp(home: Scaffold(body: PulsePage())),
+      // PulsePage 自身已含 Scaffold + RefreshIndicator
+      child: const MaterialApp(home: PulsePage()),
     ));
     await tester.pumpAndSettle(const Duration(seconds: 1));
     expect(find.textContaining('稍后'), findsWidgets);

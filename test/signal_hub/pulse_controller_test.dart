@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:info_flow/features/feed/domain/entities/article.dart';
 import 'package:info_flow/features/signal_hub/data/ticker_resolver.dart';
 import 'package:info_flow/features/signal_hub/presentation/controllers/pulse_controller.dart';
 

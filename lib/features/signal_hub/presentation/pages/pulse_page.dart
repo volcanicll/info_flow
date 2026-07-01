@@ -15,52 +15,59 @@ class PulsePage extends ConsumerWidget {
     final state = ref.watch(pulseControllerProvider);
     final theme = Theme.of(context);
 
-    return CustomScrollView(
-      slivers: [
-        SliverToBoxAdapter(child: _buildHeader(theme)),
-        if (state.articles.isEmpty)
-          const SliverFillRemaining(
-            hasScrollBody: false,
-            child: Center(
-              child: Padding(
-                padding: EdgeInsets.all(32),
-                child: Text('暂无资讯，下拉刷新或稍后再看'),
-              ),
-            ),
-          )
-        else
-          SliverList.builder(
-            itemCount: state.articles.length,
-            itemBuilder: (context, i) {
-              final a = state.articles[i];
-              return Column(
-                children: [
-                  ArticleCard(
-                    article: a,
-                    onTap: () {}, // Task 8 接路由跳转 Reader
+    return Scaffold(
+      body: RefreshIndicator(
+        onRefresh: () => ref.read(pulseControllerProvider.notifier).refresh(),
+        child: CustomScrollView(
+          // 空态时仍可下拉触发刷新（参照 feed_page.dart 的做法）
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverToBoxAdapter(child: _buildHeader(theme)),
+            if (state.articles.isEmpty)
+              const SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(32),
+                    child: Text('暂无资讯，下拉刷新或稍后再看'),
                   ),
-                  if (a.tickers.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                      child: Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: a.tickers.map((t) {
-                          // quotes 是 Map<String, dynamic>，需做类型检查
-                          final q = state.quotes[t.symbol];
-                          return TickerBadge(
-                            ref: t,
-                            quote: q is TickerQuote ? q : null,
-                          );
-                        }).toList(),
+                ),
+              )
+            else
+              SliverList.builder(
+                itemCount: state.articles.length,
+                itemBuilder: (context, i) {
+                  final a = state.articles[i];
+                  return Column(
+                    children: [
+                      ArticleCard(
+                        article: a,
+                        onTap: () {}, // Task 8 接路由跳转 Reader
                       ),
-                    ),
-                ],
-              );
-            },
-          ),
-        const SliverPadding(padding: EdgeInsets.only(bottom: 24)),
-      ],
+                      if (a.tickers.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                          child: Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: a.tickers.map((t) {
+                              // quotes 是 Map<String, dynamic>，需做类型检查
+                              final q = state.quotes[t.symbol];
+                              return TickerBadge(
+                                ref: t,
+                                quote: q is TickerQuote ? q : null,
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+            const SliverPadding(padding: EdgeInsets.only(bottom: 24)),
+          ],
+        ),
+      ),
     );
   }
 
