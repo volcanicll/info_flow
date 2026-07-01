@@ -44,10 +44,11 @@ class BinanceApi {
         .toList();
   }
 
-  Future<List<List<dynamic>>?> getKlines(String symbol, {int limit = 180}) async {
+  Future<List<List<dynamic>>?> getKlines(String symbol,
+      {String interval = '1d', int limit = 180}) async {
     final data = await _getList('/fapi/v1/klines', params: {
       'symbol': symbol,
-      'interval': '1d',
+      'interval': interval,
       'limit': limit,
     });
     if (data == null) return null;
