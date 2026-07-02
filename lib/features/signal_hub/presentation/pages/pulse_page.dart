@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../feed/presentation/widgets/article_card.dart';
 import '../../domain/entities/ticker_quote.dart';
@@ -42,7 +43,7 @@ class PulsePage extends ConsumerWidget {
                     children: [
                       ArticleCard(
                         article: a,
-                        onTap: () {}, // Task 8 接路由跳转 Reader
+                        onTap: () => context.push('/reader/${a.id}'),
                       ),
                       if (a.tickers.isNotEmpty)
                         Padding(

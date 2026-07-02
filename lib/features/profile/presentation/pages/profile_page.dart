@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../core/state/library_store.dart';
@@ -35,40 +36,44 @@ class ProfilePage extends ConsumerWidget {
                 border: Border.all(color: AppTheme.hair(brightness)),
                 boxShadow: AppTheme.cardShadow(brightness),
               ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      color: AppTheme.tint(brightness),
-                      borderRadius: BorderRadius.circular(22),
+              child: InkWell(
+                onTap: () => _showProfileSheet(context),
+                borderRadius: BorderRadius.circular(20),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: AppTheme.tint(brightness),
+                        borderRadius: BorderRadius.circular(22),
+                      ),
+                      child: Icon(Icons.person_rounded,
+                          size: 30, color: theme.colorScheme.primary),
                     ),
-                    child: Icon(Icons.person_rounded,
-                        size: 30, color: theme.colorScheme.primary),
-                  ),
-                  const SizedBox(width: 15),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('InfoFlow 用户',
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              fontSize: 17,
-                            )),
-                        const SizedBox(height: 3),
-                        Text(
-                          '已订阅 ${RssSources.all.length} 个来源',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontSize: 13,
+                    const SizedBox(width: 15),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('InfoFlow 用户',
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontSize: 17,
+                              )),
+                          const SizedBox(height: 3),
+                          Text(
+                            '已订阅 ${RssSources.all.length} 个来源',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              fontSize: 13,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  Icon(Icons.chevron_right_rounded,
-                      size: 20, color: AppTheme.hairStrong(brightness)),
-                ],
+                    Icon(Icons.chevron_right_rounded,
+                        size: 20, color: AppTheme.hairStrong(brightness)),
+                  ],
+                ),
               ),
             ),
           ),
@@ -139,6 +144,7 @@ class ProfilePage extends ConsumerWidget {
                         fontSize: 13,
                         color: theme.textTheme.bodySmall?.color,
                       )),
+                  onTap: () => _showLanguageSheet(context),
                 ),
               ],
             ),
@@ -163,6 +169,9 @@ class ProfilePage extends ConsumerWidget {
                   icon: Icons.download_outlined,
                   title: '离线下载',
                   subtitle: '即将推出',
+                  onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('离线下载功能开发中，敬请期待')),
+                  ),
                 ),
                 _sep(context),
                 _SettingItem(
@@ -200,16 +209,24 @@ class ProfilePage extends ConsumerWidget {
                         fontSize: 13,
                         color: theme.textTheme.bodySmall?.color,
                       )),
+                  onTap: () => _showAboutDialog(context),
                 ),
                 _sep(context),
                 _SettingItem(
                   icon: Icons.help_outline_rounded,
                   title: '帮助与反馈',
+                  onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('帮助文档即将上线')),
+                  ),
                 ),
                 _sep(context),
                 _SettingItem(
                   icon: Icons.share_outlined,
                   title: '推荐给朋友',
+                  onTap: () => Share.share(
+                    '推荐你使用 InfoFlow，一款 AI 驱动的信息聚合 App',
+                    subject: 'InfoFlow',
+                  ),
                 ),
               ],
             ),
@@ -232,6 +249,128 @@ class ProfilePage extends ConsumerWidget {
     if (size <= 16) return '中 · 16pt';
     if (size <= 19) return '大';
     return '特大';
+  }
+
+  void _showProfileSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('个人资料', style: Theme.of(ctx).textTheme.titleLarge),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(ctx).cardTheme.color,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.person_rounded, size: 40,
+                      color: Theme.of(ctx).colorScheme.primary),
+                  const SizedBox(width: 12),
+                  const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('InfoFlow 用户',
+                          style: TextStyle(fontWeight: FontWeight.w600)),
+                      SizedBox(height: 2),
+                      Text('编辑个人资料', style: TextStyle(fontSize: 12)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('个人资料编辑功能即将上线')),
+                  );
+                },
+                child: const Text('编辑资料'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showLanguageSheet(BuildContext context) {
+    final languages = [
+      ('简体中文', 'zh_CN'),
+      ('English', 'en'),
+      ('日本語', 'ja'),
+      ('한국어', 'ko'),
+    ];
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('选择语言', style: Theme.of(ctx).textTheme.titleLarge),
+            const SizedBox(height: 12),
+            ...languages.map((lang) => ListTile(
+                  leading: const Icon(Icons.language_rounded),
+                  title: Text(lang.$1),
+                  trailing: lang.$2 == 'zh_CN'
+                      ? Icon(Icons.check, color: Theme.of(ctx).colorScheme.primary)
+                      : null,
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    if (lang.$2 != 'zh_CN') {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('${lang.$1}语言包即将上线')),
+                      );
+                    }
+                  },
+                )),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAboutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('关于 InfoFlow'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('版本: v1.0.0',
+                style: Theme.of(ctx).textTheme.bodyMedium),
+            const SizedBox(height: 8),
+            Text(
+              'InfoFlow 是一款 AI 驱动的信息聚合应用，'
+              '帮助您高效获取和阅读感兴趣的资讯。',
+              style: Theme.of(ctx).textTheme.bodySmall,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('关闭'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showFontSizeSheet(BuildContext context, WidgetRef ref, double current) {

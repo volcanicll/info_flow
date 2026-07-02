@@ -220,11 +220,11 @@ class _SearchSuggestions extends StatelessWidget {
           spacing: 7,
           runSpacing: 9,
           children: [
-            _HotTag(text: 'GPT-5', rank: '1'),
-            _HotTag(text: '比亚迪财报', rank: '2'),
-            _HotTag(text: 'Rust 异步闭包', rank: '3'),
-            _HotTag(text: 'Vision Pro 2', rank: '4'),
-            _HotTag(text: 'DeepMind', rank: '5'),
+            _HotTag(text: 'GPT-5', rank: '1', onTap: () => onTapHistory('GPT-5')),
+            _HotTag(text: '比亚迪财报', rank: '2', onTap: () => onTapHistory('比亚迪财报')),
+            _HotTag(text: 'Rust 异步闭包', rank: '3', onTap: () => onTapHistory('Rust 异步闭包')),
+            _HotTag(text: 'Vision Pro 2', rank: '4', onTap: () => onTapHistory('Vision Pro 2')),
+            _HotTag(text: 'DeepMind', rank: '5', onTap: () => onTapHistory('DeepMind')),
           ],
         ),
         const SizedBox(height: 24),
@@ -291,33 +291,37 @@ class _SearchSuggestions extends StatelessWidget {
 class _HotTag extends StatelessWidget {
   final String text;
   final String rank;
-  const _HotTag({required this.text, required this.rank});
+  final VoidCallback? onTap;
+  const _HotTag({required this.text, required this.rank, this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final brightness = theme.brightness;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
-      decoration: BoxDecoration(
-        color: theme.cardTheme.color,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppTheme.hair(brightness)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(rank, style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w800,
-            color: AppTheme.down(brightness),
-          )),
-          const SizedBox(width: 5),
-          Text(text, style: TextStyle(
-            fontSize: 13,
-            color: theme.textTheme.bodyLarge?.color,
-          )),
-        ],
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+        decoration: BoxDecoration(
+          color: theme.cardTheme.color,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: AppTheme.hair(brightness)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(rank, style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.down(brightness),
+            )),
+            const SizedBox(width: 5),
+            Text(text, style: TextStyle(
+              fontSize: 13,
+              color: theme.textTheme.bodyLarge?.color,
+            )),
+          ],
+        ),
       ),
     );
   }

@@ -252,7 +252,9 @@ class _SubscriptionPageState extends ConsumerState<SubscriptionPage> {
                     child: _QuickAction(
                       icon: Icons.upload_file_rounded,
                       label: '导入 OPML',
-                      onTap: () {},
+                      onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('OPML 导入功能开发中')),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -260,7 +262,7 @@ class _SubscriptionPageState extends ConsumerState<SubscriptionPage> {
                     child: _QuickAction(
                       icon: Icons.explore_rounded,
                       label: '发现源',
-                      onTap: () {},
+                      onTap: () => _showDiscoverSources(context),
                     ),
                   ),
                 ],
@@ -414,6 +416,60 @@ class _SubscriptionPageState extends ConsumerState<SubscriptionPage> {
       ),
     ];
   }
+}
+
+void _showDiscoverSources(BuildContext ctx) {
+  showModalBottomSheet(
+    context: ctx,
+    showDragHandle: true,
+    builder: (sheetCtx) => Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('发现源', style: Theme.of(sheetCtx).textTheme.titleLarge),
+          const SizedBox(height: 4),
+          Text('推荐以下热门订阅源',
+              style: Theme.of(sheetCtx).textTheme.bodySmall),
+          const SizedBox(height: 14),
+          ...RssSources.all.take(6).map((s) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    _SourceIcon(source: s),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(s.name,
+                              style: const TextStyle(fontWeight: FontWeight.w600)),
+                          Text(s.description,
+                              style: Theme.of(sheetCtx).textTheme.bodySmall
+                                  ?.copyWith(fontSize: 11),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              )),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(sheetCtx);
+              ScaffoldMessenger.of(ctx).showSnackBar(
+                const SnackBar(content: Text('更多发现源功能即将上线')),
+              );
+            },
+            child: const Text('查看更多 →'),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 const _brandGradient = [Color(0xFF5B5BD6), Color(0xFF8B5CF6)];

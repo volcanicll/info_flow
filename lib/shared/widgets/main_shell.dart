@@ -24,7 +24,11 @@ class MainShell extends StatelessWidget {
     final t3 = theme.textTheme.bodySmall?.color ?? Colors.grey;
 
     return Scaffold(
-      body: navigationShell,
+      body: SafeArea(
+        top: true,
+        bottom: false,
+        child: navigationShell,
+      ),
       bottomNavigationBar: ClipRect(
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),

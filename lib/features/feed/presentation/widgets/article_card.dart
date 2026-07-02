@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../core/state/library_store.dart';
@@ -296,10 +297,15 @@ class _ArticleActions extends ConsumerWidget {
         _ActBtn(
           icon: Icons.chat_bubble_outline_rounded,
           label: '评论',
+          onTap: () => _showCommentSheet(context),
         ),
         _ActBtn(
           icon: Icons.share_outlined,
           label: '分享',
+          onTap: () => Share.share(
+            '${article.title}\n${article.url}',
+            subject: article.title,
+          ),
         ),
         const Spacer(),
         _ActBtn(
@@ -364,6 +370,55 @@ class _ActBtn extends StatelessWidget {
       ),
     );
   }
+}
+
+void _showCommentSheet(BuildContext context) {
+  final ctrl = TextEditingController();
+  showModalBottomSheet(
+    context: context,
+    showDragHandle: true,
+    builder: (ctx) => Padding(
+      padding: EdgeInsets.fromLTRB(
+          20, 0, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('发表评论', style: Theme.of(ctx).textTheme.titleLarge),
+          const SizedBox(height: 14),
+          TextField(
+            controller: ctrl,
+            autofocus: true,
+            maxLines: 4,
+            decoration: const InputDecoration(
+              hintText: '写下你的想法…',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('取消'),
+              ),
+              const SizedBox(width: 8),
+              FilledButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('评论功能即将上线')),
+                  );
+                },
+                child: const Text('发送'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 String _formatTime(DateTime? time) {
