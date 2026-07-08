@@ -14,5 +14,5 @@ class TickerQuote {
     required this.changePercent,
   });
 
-  bool get isUp => changePercent >= 0;
+  bool get isUp => changePercent > 0;
 }

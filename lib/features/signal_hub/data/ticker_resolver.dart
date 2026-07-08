@@ -1,6 +1,15 @@
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
 import '../../feed/domain/entities/article.dart';
 import '../domain/entities/ticker_ref.dart';
 import 'ticker_dictionary.dart';
+
+part 'ticker_resolver.g.dart';
+
+@riverpod
+TickerDictionary tickerDictionary(TickerDictionaryRef ref) {
+  return TickerDictionary();
+}
 
 /// 标的识别引擎：基于本地词典的多模式子串匹配。
 ///

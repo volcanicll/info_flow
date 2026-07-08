@@ -30,7 +30,8 @@ class PulseController extends _$PulseController {
   @override
   PulseState build() {
     final cache = ref.watch(articleCacheProvider);
-    final resolver = TickerResolver();
+    final dict = ref.watch(tickerDictionaryProvider);
+    final resolver = TickerResolver(dict);
     final enriched = resolver.resolveList(cache.values.toList());
 
     // 按发布时间倒序；缺失时间的文章退回 2000 年避免 null 比较。

@@ -8,11 +8,20 @@ import '../../../../core/state/library_store.dart';
 import '../../../../features/signal_hub/presentation/widgets/ticker_chip.dart';
 import '../../domain/entities/article.dart';
 
+/// Card type variants for the feed
+enum CardType { largeImage, standard, multiImage, textOnly }
+
 class ArticleCard extends ConsumerWidget {
   final Article article;
   final VoidCallback? onTap;
+  final CardType cardType;
 
-  const ArticleCard({super.key, required this.article, this.onTap});
+  const ArticleCard({
+    super.key,
+    required this.article,
+    this.onTap,
+    this.cardType = CardType.standard,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -44,58 +53,15 @@ class ArticleCard extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Feed row: avatar + name + time
-                  _FeedHeader(article: article),
+                  // Feed row: avatar + name + time + read badge
+                  _FeedHeader(article: article, isRead: isRead),
                   const SizedBox(height: 11),
-                  // Main content row
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _TitleText(text: article.title),
-                            if (hasAiSummary) ...[
-                              const SizedBox(height: 6),
-                              Text(
-                                article.summary!,
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                  fontSize: 13,
-                                  height: 1.5,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 9),
-                              const _AiChip(),
-                            ],
-                          ],
-                        ),
-                      ),
-                      if (hasCover) ...[
-                        const SizedBox(width: 13),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: CachedNetworkImage(
-                            imageUrl: article.coverImageUrl!,
-                            width: 112,
-                            height: 88,
-                            fit: BoxFit.cover,
-                            placeholder: (_, __) => Container(
-                              width: 112, height: 88,
-                              color: AppTheme.surface2(brightness),
-                            ),
-                            errorWidget: (_, __, ___) => Container(
-                              width: 112, height: 88,
-                              color: AppTheme.surface2(brightness),
-                              child: Icon(Icons.broken_image_outlined,
-                                  size: 22, color: AppTheme.hairStrong(brightness)),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
+                  // Card body varies by type
+                  _buildCardBody(
+                    context,
+                    hasCover: hasCover,
+                    hasAiSummary: hasAiSummary,
+                    brightness: brightness,
                   ),
                   // 标的标签行：当文章识别出标的时渲染最多 4 个 TickerChip
                   if (article.tickers.isNotEmpty) ...[
@@ -124,11 +90,305 @@ class ArticleCard extends ConsumerWidget {
       ),
     );
   }
+
+  Widget _buildCardBody(
+    BuildContext context, {
+    required bool hasCover,
+    required bool hasAiSummary,
+    required Brightness brightness,
+  }) {
+    switch (cardType) {
+      case CardType.largeImage:
+        return _LargeImageBody(article: article, hasAiSummary: hasAiSummary);
+      case CardType.multiImage:
+        return _MultiImageBody(article: article, hasAiSummary: hasAiSummary);
+      case CardType.textOnly:
+        return _TextOnlyBody(article: article, hasAiSummary: hasAiSummary);
+      case CardType.standard:
+      default:
+        return _StandardBody(
+          article: article,
+          hasCover: hasCover,
+          hasAiSummary: hasAiSummary,
+        );
+    }
+  }
 }
+
+// ─── Card Body Variants ────────────────────────────────────────────
+
+class _LargeImageBody extends StatelessWidget {
+  final Article article;
+  final bool hasAiSummary;
+  const _LargeImageBody({required this.article, required this.hasAiSummary});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final brightness = theme.brightness;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (article.coverImageUrl != null)
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: CachedNetworkImage(
+              imageUrl: article.coverImageUrl!,
+              width: double.infinity,
+              height: 180,
+              fit: BoxFit.cover,
+              placeholder: (_, __) => Container(
+                width: double.infinity,
+                height: 180,
+                color: AppTheme.surface2(brightness),
+              ),
+              errorWidget: (_, __, ___) => Container(
+                width: double.infinity,
+                height: 180,
+                color: AppTheme.surface2(brightness),
+                child: Icon(Icons.broken_image_outlined,
+                    size: 22, color: AppTheme.hairStrong(brightness)),
+              ),
+            ),
+          ),
+        const SizedBox(height: 10),
+        _TitleText(text: article.title),
+        if (hasAiSummary) ...[
+          const SizedBox(height: 6),
+          Text(
+            article.summary!,
+            style: theme.textTheme.bodyMedium?.copyWith(fontSize: 13, height: 1.5),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 9),
+          const _AiChip(),
+        ],
+      ],
+    );
+  }
+}
+
+class _StandardBody extends StatelessWidget {
+  final Article article;
+  final bool hasCover;
+  final bool hasAiSummary;
+  const _StandardBody({
+    required this.article,
+    required this.hasCover,
+    required this.hasAiSummary,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final brightness = theme.brightness;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _TitleText(text: article.title),
+              if (hasAiSummary) ...[
+                const SizedBox(height: 6),
+                Text(
+                  article.summary!,
+                  style: theme.textTheme.bodyMedium?.copyWith(fontSize: 13, height: 1.5),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 9),
+                const _AiChip(),
+              ],
+            ],
+          ),
+        ),
+        if (hasCover) ...[
+          const SizedBox(width: 13),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: CachedNetworkImage(
+              imageUrl: article.coverImageUrl!,
+              width: 112,
+              height: 88,
+              fit: BoxFit.cover,
+              placeholder: (_, __) => Container(
+                width: 112, height: 88,
+                color: AppTheme.surface2(brightness),
+              ),
+              errorWidget: (_, __, ___) => Container(
+                width: 112, height: 88,
+                color: AppTheme.surface2(brightness),
+                child: Icon(Icons.broken_image_outlined,
+                    size: 22, color: AppTheme.hairStrong(brightness)),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _MultiImageBody extends StatelessWidget {
+  final Article article;
+  final bool hasAiSummary;
+  const _MultiImageBody({required this.article, required this.hasAiSummary});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final brightness = theme.brightness;
+    final images = <String>[
+      if (article.coverImageUrl != null) article.coverImageUrl!,
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _TitleText(text: article.title),
+        if (hasAiSummary) ...[
+          const SizedBox(height: 6),
+          Text(
+            article.summary!,
+            style: theme.textTheme.bodyMedium?.copyWith(fontSize: 13, height: 1.5),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+        if (images.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              for (var i = 0; i < images.length && i < 3; i++) ...[
+                if (i > 0) const SizedBox(width: 6),
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: CachedNetworkImage(
+                      imageUrl: images[i],
+                      height: 72,
+                      fit: BoxFit.cover,
+                      placeholder: (_, __) => Container(
+                        height: 72, color: AppTheme.surface2(brightness),
+                      ),
+                      errorWidget: (_, __, ___) => Container(
+                        height: 72, color: AppTheme.surface2(brightness),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+        if (hasAiSummary) ...[
+          const SizedBox(height: 9),
+          const _AiChip(),
+        ],
+      ],
+    );
+  }
+}
+
+class _TextOnlyBody extends StatelessWidget {
+  final Article article;
+  final bool hasAiSummary;
+  const _TextOnlyBody({required this.article, required this.hasAiSummary});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _TitleText(text: article.title),
+        if (hasAiSummary) ...[
+          const SizedBox(height: 6),
+          Text(
+            article.summary!,
+            style: theme.textTheme.bodyMedium?.copyWith(fontSize: 13, height: 1.5),
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 9),
+          const _AiChip(),
+        ],
+        if (article.sentiment != null) ...[
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              _TagChip(label: article.feedName),
+              _TagChip(label: article.sentiment!),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _TagChip extends StatelessWidget {
+  final String label;
+  const _TagChip({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final brightness = theme.brightness;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: AppTheme.surface2(brightness),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w500,
+          color: theme.textTheme.bodySmall?.color,
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Read Badge ────────────────────────────────────────────────────
+
+class ReadBadge extends StatelessWidget {
+  const ReadBadge({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final up = AppTheme.up(Theme.of(context).brightness);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: up.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.check_circle_rounded, size: 11, color: up),
+          const SizedBox(width: 3),
+          Text('已读', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: up)),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Feed Header ───────────────────────────────────────────────────
 
 class _FeedHeader extends StatelessWidget {
   final Article article;
-  const _FeedHeader({required this.article});
+  final bool isRead;
+  const _FeedHeader({required this.article, this.isRead = false});
 
   @override
   Widget build(BuildContext context) {
@@ -159,6 +419,10 @@ class _FeedHeader extends StatelessWidget {
             fontWeight: FontWeight.w400,
           ),
         ),
+        if (isRead) ...[
+          const SizedBox(width: 8),
+          const ReadBadge(),
+        ],
       ],
     );
   }

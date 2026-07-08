@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/theme.dart';
 import '../../../feed/presentation/widgets/article_card.dart';
 import '../../domain/entities/ticker_quote.dart';
 import '../controllers/pulse_controller.dart';
@@ -23,14 +24,31 @@ class PulsePage extends ConsumerWidget {
           // 空态时仍可下拉触发刷新（参照 feed_page.dart 的做法）
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
-            SliverToBoxAdapter(child: _buildHeader(theme)),
+            SliverToBoxAdapter(child: _buildHeader(context, theme)),
             if (state.articles.isEmpty)
-              const SliverFillRemaining(
+              SliverFillRemaining(
                 hasScrollBody: false,
                 child: Center(
                   child: Padding(
-                    padding: EdgeInsets.all(32),
-                    child: Text('暂无资讯，下拉刷新或稍后再看'),
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.graphic_eq_rounded, size: 48,
+                            color: AppTheme.hairStrong(theme.brightness)),
+                        const SizedBox(height: 16),
+                        Text('暂无资讯', style: theme.textTheme.titleMedium),
+                        const SizedBox(height: 8),
+                        Text('下拉刷新或添加订阅源',
+                            style: theme.textTheme.bodyMedium),
+                        const SizedBox(height: 20),
+                        FilledButton.icon(
+                          onPressed: () => context.push('/feed/subscription'),
+                          icon: const Icon(Icons.add_rounded, size: 18),
+                          label: const Text('添加订阅源'),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               )
@@ -52,11 +70,11 @@ class PulsePage extends ConsumerWidget {
                             spacing: 6,
                             runSpacing: 6,
                             children: a.tickers.map((t) {
-                              // quotes 是 Map<String, dynamic>，需做类型检查
                               final q = state.quotes[t.symbol];
                               return TickerBadge(
                                 ref: t,
                                 quote: q is TickerQuote ? q : null,
+                                onTap: () => context.push('/crypto-radar'),
                               );
                             }).toList(),
                           ),
@@ -72,24 +90,33 @@ class PulsePage extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(ThemeData theme) {
+  Widget _buildHeader(BuildContext context, ThemeData theme) {
+    final brightness = theme.brightness;
     return Padding(
       padding: const EdgeInsets.fromLTRB(18, 6, 18, 8),
       child: Row(
         children: [
           Container(
-            width: 8,
-            height: 8,
-            decoration: const BoxDecoration(
-              color: Colors.red,
+            width: 8, height: 8,
+            decoration: BoxDecoration(
+              color: AppTheme.down(brightness),
               shape: BoxShape.circle,
             ),
           ),
           const SizedBox(width: 10),
           Text('脉搏 Pulse', style: theme.textTheme.headlineLarge),
           const Spacer(),
-          Icon(Icons.graphic_eq_rounded,
-              size: 20, color: theme.colorScheme.primary),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => context.push('/search'),
+              borderRadius: BorderRadius.circular(999),
+              child: const SizedBox(
+                width: 40, height: 40,
+                child: Icon(Icons.search_rounded, size: 22),
+              ),
+            ),
+          ),
         ],
       ),
     );

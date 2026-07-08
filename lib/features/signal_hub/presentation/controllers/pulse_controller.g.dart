@@ -6,7 +6,7 @@ part of 'pulse_controller.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$pulseControllerHash() => r'e0eccfba5b290a1d2b8e5bef812e7fa5b043e589';
+String _$pulseControllerHash() => r'2a9787f88b253bc68967fc0e88abdc3b034a26ad';
 
 /// 脉搏控制器：装配时间线状态。
 ///

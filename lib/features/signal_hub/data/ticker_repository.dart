@@ -44,21 +44,25 @@ class TickerRepository {
       }
     }
 
-    // 加密：逐 symbol 取最近 K 线收盘 + 前一日收盘算涨跌
+    // 加密：并行取所有 symbol 的 K 线，任一失败不影响其它
     try {
-      for (final sym in cryptoSyms) {
-        final klines = await _crypto.getKlines(sym, limit: 2);
-        if (klines == null || klines.length < 2) continue;
-        final close = _n(klines.last[4]);
-        final prevClose = _n(klines.first[4]);
-        if (close <= 0 || prevClose <= 0) continue;
-        final coin = sym.replaceAll('USDT', '');
-        result[coin] = TickerQuote(
-          symbol: coin,
-          asset: AssetClass.crypto,
-          price: close,
-          changePercent: (close - prevClose) / prevClose * 100,
-        );
+      final results = await Future.wait(
+        cryptoSyms.map((sym) => _crypto.getKlines(sym, limit: 2).then((klines) {
+          if (klines == null || klines.length < 2) return null;
+          final close = _n(klines.last[4]);
+          final prevClose = _n(klines.first[4]);
+          if (close <= 0 || prevClose <= 0) return null;
+          final coin = sym.replaceAll('USDT', '');
+          return MapEntry(coin, TickerQuote(
+            symbol: coin,
+            asset: AssetClass.crypto,
+            price: close,
+            changePercent: (close - prevClose) / prevClose * 100,
+          ));
+        }).catchError((_) => null)),
+      );
+      for (final entry in results) {
+        if (entry != null) result[entry.key] = entry.value;
       }
     } catch (_) {
       // 降级：忽略加密源

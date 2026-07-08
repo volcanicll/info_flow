@@ -19,7 +19,11 @@ class TickerBadge extends StatelessWidget {
     final hasQuote = quote != null;
     final color = !hasQuote
         ? (theme.textTheme.bodySmall?.color ?? Colors.grey)
-        : (quote!.isUp ? AppTheme.up(brightness) : AppTheme.down(brightness));
+        : (quote!.changePercent > 0
+            ? AppTheme.up(brightness)
+            : quote!.changePercent < 0
+                ? AppTheme.down(brightness)
+                : (theme.textTheme.bodySmall?.color ?? Colors.grey));
 
     final priceText = hasQuote ? _formatPrice(quote!.price) : '--';
     final chgText = hasQuote

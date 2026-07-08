@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/state/library_store.dart';
 import '../../../../shared/widgets/article_card_shimmer.dart';
 import '../controllers/feed_controller.dart';
 import '../widgets/article_card.dart';
@@ -62,11 +63,11 @@ class _FeedPageState extends ConsumerState<FeedPage>
                       Material(
                         color: Colors.transparent,
                         child: InkWell(
-                          onTap: () => context.push('/feed/subscription'),
+                          onTap: () {},
                           borderRadius: BorderRadius.circular(999),
                           child: const SizedBox(
                             width: 40, height: 40,
-                            child: Icon(Icons.rss_feed_rounded, size: 20),
+                            child: Icon(Icons.notifications_none_rounded, size: 22),
                           ),
                         ),
                       ),
@@ -179,102 +180,147 @@ class _ArticleListState extends ConsumerState<_ArticleList>
         ref.watch(feedControllerProvider(widget.feedType));
     final notifier =
         ref.read(feedControllerProvider(widget.feedType).notifier);
+    final library = ref.watch(libraryStoreProvider);
+    final unreadCount =
+        articlesAsync.valueOrNull?.where((a) => !library.isRead(a.id)).length ?? 0;
 
-    return RefreshIndicator(
-      onRefresh: () => notifier.refresh(),
-      child: articlesAsync.when(
-        loading: () => ListView.builder(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.only(top: 4, bottom: 16),
-          itemCount: 4,
-          itemBuilder: (_, __) => const ArticleCardShimmer(),
-        ),
-        error: (err, stack) => ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.only(top: 120),
-          children: [
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  children: [
-                    Icon(Icons.wifi_off_rounded,
-                        size: 48,
-                        color: theme.textTheme.bodySmall?.color),
-                    const SizedBox(height: 16),
-                    Text('加载失败', style: theme.textTheme.titleMedium),
-                    const SizedBox(height: 8),
-                    Text('网络连接异常，请检查后重试',
-                        style: theme.textTheme.bodyMedium),
-                    const SizedBox(height: 16),
-                    FilledButton.icon(
-                      onPressed: () => ref.invalidate(
-                          feedControllerProvider(widget.feedType)),
-                      icon: const Icon(Icons.refresh_rounded, size: 18),
-                      label: const Text('重试'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-        data: (articles) {
-          if (articles.isEmpty) {
-            return ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.only(top: 120),
+    return Column(
+      children: [
+        // Mark all read bar
+        if (unreadCount > 0)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
               children: [
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Column(
-                      children: [
-                        Icon(Icons.article_outlined,
-                            size: 48,
-                            color: theme.textTheme.bodySmall?.color),
-                        const SizedBox(height: 16),
-                        Text('暂无内容',
-                            style: theme.textTheme.titleMedium),
-                        const SizedBox(height: 8),
-                        Text('下拉刷新或添加订阅源',
-                            style: theme.textTheme.bodyMedium),
-                      ],
+                Text(
+                  '$unreadCount 篇新内容',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontSize: 12, fontWeight: FontWeight.w400,
+                      ),
+                ),
+                const Spacer(),
+                GestureDetector(
+                  onTap: () => _markAllRead(),
+                  child: Text(
+                    '全部已读',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
                 ),
               ],
-            );
-          }
-          return ListView.builder(
-            controller: _scrollController,
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.only(top: 4, bottom: 16),
-            itemCount: articles.length + 1,
-            itemBuilder: (context, index) {
-              if (index == articles.length) {
-                return const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Center(
-                    child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child:
-                          CircularProgressIndicator(strokeWidth: 2),
+            ),
+          ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: () => notifier.refresh(),
+            child: articlesAsync.when(
+              loading: () => ListView.builder(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.only(top: 4, bottom: 16),
+                itemCount: 4,
+                itemBuilder: (_, __) => const ArticleCardShimmer(),
+              ),
+              error: (err, stack) => ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.only(top: 120),
+                children: [
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        children: [
+                          Icon(Icons.wifi_off_rounded,
+                              size: 48,
+                              color: theme.textTheme.bodySmall?.color),
+                          const SizedBox(height: 16),
+                          Text('加载失败', style: theme.textTheme.titleMedium),
+                          const SizedBox(height: 8),
+                          Text('网络连接异常，请检查后重试',
+                              style: theme.textTheme.bodyMedium),
+                          const SizedBox(height: 16),
+                          FilledButton.icon(
+                            onPressed: () => ref.invalidate(
+                                feedControllerProvider(widget.feedType)),
+                            icon: const Icon(Icons.refresh_rounded, size: 18),
+                            label: const Text('重试'),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
+                ],
+              ),
+              data: (articles) {
+                if (articles.isEmpty) {
+                  return ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.only(top: 120),
+                    children: [
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Column(
+                            children: [
+                              Icon(Icons.article_outlined,
+                                  size: 48,
+                                  color: theme.textTheme.bodySmall?.color),
+                              const SizedBox(height: 16),
+                              Text('暂无内容',
+                                  style: theme.textTheme.titleMedium),
+                              const SizedBox(height: 8),
+                              Text('下拉刷新或添加订阅源',
+                                  style: theme.textTheme.bodyMedium),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }
+                return ListView.builder(
+                  controller: _scrollController,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.only(top: 4, bottom: 16),
+                  itemCount: articles.length + 1,
+                  itemBuilder: (context, index) {
+                    if (index == articles.length) {
+                      return const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Center(
+                          child: SizedBox(
+                            width: 20, height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
+                      );
+                    }
+                    final cardType = CardType.values[index % CardType.values.length];
+                    return ArticleCard(
+                      article: articles[index],
+                      cardType: cardType,
+                      onTap: () =>
+                          context.push('/reader/${articles[index].id}'),
+                    );
+                  },
                 );
-              }
-              return ArticleCard(
-                article: articles[index],
-                onTap: () =>
-                    context.push('/reader/${articles[index].id}'),
-              );
-            },
-          );
-        },
-      ),
+              },
+            ),
+          ),
+        ),
+      ],
     );
+  }
+
+  void _markAllRead() {
+    final articles =
+        ref.read(feedControllerProvider(widget.feedType)).valueOrNull;
+    if (articles == null || articles.isEmpty) return;
+    for (final article in articles) {
+      ref.read(libraryStoreProvider.notifier).markRead(article.id);
+    }
   }
 
   ThemeData get theme => Theme.of(context);
