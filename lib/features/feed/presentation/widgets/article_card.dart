@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../../../app/theme.dart';
 import '../../../../core/state/library_store.dart';
 import '../../../../features/signal_hub/presentation/widgets/ticker_chip.dart';
+import '../../../../shared/widgets/press_scale.dart';
 import '../../domain/entities/article.dart';
 
 /// Card type variants for the feed
@@ -36,7 +37,8 @@ class ArticleCard extends ConsumerWidget {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-      child: GestureDetector(
+      child: PressScale(
+        pressedScale: 0.985,
         onTap: onTap,
         child: AnimatedOpacity(
           duration: const Duration(milliseconds: 200),
@@ -606,17 +608,27 @@ class _ActBtn extends StatelessWidget {
   Widget build(BuildContext context) {
     final t3 = Theme.of(context).textTheme.bodySmall?.color ?? Colors.grey;
     final color = isActive ? (activeColor ?? t3) : t3;
-    return GestureDetector(
+    final shownIcon = isActive && activeIcon != null ? activeIcon! : icon;
+    return PressScale(
+      pressedScale: 0.85,
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 2),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              isActive && activeIcon != null ? activeIcon! : icon,
-              size: 17,
-              color: color,
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 240),
+              transitionBuilder: (child, anim) => ScaleTransition(
+                scale: CurvedAnimation(parent: anim, curve: Curves.easeOutBack),
+                child: child,
+              ),
+              child: Icon(
+                shownIcon,
+                key: ValueKey(shownIcon),
+                size: 17,
+                color: color,
+              ),
             ),
             if (label != null) ...[
               const SizedBox(width: 5),

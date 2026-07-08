@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../core/state/article_cache.dart';
+import '../../../../shared/widgets/press_scale.dart';
 import '../../../feed/domain/entities/article.dart';
 
 class SearchPage extends ConsumerStatefulWidget {
@@ -22,6 +25,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   List<String> _history = [];
   bool _loading = false;
   int _activeFilter = 0;
+  Timer? _debounce;
 
   static const _kHistory = 'search_history';
   static const _filterLabels = ['全部', '文章', '来源', '标签'];
@@ -30,14 +34,30 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   void initState() {
     super.initState();
     _loadHistory();
-    _searchController.addListener(() => setState(() {}));
+    _searchController.addListener(_onSearchChanged);
   }
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _searchController.dispose();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged() {
+    setState(() {});
+    final text = _searchController.text.trim();
+    _debounce?.cancel();
+    if (text.isEmpty) {
+      setState(() {
+        _hasSearched = false;
+        _results = [];
+      });
+      return;
+    }
+    // 边打字边出结果：200ms 防抖，避免每字符全量过滤
+    _debounce = Timer(const Duration(milliseconds: 200), () => _liveFilter(text));
   }
 
   Future<void> _loadHistory() async {
@@ -66,10 +86,21 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     _focusNode.unfocus();
 
     setState(() { _loading = true; _hasSearched = true; });
+    final results = _runFilter(text);
+    setState(() { _results = results; _loading = false; });
+  }
 
+  /// 实时过滤（来自输入框防抖）：不写历史、不收起键盘。
+  void _liveFilter(String text) {
+    setState(() { _hasSearched = true; _loading = true; });
+    final results = _runFilter(text);
+    if (mounted) setState(() { _results = results; _loading = false; });
+  }
+
+  List<Article> _runFilter(String text) {
     final cache = ref.read(articleCacheProvider);
     final lower = text.toLowerCase();
-    final results = cache.values.where((a) {
+    return cache.values.where((a) {
       switch (_activeFilter) {
         case 1: return a.title.toLowerCase().contains(lower) || (a.summary?.toLowerCase().contains(lower) ?? false);
         case 2: return a.feedName.toLowerCase().contains(lower);
@@ -82,8 +113,6 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       final bt = b.title.toLowerCase().contains(lower) ? 0 : 1;
       return at.compareTo(bt);
     });
-
-    setState(() { _results = results; _loading = false; });
   }
 
   @override
@@ -143,7 +172,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                   ),
                 ),
                 const SizedBox(width: 10),
-                GestureDetector(
+                PressScale(
+                  pressedScale: 0.92,
                   onTap: () => context.pop(),
                   child: Text('取消', style: TextStyle(
                       fontSize: 14, color: theme.colorScheme.primary)),
@@ -160,7 +190,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                   final active = _activeFilter == i;
                   return Padding(
                     padding: const EdgeInsets.only(right: 8),
-                    child: GestureDetector(
+                    child: PressScale(
+                      pressedScale: 0.94,
                       onTap: () { setState(() => _activeFilter = i); if (_hasSearched) _doSearch(); },
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
@@ -234,7 +265,8 @@ class _SearchSuggestions extends StatelessWidget {
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           Text('搜索历史', style: theme.textTheme.bodySmall?.copyWith(fontSize: 13, fontWeight: FontWeight.w700)),
           if (history.isNotEmpty)
-            GestureDetector(
+            PressScale(
+              pressedScale: 0.94,
               onTap: onClearHistory,
               child: Row(children: [
                 Icon(Icons.delete_outline_rounded, size: 14, color: theme.textTheme.bodySmall?.color),
@@ -252,7 +284,8 @@ class _SearchSuggestions extends StatelessWidget {
         else
           ...history.map((h) => Padding(
             padding: const EdgeInsets.only(bottom: 10),
-            child: GestureDetector(
+            child: PressScale(
+              pressedScale: 0.97,
               onTap: () => onTapHistory(h),
               child: Row(children: [
                 Icon(Icons.history_rounded, size: 17, color: AppTheme.hairStrong(brightness)),

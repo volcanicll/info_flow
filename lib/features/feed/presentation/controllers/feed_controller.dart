@@ -15,16 +15,25 @@ class FeedController extends _$FeedController {
   List<Article> _all = [];
   bool _hasMore = true;
   bool _isLoadingMore = false;
+  List<RssSource> _sourceQueue = [];
+  int _sourceCursor = 0;
+  Set<String> _seenUrls = {};
   static const int _pageSize = 12;
   static const int _maxPerSource = 10;
-  static const int _batchSize = 3;
+  static const int _initialBatchSize = 3;
+  static const int _loadMoreBatchSize = 3;
   Set<String>? _subscribedIds;
+
+  bool get hasMore => _hasMore;
 
   @override
   FutureOr<List<Article>> build(FeedType feedType) {
     _all = [];
     _hasMore = true;
     _isLoadingMore = false;
+    _sourceQueue = [];
+    _sourceCursor = 0;
+    _seenUrls = {};
     _subscribedIds = feedType == FeedType.following
         ? ref.watch(subscriptionStoreProvider)
         : null;
@@ -33,27 +42,46 @@ class FeedController extends _$FeedController {
 
   Future<List<Article>> _loadArticles() async {
     final repo = ref.read(rssRepositoryProvider);
-    final sources = _sourcesForType(feedType);
-    if (sources.isEmpty) return [];
+    _sourceQueue = _sourcesForType(feedType);
+    _sourceCursor = 0;
 
-    _all = [];
-    final seenUrls = <String>{};
+    if (_sourceQueue.isEmpty) return [];
 
-    for (int i = 0; i < sources.length; i += _batchSize) {
-      final batch =
-          sources.sublist(i, (i + _batchSize).clamp(0, sources.length));
-      final results = await Future.wait(
-          batch.map((s) => repo.fetchSource(s, maxItems: _maxPerSource)));
+    await _fetchNextBatch(_initialBatchSize);
 
-      for (final articles in results) {
-        for (final a in articles) {
-          final key = a.url.isEmpty ? a.title : a.url;
-          if (seenUrls.add(key)) _all.add(a);
-        }
+    if (_all.isEmpty &&
+        _sourceCursor >= _sourceQueue.length &&
+        repo.failedCount >= _sourceQueue.length) {
+      throw Exception('所有订阅源均加载失败，请检查网络连接');
+    }
+
+    if (_all.length <= _pageSize) _hasMore = false;
+    return _paginate(_all, 1);
+  }
+
+  /// 抓取下一批订阅源，去重、注入 tickers、按时间排序后追加到 _all
+  Future<void> _fetchNextBatch(int count) async {
+    if (_sourceCursor >= _sourceQueue.length) {
+      _hasMore = false;
+      return;
+    }
+
+    final repo = ref.read(rssRepositoryProvider);
+    final end = (_sourceCursor + count).clamp(0, _sourceQueue.length);
+    final batch = _sourceQueue.sublist(_sourceCursor, end);
+    _sourceCursor = end;
+
+    final results = await Future.wait(
+      batch.map((s) => repo.fetchSource(s, maxItems: _maxPerSource)),
+    );
+
+    for (final articles in results) {
+      for (final a in articles) {
+        final key = a.url.isEmpty ? a.title : a.url;
+        if (_seenUrls.add(key)) _all.add(a);
       }
     }
 
-    // 注入 tickers（已有 tickers 的文章会被跳过），再排序
     final resolver = TickerResolver();
     _all = resolver.resolveList(_all);
 
@@ -62,14 +90,6 @@ class FeedController extends _$FeedController {
       final tb = b.publishedAt ?? DateTime(2000);
       return tb.compareTo(ta);
     });
-
-    if (_all.isEmpty &&
-        sources.isNotEmpty &&
-        repo.failedCount == sources.length) {
-      throw Exception('所有订阅源均加载失败，请检查网络连接');
-    }
-    if (_all.length <= _pageSize) _hasMore = false;
-    return _paginate(_all, 1);
   }
 
   List<RssSource> _sourcesForType(FeedType type) {
@@ -110,6 +130,8 @@ class FeedController extends _$FeedController {
 
   Future<void> refresh() async {
     _hasMore = true;
+    _sourceCursor = 0;
+    _seenUrls = {};
     final currentData = state.valueOrNull;
     final result = await AsyncValue.guard(() => _loadArticles());
     if (result.hasValue) {
@@ -121,16 +143,40 @@ class FeedController extends _$FeedController {
 
   Future<void> loadMore() async {
     if (_isLoadingMore || !_hasMore) return;
-    final current = state.valueOrNull ?? [];
-    if (current.length >= _all.length) {
-      _hasMore = false;
-      return;
-    }
+
     _isLoadingMore = true;
-    final nextPage = (current.length ~/ _pageSize) + 1;
-    final more = _paginate(_all, nextPage);
-    state = AsyncData([...current, ...more]);
-    _isLoadingMore = false;
+    try {
+      final current = state.valueOrNull ?? [];
+
+      if (current.length >= _all.length) {
+        if (_sourceCursor >= _sourceQueue.length) {
+          _hasMore = false;
+          state = AsyncData([...current]);
+          return;
+        }
+
+        await _fetchNextBatch(_loadMoreBatchSize);
+
+        if (current.length >= _all.length) {
+          _hasMore = false;
+          state = AsyncData([...current]);
+          return;
+        }
+      }
+
+      final end = (current.length + _pageSize).clamp(0, _all.length);
+      final more = _all.sublist(current.length, end);
+
+      if (more.isEmpty) {
+        _hasMore = false;
+        state = AsyncData([...current]);
+        return;
+      }
+
+      state = AsyncData([...current, ...more]);
+    } finally {
+      _isLoadingMore = false;
+    }
   }
 
   Future<void> toggleLike(String articleId) async {

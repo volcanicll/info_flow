@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../shared/widgets/press_scale.dart';
 import '../../domain/entities/ticker_ref.dart';
 
 /// 轻量标的标签：仅符号，无行情。用于 Feed 页文章卡，保持阅读流纯净。
@@ -11,7 +12,8 @@ class TickerChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return GestureDetector(
+    return PressScale(
+      pressedScale: 0.92,
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

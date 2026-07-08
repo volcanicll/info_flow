@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme.dart';
+import '../../../../shared/widgets/press_scale.dart';
 import '../../domain/entities/ticker_quote.dart';
 import '../../domain/entities/ticker_ref.dart';
 
@@ -30,7 +31,8 @@ class TickerBadge extends StatelessWidget {
         ? "${quote!.isUp ? '+' : ''}${quote!.changePercent.toStringAsFixed(2)}%"
         : '--';
 
-    return GestureDetector(
+    return PressScale(
+      pressedScale: 0.92,
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

@@ -8,6 +8,7 @@ import '../../../../app/theme.dart';
 import '../../../../core/state/article_cache.dart';
 import '../../../../core/state/library_store.dart';
 import '../../../../core/state/reading_stats.dart';
+import '../../../../shared/widgets/press_scale.dart';
 import '../../../feed/domain/entities/article.dart';
 
 class ReaderPage extends ConsumerStatefulWidget {
@@ -352,6 +353,13 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
                 child: Image.network(
                   article.coverImageUrl!,
                   width: double.infinity, height: 200, fit: BoxFit.cover,
+                  frameBuilder: (ctx, child, frame, wasSyncLoaded) =>
+                      AnimatedOpacity(
+                    opacity: frame == null ? 0 : 1,
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeOut,
+                    child: child,
+                  ),
                   errorBuilder: (_, __, ___) => Container(
                     height: 200, color: AppTheme.surface2(theme.brightness),
                   ),
@@ -658,7 +666,8 @@ class _ModeToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return GestureDetector(
+    return PressScale(
+      pressedScale: 0.94,
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
@@ -691,7 +700,8 @@ class _BottomAction extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = color ?? Theme.of(context).textTheme.bodySmall?.color ?? Colors.grey;
-    return GestureDetector(
+    return PressScale(
+      pressedScale: 0.88,
       onTap: onTap,
       child: Column(
         mainAxisSize: MainAxisSize.min,

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/state/library_store.dart';
+import '../../../../shared/widgets/animated_entrance.dart';
 import '../../../../shared/widgets/article_card_shimmer.dart';
 import '../controllers/feed_controller.dart';
 import '../widgets/article_card.dart';
@@ -284,7 +285,7 @@ class _ArticleListState extends ConsumerState<_ArticleList>
                   controller: _scrollController,
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.only(top: 4, bottom: 16),
-                  itemCount: articles.length + 1,
+                  itemCount: articles.length + (notifier.hasMore ? 1 : 0),
                   itemBuilder: (context, index) {
                     if (index == articles.length) {
                       return const Padding(
@@ -298,11 +299,14 @@ class _ArticleListState extends ConsumerState<_ArticleList>
                       );
                     }
                     final cardType = CardType.values[index % CardType.values.length];
-                    return ArticleCard(
-                      article: articles[index],
-                      cardType: cardType,
-                      onTap: () =>
-                          context.push('/reader/${articles[index].id}'),
+                    return AnimatedEntrance(
+                      index: index,
+                      child: ArticleCard(
+                        article: articles[index],
+                        cardType: cardType,
+                        onTap: () =>
+                            context.push('/reader/${articles[index].id}'),
+                      ),
                     );
                   },
                 );

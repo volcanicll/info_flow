@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,6 +17,31 @@ import 'package:info_flow/features/precious_metals/presentation/pages/metals_pag
 import 'package:info_flow/shared/widgets/main_shell.dart';
 
 part 'router.g.dart';
+
+/// 统一的页面转场：淡入 + 轻微上移，给进入详情/搜索等页面一致的丝滑手感。
+CustomTransitionPage<void> _fadeSlideTransition(
+  GoRouterState state,
+  Widget child,
+) {
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: const Duration(milliseconds: 240),
+    reverseTransitionDuration: const Duration(milliseconds: 200),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      final fade =
+          CurvedAnimation(parent: animation, curve: Curves.easeOut);
+      final slide = Tween<Offset>(
+        begin: const Offset(0, 0.04),
+        end: Offset.zero,
+      ).animate(fade);
+      return FadeTransition(
+        opacity: fade,
+        child: SlideTransition(position: slide, child: child),
+      );
+    },
+  );
+}
 
 @Riverpod(keepAlive: true)
 GoRouter goRouter(Ref ref) {
@@ -85,30 +111,34 @@ GoRouter goRouter(Ref ref) {
       GoRoute(
         path: '/reader/:articleId',
         name: 'reader',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final articleId = state.pathParameters['articleId']!;
-          return ReaderPage(articleId: articleId);
+          return _fadeSlideTransition(state, ReaderPage(articleId: articleId));
         },
       ),
       GoRoute(
         path: '/search',
         name: 'search',
-        builder: (context, state) => const SearchPage(),
+        pageBuilder: (context, state) =>
+            _fadeSlideTransition(state, const SearchPage()),
       ),
       GoRoute(
         path: '/crypto-radar',
         name: 'cryptoRadar',
-        builder: (context, state) => const CryptoRadarPage(),
+        pageBuilder: (context, state) =>
+            _fadeSlideTransition(state, const CryptoRadarPage()),
       ),
       GoRoute(
         path: '/ai-models',
         name: 'aiModels',
-        builder: (context, state) => const AiModelsPage(),
+        pageBuilder: (context, state) =>
+            _fadeSlideTransition(state, const AiModelsPage()),
       ),
       GoRoute(
         path: '/metals',
         name: 'metals',
-        builder: (context, state) => const MetalsPage(),
+        pageBuilder: (context, state) =>
+            _fadeSlideTransition(state, const MetalsPage()),
       ),
     ],
   );

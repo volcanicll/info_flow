@@ -3,6 +3,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'press_scale.dart';
+
 class MainShell extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
 
@@ -47,7 +49,8 @@ class MainShell extends StatelessWidget {
               children: List.generate(_tabs.length, (i) {
                 final active = navigationShell.currentIndex == i;
                 return Expanded(
-                  child: GestureDetector(
+                  child: PressScale(
+                    pressedScale: 0.9,
                     onTap: () => navigationShell.goBranch(i,
                         initialLocation: i == navigationShell.currentIndex),
                     child: AnimatedContainer(
