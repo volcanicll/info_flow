@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:info_flow/app/theme.dart';
 
 import 'package:info_flow/features/precious_metals/domain/models/metal_price.dart';
@@ -8,9 +9,14 @@ import 'package:info_flow/features/crypto_radar/data/models/trade_signal.dart';
 import 'package:info_flow/features/feed/domain/entities/article.dart';
 
 void main() {
+  // AppTheme 通过 google_fonts 构建 TextTheme，需已初始化绑定才能加载字体资源；
+  // 关闭运行时联网拉取，测试环境走本地回退字体，避免异步网络错误。
+  TestWidgetsFlutterBinding.ensureInitialized();
+  GoogleFonts.config.allowRuntimeFetching = false;
+
   group('Model tests', () {
     test('MetalPrice correctly formats price', () {
-      final price = MetalPrice(
+      final price = const MetalPrice(
         name: '纽约金',
         code: 'XAU',
         currency: 'USD',
@@ -23,7 +29,7 @@ void main() {
     });
 
     test('MetalPrice shows negative change', () {
-      final price = MetalPrice(
+      final price = const MetalPrice(
         name: '纽约银',
         code: 'XAG',
         currency: 'USD',
@@ -35,7 +41,7 @@ void main() {
     });
 
     test('AiModelItem formats downloads', () {
-      final model = AiModelItem(
+      final model = const AiModelItem(
         id: 'mistralai/Mistral-7B',
         name: 'Mistral-7B',
         description: 'A powerful model',
@@ -47,7 +53,7 @@ void main() {
     });
 
     test('AiModelItem small downloads', () {
-      final model = AiModelItem(
+      final model = const AiModelItem(
         id: 'test/model',
         name: 'Test Model',
         description: '',
@@ -59,7 +65,7 @@ void main() {
     });
 
     test('TradeSignal stores correct values', () {
-      final signal = TradeSignal(
+      final signal = const TradeSignal(
         coin: 'BTC',
         sym: 'BTCUSDT',
         direction: '做多',
@@ -82,7 +88,7 @@ void main() {
     });
 
     test('Article has correct default values', () {
-      final article = Article(
+      final article = const Article(
         id: 'test_1',
         feedId: 'test',
         feedName: 'Test Source',
@@ -97,13 +103,15 @@ void main() {
   });
 
   group('Theme tests', () {
-    test('light theme is created correctly', () {
+    // 用 testWidgets 承载：AppTheme 通过 google_fonts 构建 TextTheme，
+    // 字体加载为 fire-and-forget 异步，需在 binding 的测试 zone 中容错。
+    testWidgets('light theme is created correctly', (tester) async {
       final theme = AppTheme.lightTheme;
       expect(theme.useMaterial3, true);
       expect(theme.brightness, Brightness.light);
     });
 
-    test('dark theme is created correctly', () {
+    testWidgets('dark theme is created correctly', (tester) async {
       final theme = AppTheme.darkTheme;
       expect(theme.useMaterial3, true);
       expect(theme.brightness, Brightness.dark);

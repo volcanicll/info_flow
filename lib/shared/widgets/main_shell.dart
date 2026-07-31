@@ -1,10 +1,11 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/theme.dart';
+import 'hairline.dart';
 import 'press_scale.dart';
 
+/// 主框架：纸底底栏 + 顶部发丝线，激活态为墨点/短下划线（非色块）。
 class MainShell extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
 
@@ -20,10 +21,7 @@ class MainShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final surface = theme.colorScheme.surface;
-    final brand = theme.colorScheme.primary;
-    final t3 = theme.textTheme.bodySmall?.color ?? Colors.grey;
+    final c = context.colors;
 
     return Scaffold(
       body: SafeArea(
@@ -31,77 +29,83 @@ class MainShell extends StatelessWidget {
         bottom: false,
         child: navigationShell,
       ),
-      bottomNavigationBar: ClipRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-          child: Container(
-            decoration: BoxDecoration(
-              color: surface.withValues(alpha: 0.88),
-              border: Border(top: BorderSide(color: theme.dividerColor, width: 0.5)),
-            ),
-            padding: EdgeInsets.only(
-              left: 8,
-              right: 8,
-              top: 8,
-              bottom: 14 + MediaQuery.paddingOf(context).bottom,
-            ),
-            child: Row(
-              children: List.generate(_tabs.length, (i) {
-                final active = navigationShell.currentIndex == i;
-                return Expanded(
-                  child: PressScale(
-                    pressedScale: 0.9,
-                    onTap: () => navigationShell.goBranch(i,
-                        initialLocation: i == navigationShell.currentIndex),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      curve: Curves.easeOut,
-                      child: Stack(
-                        alignment: Alignment.topCenter,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(top: 8),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  _tabs[i].icon,
-                                  size: 24,
-                                  color: active ? brand : t3,
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  _tabs[i].label,
-                                  style: TextStyle(
-                                    fontSize: 10.5,
-                                    fontWeight: FontWeight.w600,
-                                    color: active ? brand : t3,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (active)
-                            Positioned(
-                              top: 0,
-                              child: Container(
-                                width: 24,
-                                height: 3,
-                                decoration: BoxDecoration(
-                                  color: brand,
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
+      bottomNavigationBar: DecoratedBox(
+        decoration: BoxDecoration(
+          color: c.paper,
+          border: Border(top: BorderSide(color: c.hairlineStrong, width: 0.5)),
+        ),
+        child: Padding(
+          padding: EdgeInsets.only(
+            left: 8,
+            right: 8,
+            top: 10,
+            bottom: 12 + MediaQuery.paddingOf(context).bottom,
+          ),
+          child: Row(
+            children: List.generate(_tabs.length, (i) {
+              final active = navigationShell.currentIndex == i;
+              return Expanded(
+                child: _TabButton(
+                  item: _tabs[i],
+                  active: active,
+                  onTap: () => navigationShell.goBranch(
+                    i,
+                    initialLocation: i == navigationShell.currentIndex,
                   ),
-                );
-              }),
-            ),
+                ),
+              );
+            }),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _TabButton extends StatelessWidget {
+  final _TabItem item;
+  final bool active;
+  final VoidCallback onTap;
+
+  const _TabButton({
+    required this.item,
+    required this.active,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final color = active ? c.ink : c.inkTertiary;
+
+    return PressScale(
+      pressedScale: 0.92,
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(item.icon, size: 23, color: color),
+          const SizedBox(height: 5),
+          Text(
+            item.label,
+            style: TextStyle(
+              fontSize: 10.5,
+              fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+              letterSpacing: 0.5,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 5),
+          // 激活态：短墨线下划线，替代色块
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+            width: active ? 16 : 0,
+            child: active
+                ? Hairline(thickness: 2, color: c.accent)
+                : const SizedBox(height: 2),
+          ),
+        ],
       ),
     );
   }

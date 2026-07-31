@@ -4,6 +4,8 @@ import 'dart:ui';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:info_flow/core/logging/logger.dart';
+import 'package:info_flow/core/storage/kv_storage.dart';
 import 'package:info_flow/features/feed/data/rss_sources.dart';
 
 part 'subscription_store.g.dart';
@@ -69,45 +71,42 @@ class SubscriptionStore extends _$SubscriptionStore {
 
   Map<String, CustomSourceData> _customSources = {};
 
+  SharedPreferences get _prefs => ref.read(sharedPreferencesProvider);
+
   @override
   Set<String> build() {
-    _load();
-    return {};
-  }
-
-  Future<void> _load() async {
-    final prefs = await SharedPreferences.getInstance();
-    final inited = prefs.getBool(_kInited) ?? false;
+    // 同步读取：首次启动写入默认订阅，其余直接恢复
+    final inited = _prefs.getBool(_kInited) ?? false;
     Set<String> ids;
     if (inited) {
-      ids = (prefs.getStringList(_kSubscribed) ?? []).toSet();
+      ids = (_prefs.getStringList(_kSubscribed) ?? []).toSet();
     } else {
       ids = RssSources.defaultSubscribedIds.toSet();
-      await prefs.setStringList(_kSubscribed, ids.toList());
-      await prefs.setBool(_kInited, true);
+      _prefs.setStringList(_kSubscribed, ids.toList());
+      _prefs.setBool(_kInited, true);
     }
-    state = ids;
 
-    final customJson = prefs.getString(_kCustomSources);
+    final customJson = _prefs.getString(_kCustomSources);
     if (customJson != null) {
       try {
         final map = jsonDecode(customJson) as Map<String, dynamic>;
         _customSources = map.map((k, v) =>
             MapEntry(k, CustomSourceData.fromJson(v as Map<String, dynamic>)));
-      } catch (_) {
+      } catch (e) {
+        ref.read(loggerProvider).w('自定义订阅源解析失败，已忽略', error: e);
         _customSources = {};
       }
     }
+    return ids;
   }
 
   bool isSubscribed(String sourceId) => state.contains(sourceId);
 
   Future<void> toggle(String sourceId) async {
-    final prefs = await SharedPreferences.getInstance();
     final next = Set<String>.from(state);
     if (!next.add(sourceId)) next.remove(sourceId);
     state = next;
-    await prefs.setStringList(_kSubscribed, next.toList());
+    await _prefs.setStringList(_kSubscribed, next.toList());
   }
 
   List<RssSource> get subscribedSources {
@@ -144,8 +143,7 @@ class SubscriptionStore extends _$SubscriptionStore {
       categoryName: categoryName,
     );
     _customSources[id] = src;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
+    await _prefs.setString(
         _kCustomSources,
         jsonEncode(
             _customSources.map((k, v) => MapEntry(k, v.toJson()))));
@@ -153,13 +151,12 @@ class SubscriptionStore extends _$SubscriptionStore {
 
   Future<void> removeCustomSource(String id) async {
     _customSources.remove(id);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
+    await _prefs.setString(
         _kCustomSources,
         jsonEncode(
             _customSources.map((k, v) => MapEntry(k, v.toJson()))));
     final next = Set<String>.from(state)..remove(id);
     state = next;
-    await prefs.setStringList(_kSubscribed, next.toList());
+    await _prefs.setStringList(_kSubscribed, next.toList());
   }
 }

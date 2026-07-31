@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme.dart';
+import '../../../../shared/widgets/hairline.dart';
 import '../../../../shared/widgets/icon_btn.dart';
+import '../../../../shared/widgets/section_header.dart';
 import '../../domain/models/metal_price.dart';
 import '../controllers/metals_controller.dart';
 
+/// 贵金属行情（财经报纸表格化）：等宽报价 + 涨跌文字色，发丝线分隔。
 class MetalsPage extends ConsumerWidget {
   const MetalsPage({super.key});
 
@@ -14,109 +17,84 @@ class MetalsPage extends ConsumerWidget {
     final state = ref.watch(metalsProvider);
     final notifier = ref.read(metalsProvider.notifier);
     final theme = Theme.of(context);
-    final brightness = theme.brightness;
+    final c = context.colors;
 
     return Scaffold(
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(10, 6, 18, 12),
-            child: Row(
-              children: [
-                IconBtn(
-                  icon: Icons.arrow_back_rounded,
-                  onTap: () => Navigator.pop(context),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Row(
-                    children: [
-                      Icon(Icons.monetization_on_outlined,
-                          size: 20, color: _goldColor),
-                      const SizedBox(width: 8),
-                      Text('贵金属行情',
-                          style: theme.textTheme.headlineLarge),
-                    ],
-                  ),
-                ),
-                if (state.status == MetalsStatus.loading)
-                  const SizedBox(
-                    width: 20, height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                else
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 8, 12, 8),
+              child: Row(
+                children: [
                   IconBtn(
-                    icon: Icons.refresh_rounded,
-                    onTap: () => notifier.loadPrices(),
+                      icon: Icons.arrow_back_rounded,
+                      onTap: () => Navigator.pop(context)),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('METALS · 实时报价',
+                            style: theme.textTheme.labelMedium
+                                ?.copyWith(color: c.accent)),
+                        const SizedBox(height: 2),
+                        Text('贵金属', style: theme.textTheme.displayMedium),
+                      ],
+                    ),
                   ),
-              ],
+                  if (state.status == MetalsStatus.loading)
+                    const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  else
+                    IconBtn(
+                        icon: Icons.refresh_rounded,
+                        onTap: () => notifier.loadPrices()),
+                ],
+              ),
             ),
-          ),
-          Expanded(
-            child: _buildBody(context, theme, brightness, state, notifier),
-          ),
-        ],
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Hairline(color: c.hairlineStrong),
+            ),
+            Expanded(child: _body(context, state, notifier)),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildBody(
-    BuildContext context,
-    ThemeData theme,
-    Brightness brightness,
-    MetalsState state,
-    MetalsNotifier notifier,
-  ) {
+  Widget _body(BuildContext context, MetalsState state, Metals notifier) {
     switch (state.status) {
       case MetalsStatus.idle:
-        return Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.monetization_on, size: 64,
-                    color: _goldColor.withValues(alpha: 0.6)),
-                const SizedBox(height: 16),
-                Text('点击刷新获取实时贵金属行情',
-                    style: theme.textTheme.titleMedium),
-                const SizedBox(height: 24),
-                FilledButton.icon(
-                  onPressed: () => notifier.loadPrices(),
-                  icon: const Icon(Icons.refresh_rounded),
-                  label: const Text('加载行情'),
-                ),
-              ],
-            ),
-          ),
+        return _MetalsMessage(
+          icon: Icons.monetization_on_outlined,
+          title: '行情待命',
+          subtitle: '获取纽约金银与上海金银实时报价',
+          actionLabel: '加载行情',
+          onAction: notifier.loadPrices,
         );
       case MetalsStatus.loading:
         return const Center(child: CircularProgressIndicator());
       case MetalsStatus.error:
-        return Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.error_outline, size: 48,
-                    color: theme.colorScheme.error),
-                const SizedBox(height: 16),
-                Text('加载失败', style: theme.textTheme.titleMedium),
-                const SizedBox(height: 24),
-                FilledButton.icon(
-                  onPressed: () => notifier.loadPrices(),
-                  icon: const Icon(Icons.refresh_rounded),
-                  label: const Text('重试'),
-                ),
-              ],
-            ),
-          ),
+        return _MetalsMessage(
+          icon: Icons.error_outline_rounded,
+          title: '加载失败',
+          subtitle: state.error ?? '未知错误',
+          actionLabel: '重试',
+          onAction: notifier.loadPrices,
         );
       case MetalsStatus.done:
         if (state.prices.isEmpty) {
-          return Center(
-            child: Text('暂无数据', style: theme.textTheme.titleMedium),
+          return _MetalsMessage(
+            icon: Icons.inbox_outlined,
+            title: '暂无数据',
+            actionLabel: '刷新',
+            onAction: notifier.loadPrices,
           );
         }
         return RefreshIndicator(
@@ -125,47 +103,15 @@ class MetalsPage extends ConsumerWidget {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.only(bottom: 24),
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: theme.cardTheme.color,
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: AppTheme.hair(brightness)),
-                    boxShadow: AppTheme.cardShadow(brightness),
+              const SectionHeader(kicker: '新浪财经 · 延迟约 15 秒', title: '实时报价'),
+              for (var i = 0; i < state.prices.length; i++) ...[
+                if (i > 0)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    child: Hairline(),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 8, height: 8,
-                            decoration: BoxDecoration(
-                              color: _goldColor,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text('实时报价 · 新浪财经',
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                fontSize: 15,
-                              )),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text('数据延迟约 15 秒',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            fontSize: 11,
-                          )),
-                    ],
-                  ),
-                ),
-              ),
-              ...state.prices.map((p) => _MetalCard(
-                metal: p, brightness: brightness, theme: theme,
-              )),
+                _MetalRow(metal: state.prices[i]),
+              ],
             ],
           ),
         );
@@ -173,96 +119,90 @@ class MetalsPage extends ConsumerWidget {
   }
 }
 
-const _goldColor = Color(0xFFD4A843);
-
-class _MetalCard extends StatelessWidget {
+/// 报价行：币种 + 计价货币 | 等宽价格 + 涨跌（趋势色文字，无色块）。
+class _MetalRow extends StatelessWidget {
   final MetalPrice metal;
-  final Brightness brightness;
-  final ThemeData theme;
-  const _MetalCard({
-    required this.metal,
-    required this.brightness,
-    required this.theme,
+  const _MetalRow({required this.metal});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final c = context.colors;
+    final trend = metal.isUp ? c.up : c.down;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(metal.name, style: theme.textTheme.titleLarge),
+                const SizedBox(height: 2),
+                Text('${metal.code} · ${metal.currency}',
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: c.inkTertiary)),
+              ],
+            ),
+          ),
+          const SizedBox(width: 14),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(metal.priceFormatted,
+                  style: AppTheme.mono(theme.textTheme.headlineMedium!)),
+              const SizedBox(height: 2),
+              Text(metal.changeFormatted,
+                  style: AppTheme.mono(theme.textTheme.labelMedium!
+                      .copyWith(color: trend, fontWeight: FontWeight.w700))),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 空闲 / 错误 / 空数据态。
+class _MetalsMessage extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final String actionLabel;
+  final VoidCallback onAction;
+  const _MetalsMessage({
+    required this.icon,
+    required this.title,
+    this.subtitle,
+    required this.actionLabel,
+    required this.onAction,
   });
 
   @override
   Widget build(BuildContext context) {
-    final isUp = metal.isUp;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppTheme.surface2(brightness),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppTheme.hair(brightness)),
-        ),
-        child: Row(
+    final theme = Theme.of(context);
+    final c = context.colors;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 48, height: 48,
-              decoration: BoxDecoration(
-                color: _goldColor.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child:               Icon(
-                metal.code == 'XAU' || metal.code == 'AUTD'
-                    ? Icons.circle_rounded
-                    : Icons.square_rounded,
-                size: 24, color: _goldColor,
-              ),
-            ),
-            const SizedBox(width: 13),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(metal.name,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w700, fontSize: 15)),
-                  const SizedBox(height: 2),
-                  Text(metal.currency,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w400,
-                      )),
-                ],
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                  Text(
-                    '\$${metal.priceFormatted}',
-                    style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                const SizedBox(height: 2),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: (isUp
-                            ? AppTheme.up(brightness)
-                            : AppTheme.down(brightness))
-                        .withValues(alpha: 0.14),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    metal.changeFormatted,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: isUp
-                          ? AppTheme.up(brightness)
-                          : AppTheme.down(brightness),
-                    ),
-                  ),
-                ),
-              ],
+            Icon(icon, size: 44, color: c.hairlineStrong),
+            const SizedBox(height: 16),
+            Text(title, style: theme.textTheme.titleLarge),
+            if (subtitle != null) ...[
+              const SizedBox(height: 8),
+              Text(subtitle!,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium),
+            ],
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              onPressed: onAction,
+              icon: const Icon(Icons.refresh_rounded, size: 18),
+              label: Text(actionLabel),
             ),
           ],
         ),
@@ -270,5 +210,3 @@ class _MetalCard extends StatelessWidget {
     );
   }
 }
-
-

@@ -1,7 +1,11 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+import 'package:info_flow/core/network/api_client.dart';
 
 import '../../data/metals_repository.dart';
 import '../../domain/models/metal_price.dart';
+
+part 'metals_controller.g.dart';
 
 enum MetalsStatus { idle, loading, done, error }
 
@@ -17,23 +21,21 @@ class MetalsState {
   });
 }
 
-class MetalsNotifier extends StateNotifier<MetalsState> {
-  final MetalsRepository _repo;
-
-  MetalsNotifier(this._repo) : super(const MetalsState());
+@riverpod
+class Metals extends _$Metals {
+  @override
+  MetalsState build() => const MetalsState();
 
   Future<void> loadPrices() async {
     state = const MetalsState(status: MetalsStatus.loading);
     try {
-      final prices = await _repo.fetchPrices();
+      final prices = await ref.read(metalsRepositoryProvider).fetchPrices();
       state = MetalsState(status: MetalsStatus.done, prices: prices);
     } catch (e) {
-      state = MetalsState(status: MetalsStatus.error, error: e.toString());
+      state = MetalsState(
+        status: MetalsStatus.error,
+        error: mapToAppException(e).message,
+      );
     }
   }
 }
-
-final metalsProvider =
-    StateNotifierProvider<MetalsNotifier, MetalsState>((ref) {
-  return MetalsNotifier(ref.read(metalsRepositoryProvider));
-});

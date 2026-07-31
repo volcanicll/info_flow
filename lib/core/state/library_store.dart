@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:info_flow/core/logging/logger.dart';
+import 'package:info_flow/core/storage/kv_storage.dart';
 import 'package:info_flow/features/feed/domain/entities/article.dart';
 
 part 'library_store.g.dart';
@@ -17,19 +19,14 @@ class LibraryStore extends _$LibraryStore {
   static const _kLiked = 'lib_liked';
   static const _kRead = 'lib_read';
 
-  SharedPreferences? _prefs;
+  SharedPreferences get _prefs => ref.read(sharedPreferencesProvider);
 
   @override
   LibraryState build() {
-    _load();
-    return const LibraryState();
-  }
-
-  Future<void> _load() async {
-    _prefs = await SharedPreferences.getInstance();
-    final bookmarksJson = _prefs!.getString(_kBookmarks);
-    final liked = _prefs!.getStringList(_kLiked) ?? [];
-    final read = _prefs!.getStringList(_kRead) ?? [];
+    // SharedPreferences 已在启动时注入，同步读取初始态，无加载竞态
+    final bookmarksJson = _prefs.getString(_kBookmarks);
+    final liked = _prefs.getStringList(_kLiked) ?? [];
+    final read = _prefs.getStringList(_kRead) ?? [];
 
     var bookmarks = <Article>[];
     if (bookmarksJson != null) {
@@ -37,10 +34,12 @@ class LibraryStore extends _$LibraryStore {
         final list = jsonDecode(bookmarksJson) as List;
         bookmarks =
             list.map((e) => Article.fromJson(e as Map<String, dynamic>)).toList();
-      } catch (_) {}
+      } catch (e) {
+        ref.read(loggerProvider).w('收藏数据解析失败，已忽略', error: e);
+      }
     }
 
-    state = LibraryState(
+    return LibraryState(
       bookmarks: bookmarks,
       likedIds: liked.toSet(),
       readIds: read.toSet(),
@@ -50,7 +49,6 @@ class LibraryStore extends _$LibraryStore {
   // ============ 收藏 ============
 
   Future<void> toggleBookmark(Article article) async {
-    _prefs ??= await SharedPreferences.getInstance();
     final list = List<Article>.from(state.bookmarks);
     final exists = list.any((a) => a.id == article.id);
     if (exists) {
@@ -59,13 +57,12 @@ class LibraryStore extends _$LibraryStore {
       list.insert(0, article);
     }
     state = state.copyWith(bookmarks: list);
-    await _prefs!.setString(_kBookmarks, _encodeBookmarks(list));
+    await _prefs.setString(_kBookmarks, _encodeBookmarks(list));
   }
 
   // ============ 稍后阅读 ============
 
   Future<void> toggleReadLater(Article article) async {
-    _prefs ??= await SharedPreferences.getInstance();
     final list = List<Article>.from(state.bookmarks);
     final idx = list.indexWhere((a) => a.id == article.id);
     if (idx >= 0) {
@@ -75,27 +72,25 @@ class LibraryStore extends _$LibraryStore {
       list.insert(0, article.copyWith(isReadLater: true));
     }
     state = state.copyWith(bookmarks: list);
-    await _prefs!.setString(_kBookmarks, _encodeBookmarks(list));
+    await _prefs.setString(_kBookmarks, _encodeBookmarks(list));
   }
 
   // ============ 点赞 ============
 
   Future<void> toggleLike(String id) async {
-    _prefs ??= await SharedPreferences.getInstance();
     final set = Set<String>.from(state.likedIds);
     if (!set.add(id)) set.remove(id);
     state = state.copyWith(likedIds: set);
-    await _prefs!.setStringList(_kLiked, set.toList());
+    await _prefs.setStringList(_kLiked, set.toList());
   }
 
   // ============ 已读 ============
 
   Future<void> markRead(String id) async {
     if (state.readIds.contains(id)) return;
-    _prefs ??= await SharedPreferences.getInstance();
     final set = Set<String>.from(state.readIds)..add(id);
     state = state.copyWith(readIds: set);
-    await _prefs!.setStringList(_kRead, set.toList());
+    await _prefs.setStringList(_kRead, set.toList());
   }
 
   String _encodeBookmarks(List<Article> list) =>

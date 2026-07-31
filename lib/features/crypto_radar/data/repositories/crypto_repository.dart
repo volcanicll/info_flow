@@ -233,7 +233,9 @@ class CryptoRepository {
         final kl = await _api.getKlines(sym, limit: 6);
         if (kl != null && kl.length >= 5) {
           double avg5d = 0;
-          for (var i = 0; i < kl.length - 1; i++) avg5d += _n(kl[i][7]);
+          for (var i = 0; i < kl.length - 1; i++) {
+            avg5d += _n(kl[i][7]);
+          }
           avg5d /= (kl.length - 1);
           if (avg5d > 0) {
             final ratio = vol24h / avg5d;
@@ -309,10 +311,15 @@ class CryptoRepository {
         }
         final frDelta = d.frPct - frPrev;
         String trend;
-        if (frDelta < -0.05) trend = '🔥加速';
-        else if (frDelta < -0.01) trend = '⬇️变负';
-        else if (frDelta.abs() < 0.01) trend = '➡️';
-        else trend = '⬆️回升';
+        if (frDelta < -0.05) {
+          trend = '🔥加速';
+        } else if (frDelta < -0.01) {
+          trend = '⬇️变负';
+        } else if (frDelta.abs() < 0.01) {
+          trend = '➡️';
+        } else {
+          trend = '⬆️回升';
+        }
 
         final price = d.estMcap;
         final volPct = (d.pxChg.abs() * 1.2).clamp(5.0, 100.0);
@@ -341,31 +348,54 @@ class CryptoRepository {
     final combined = <TradeSignal>[];
     for (final d in coinData.values) {
       int fSc;
-      if (d.frPct < -0.5) fSc = 25;
-      else if (d.frPct < -0.1) fSc = 22;
-      else if (d.frPct < -0.05) fSc = 18;
-      else if (d.frPct < -0.03) fSc = 14;
-      else if (d.frPct < -0.01) fSc = 10;
-      else if (d.frPct < 0) fSc = 5;
-      else fSc = 0;
+      if (d.frPct < -0.5) {
+        fSc = 25;
+      } else if (d.frPct < -0.1) {
+        fSc = 22;
+      } else if (d.frPct < -0.05) {
+        fSc = 18;
+      } else if (d.frPct < -0.03) {
+        fSc = 14;
+      } else if (d.frPct < -0.01) {
+        fSc = 10;
+      } else if (d.frPct < 0) {
+        fSc = 5;
+      } else {
+        fSc = 0;
+      }
 
       int mSc;
-      if (d.estMcap > 0 && d.estMcap < 50e6) mSc = 25;
-      else if (d.estMcap < 100e6) mSc = 22;
-      else if (d.estMcap < 200e6) mSc = 20;
-      else if (d.estMcap < 300e6) mSc = 17;
-      else if (d.estMcap < 500e6) mSc = 12;
-      else if (d.estMcap < 1e9) mSc = 7;
-      else mSc = 0;
+      if (d.estMcap > 0 && d.estMcap < 50e6) {
+        mSc = 25;
+      } else if (d.estMcap < 100e6) {
+        mSc = 22;
+      } else if (d.estMcap < 200e6) {
+        mSc = 20;
+      } else if (d.estMcap < 300e6) {
+        mSc = 17;
+      } else if (d.estMcap < 500e6) {
+        mSc = 12;
+      } else if (d.estMcap < 1e9) {
+        mSc = 7;
+      } else {
+        mSc = 0;
+      }
 
       final abs6 = d.d6h.abs();
       int oSc;
-      if (abs6 >= 15) oSc = 25;
-      else if (abs6 >= 8) oSc = 22;
-      else if (abs6 >= 5) oSc = 18;
-      else if (abs6 >= 3) oSc = 14;
-      else if (abs6 >= 2) oSc = 10;
-      else oSc = 0;
+      if (abs6 >= 15) {
+        oSc = 25;
+      } else if (abs6 >= 8) {
+        oSc = 22;
+      } else if (abs6 >= 5) {
+        oSc = 18;
+      } else if (abs6 >= 3) {
+        oSc = 14;
+      } else if (abs6 >= 2) {
+        oSc = 10;
+      } else {
+        oSc = 0;
+      }
 
       final total = fSc + mSc + 0 + oSc;
       if (total < 25) continue;
@@ -397,32 +427,55 @@ class CryptoRepository {
     final ambush = <TradeSignal>[];
     for (final d in coinData.values) {
       int mSc;
-      if (d.estMcap > 0 && d.estMcap < 50e6) mSc = 35;
-      else if (d.estMcap < 100e6) mSc = 32;
-      else if (d.estMcap < 150e6) mSc = 28;
-      else if (d.estMcap < 200e6) mSc = 25;
-      else if (d.estMcap < 300e6) mSc = 20;
-      else if (d.estMcap < 500e6) mSc = 12;
-      else if (d.estMcap < 1e9) mSc = 5;
-      else mSc = 0;
+      if (d.estMcap > 0 && d.estMcap < 50e6) {
+        mSc = 35;
+      } else if (d.estMcap < 100e6) {
+        mSc = 32;
+      } else if (d.estMcap < 150e6) {
+        mSc = 28;
+      } else if (d.estMcap < 200e6) {
+        mSc = 25;
+      } else if (d.estMcap < 300e6) {
+        mSc = 20;
+      } else if (d.estMcap < 500e6) {
+        mSc = 12;
+      } else if (d.estMcap < 1e9) {
+        mSc = 5;
+      } else {
+        mSc = 0;
+      }
 
       int oSc;
       final abs6 = d.d6h.abs();
-      if (abs6 >= 10) oSc = 30;
-      else if (abs6 >= 5) oSc = 25;
-      else if (abs6 >= 3) oSc = 20;
-      else if (abs6 >= 2) oSc = 14;
-      else if (abs6 >= 1) oSc = 8;
-      else oSc = 0;
+      if (abs6 >= 10) {
+        oSc = 30;
+      } else if (abs6 >= 5) {
+        oSc = 25;
+      } else if (abs6 >= 3) {
+        oSc = 20;
+      } else if (abs6 >= 2) {
+        oSc = 14;
+      } else if (abs6 >= 1) {
+        oSc = 8;
+      } else {
+        oSc = 0;
+      }
       if (d.d6h > 2 && d.pxChg.abs() < 5) oSc = (oSc + 5).clamp(0, 30);
 
       int fSc;
-      if (d.frPct < -0.1) fSc = 15;
-      else if (d.frPct < -0.05) fSc = 12;
-      else if (d.frPct < -0.03) fSc = 9;
-      else if (d.frPct < -0.01) fSc = 6;
-      else if (d.frPct < 0) fSc = 3;
-      else fSc = 0;
+      if (d.frPct < -0.1) {
+        fSc = 15;
+      } else if (d.frPct < -0.05) {
+        fSc = 12;
+      } else if (d.frPct < -0.03) {
+        fSc = 9;
+      } else if (d.frPct < -0.01) {
+        fSc = 6;
+      } else if (d.frPct < 0) {
+        fSc = 3;
+      } else {
+        fSc = 0;
+      }
 
       final total = mSc + oSc + 0 + fSc;
       if (total < 20) continue;

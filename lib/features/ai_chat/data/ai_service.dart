@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/network/api_client.dart';
 import '../../../core/state/ai_config.dart';
 import '../../../core/state/article_cache.dart';
 import '../../../features/feed/data/rss_sources.dart';
@@ -154,15 +155,7 @@ class AiService {
   }
 
   Future<String> _callLlm(String userMessage, AiConfigState config) async {
-    final dio = Dio(BaseOptions(
-      baseUrl: config.baseUrl,
-      connectTimeout: const Duration(seconds: 15),
-      receiveTimeout: const Duration(seconds: 30),
-      headers: {
-        'Authorization': 'Bearer ${config.apiKey}',
-        'Content-Type': 'application/json',
-      },
-    ));
+    final dio = _ref.read(dioProvider);
 
     final cache = _ref.read(articleCacheProvider);
     final context = cache.values.take(15).map((a) =>
@@ -170,7 +163,15 @@ class AiService {
         .join('\n');
 
     final resp = await dio.post<Map<String, dynamic>>(
-      '/chat/completions',
+      '${config.baseUrl}/chat/completions',
+      options: Options(
+        headers: {
+          'Authorization': 'Bearer ${config.apiKey}',
+          'Content-Type': 'application/json',
+        },
+        sendTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 30),
+      ),
       data: {
         'model': config.model,
         'messages': [

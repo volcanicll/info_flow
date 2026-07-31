@@ -1,6 +1,8 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:info_flow/core/storage/kv_storage.dart';
+
 part 'reading_stats.g.dart';
 
 /// 阅读统计：已读文章数、累计阅读时长（分钟）、收藏数
@@ -10,24 +12,17 @@ part 'reading_stats.g.dart';
 class ReadingStats extends _$ReadingStats {
   static const _kReadSeconds = 'reading_total_seconds';
 
-  @override
-  ReadingStatsState build() {
-    _load();
-    return const ReadingStatsState();
-  }
+  SharedPreferences get _prefs => ref.read(sharedPreferencesProvider);
 
-  Future<void> _load() async {
-    final prefs = await SharedPreferences.getInstance();
-    final seconds = prefs.getInt(_kReadSeconds) ?? 0;
-    state = ReadingStatsState(totalReadSeconds: seconds);
-  }
+  @override
+  ReadingStatsState build() =>
+      ReadingStatsState(totalReadSeconds: _prefs.getInt(_kReadSeconds) ?? 0);
 
   /// 累加阅读时长（秒）
   Future<void> addReadDuration(int seconds) async {
-    final prefs = await SharedPreferences.getInstance();
     final next = state.totalReadSeconds + seconds;
     state = state.copyWith(totalReadSeconds: next);
-    await prefs.setInt(_kReadSeconds, next);
+    await _prefs.setInt(_kReadSeconds, next);
   }
 
   /// 格式化阅读时长，如 "2.5h"、"45min"

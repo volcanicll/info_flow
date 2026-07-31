@@ -1,7 +1,11 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+import 'package:info_flow/core/network/api_client.dart';
 
 import '../../data/ai_models_repository.dart';
 import '../../domain/models/ai_model_item.dart';
+
+part 'ai_models_controller.g.dart';
 
 enum AiModelsStatus { idle, loading, done, error }
 
@@ -17,23 +21,22 @@ class AiModelsState {
   });
 }
 
-class AiModelsNotifier extends StateNotifier<AiModelsState> {
-  final AiModelsRepository _repo;
-
-  AiModelsNotifier(this._repo) : super(const AiModelsState());
+@riverpod
+class AiModels extends _$AiModels {
+  @override
+  AiModelsState build() => const AiModelsState();
 
   Future<void> loadModels() async {
     state = const AiModelsState(status: AiModelsStatus.loading);
     try {
-      final models = await _repo.fetchTrendingModels();
+      final models =
+          await ref.read(aiModelsRepositoryProvider).fetchTrendingModels();
       state = AiModelsState(status: AiModelsStatus.done, models: models);
     } catch (e) {
-      state = AiModelsState(status: AiModelsStatus.error, error: e.toString());
+      state = AiModelsState(
+        status: AiModelsStatus.error,
+        error: mapToAppException(e).message,
+      );
     }
   }
 }
-
-final aiModelsProvider =
-    StateNotifierProvider<AiModelsNotifier, AiModelsState>((ref) {
-  return AiModelsNotifier(ref.read(aiModelsRepositoryProvider));
-});

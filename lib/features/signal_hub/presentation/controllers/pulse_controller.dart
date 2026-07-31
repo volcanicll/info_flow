@@ -46,7 +46,7 @@ class PulseController extends _$PulseController {
     // quotes 异步：同步 build 取 valueOrNull，AsyncValue 完成后自动刷新
     final quotesAsync = ref.watch(tickerQuotesProvider);
     final quotes = <String, dynamic>{};
-    final q = quotesAsync.valueOrNull;
+    final q = quotesAsync.value;
     if (q != null) quotes.addAll(q);
 
     return PulseState(articles: enriched, quotes: quotes);

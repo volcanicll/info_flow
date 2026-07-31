@@ -18,7 +18,7 @@ class ArticleCache extends _$ArticleCache {
     final map = <String, Article>{};
     for (final type in FeedType.values) {
       final asyncArticles = ref.watch(feedControllerProvider(type));
-      final articles = asyncArticles.valueOrNull ?? [];
+      final articles = asyncArticles.value ?? [];
       for (final a in articles) {
         map[a.id] = a;
       }

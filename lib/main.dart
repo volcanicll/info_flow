@@ -10,9 +10,8 @@ import 'core/storage/kv_storage.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 预加载 SharedPreferences 避免主题闪动
+  // 预加载 SharedPreferences，通过 override 注入，全部 store 同步读取初始值
   final prefs = await SharedPreferences.getInstance();
-  initPrefs(prefs);
 
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
@@ -25,7 +24,10 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  runApp(const ProviderScope(child: InfoFlowApp()));
+  runApp(ProviderScope(
+    overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+    child: const InfoFlowApp(),
+  ));
 }
 
 class InfoFlowApp extends ConsumerWidget {
@@ -34,7 +36,7 @@ class InfoFlowApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(goRouterProvider);
-    final themeMode = ref.watch(themeModeNotifierProvider);
+    final themeMode = ref.watch(themeModeProvider);
 
     return MaterialApp.router(
       title: 'InfoFlow',

@@ -132,7 +132,7 @@ class FeedController extends _$FeedController {
     _hasMore = true;
     _sourceCursor = 0;
     _seenUrls = {};
-    final currentData = state.valueOrNull;
+    final currentData = state.value;
     final result = await AsyncValue.guard(() => _loadArticles());
     if (result.hasValue) {
       state = result;
@@ -146,7 +146,7 @@ class FeedController extends _$FeedController {
 
     _isLoadingMore = true;
     try {
-      final current = state.valueOrNull ?? [];
+      final current = state.value ?? [];
 
       if (current.length >= _all.length) {
         if (_sourceCursor >= _sourceQueue.length) {
@@ -180,7 +180,7 @@ class FeedController extends _$FeedController {
   }
 
   Future<void> toggleLike(String articleId) async {
-    final articles = state.valueOrNull ?? [];
+    final articles = state.value ?? [];
     final index = articles.indexWhere((a) => a.id == articleId);
     if (index == -1) return;
 
@@ -191,7 +191,7 @@ class FeedController extends _$FeedController {
   }
 
   Future<void> toggleBookmark(String articleId) async {
-    final articles = state.valueOrNull ?? [];
+    final articles = state.value ?? [];
     final index = articles.indexWhere((a) => a.id == articleId);
     if (index == -1) return;
 

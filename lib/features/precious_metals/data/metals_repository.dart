@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:info_flow/core/network/api_client.dart';
 
 import '../domain/models/metal_price.dart';
 
@@ -78,9 +79,5 @@ class MetalsRepository {
 }
 
 final metalsRepositoryProvider = Provider<MetalsRepository>((ref) {
-  final dio = Dio(BaseOptions(
-    connectTimeout: const Duration(seconds: 8),
-    receiveTimeout: const Duration(seconds: 10),
-  ));
-  return MetalsRepository(dio);
+  return MetalsRepository(ref.watch(dioProvider));
 });

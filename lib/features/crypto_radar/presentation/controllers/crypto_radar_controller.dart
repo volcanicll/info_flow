@@ -1,5 +1,7 @@
-import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+import 'package:info_flow/core/network/api_client.dart';
 
 import '../../data/datasources/binance_api.dart';
 import '../../data/models/pool_item.dart';
@@ -7,13 +9,10 @@ import '../../data/models/oi_alert.dart';
 import '../../data/models/trade_signal.dart';
 import '../../data/repositories/crypto_repository.dart';
 
+part 'crypto_radar_controller.g.dart';
+
 final binanceApiProvider = Provider<BinanceApi>((ref) {
-  final dio = Dio(BaseOptions(
-    connectTimeout: const Duration(seconds: 10),
-    receiveTimeout: const Duration(seconds: 15),
-    headers: {'User-Agent': 'Mozilla/5.0 (compatible; InfoFlow/1.0)'},
-  ));
-  return BinanceApi(dio);
+  return BinanceApi(ref.watch(dioProvider));
 });
 
 final cryptoRepositoryProvider = Provider<CryptoRepository>((ref) {
@@ -48,17 +47,22 @@ class CryptoRadarState {
   });
 }
 
-class CryptoRadarNotifier extends StateNotifier<CryptoRadarState> {
-  final CryptoRepository _repo;
+@riverpod
+class CryptoRadar extends _$CryptoRadar {
+  CryptoRepository get _repo => ref.read(cryptoRepositoryProvider);
 
-  CryptoRadarNotifier(this._repo) : super(const CryptoRadarState()) {
+  @override
+  CryptoRadarState build() {
     _repo.onProgress = (msg) {
-      state = CryptoRadarState(status: ScanStatus.scanning, progressMessage: msg);
+      state =
+          CryptoRadarState(status: ScanStatus.scanning, progressMessage: msg);
     };
+    return const CryptoRadarState();
   }
 
   Future<void> startFullScan() async {
-    state = const CryptoRadarState(status: ScanStatus.scanning, progressMessage: '初始化扫描…');
+    state = const CryptoRadarState(
+        status: ScanStatus.scanning, progressMessage: '初始化扫描…');
     try {
       final signals = await _repo.scanSignals();
 
@@ -71,7 +75,10 @@ class CryptoRadarNotifier extends StateNotifier<CryptoRadarState> {
         highlights: signals.highlights,
       );
     } catch (e) {
-      state = CryptoRadarState(status: ScanStatus.error, error: e.toString());
+      state = CryptoRadarState(
+        status: ScanStatus.error,
+        error: mapToAppException(e).message,
+      );
     }
   }
 
@@ -84,13 +91,12 @@ class CryptoRadarNotifier extends StateNotifier<CryptoRadarState> {
         poolItems: items,
       );
     } catch (e) {
-      state = CryptoRadarState(status: ScanStatus.error, error: e.toString());
+      state = CryptoRadarState(
+        status: ScanStatus.error,
+        error: mapToAppException(e).message,
+      );
     }
   }
 
   void reset() => state = const CryptoRadarState();
 }
-
-final cryptoRadarProvider = StateNotifierProvider<CryptoRadarNotifier, CryptoRadarState>((ref) {
-  return CryptoRadarNotifier(ref.read(cryptoRepositoryProvider));
-});

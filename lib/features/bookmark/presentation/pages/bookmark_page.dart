@@ -4,9 +4,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../core/state/library_store.dart';
+import '../../../../shared/widgets/hairline.dart';
 import '../../../feed/domain/entities/article.dart';
-import '../../../feed/presentation/widgets/article_card.dart';
+import '../../../feed/presentation/widgets/article_row.dart';
 
+/// 收藏页（剪报集）：按日期分组的杂志日期头 + 复用信息流目录行，
+/// 底部保留收藏统计条。
 class BookmarkPage extends ConsumerStatefulWidget {
   const BookmarkPage({super.key});
 
@@ -16,211 +19,128 @@ class BookmarkPage extends ConsumerStatefulWidget {
 
 class _BookmarkPageState extends ConsumerState<BookmarkPage>
     with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+  late final TabController _tab;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tab = TabController(length: 2, vsync: this);
+    _tab.addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
+    _tab.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final t1 = theme.textTheme.headlineLarge?.color ?? Colors.black;
-    final t3 = theme.textTheme.bodySmall?.color ?? Colors.grey;
-    final brand = theme.colorScheme.primary;
+    final c = context.colors;
     final library = ref.watch(libraryStoreProvider);
 
     return Scaffold(
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 6, 18, 12),
-            child: Row(
-              children: [
-                Text('收藏', style: theme.textTheme.headlineLarge),
-                const Spacer(),
-                GestureDetector(
-                  onTap: () => _showNewFolderDialog(context),
-                  child: Icon(Icons.create_new_folder_outlined, size: 22, color: brand),
-                ),
-              ],
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 6),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('剪报集 · SCRAPBOOK',
+                      style: theme.textTheme.labelMedium?.copyWith(color: c.accent)),
+                  const SizedBox(height: 2),
+                  Text('收藏', style: theme.textTheme.displayMedium),
+                ],
+              ),
             ),
-          ),
-          SizedBox(
-            height: 44,
-            child: TabBar(
-              controller: _tabController,
-              indicatorColor: brand, indicatorWeight: 3,
-              indicatorSize: TabBarIndicatorSize.label,
-              labelColor: t1, unselectedLabelColor: t3,
-              labelStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-              unselectedLabelStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-              dividerColor: Colors.transparent,
-              splashFactory: NoSplash.splashFactory,
-              overlayColor: WidgetStateProperty.all(Colors.transparent),
-              tabs: const [
-                Tab(text: '文件夹'),
-                Tab(text: '全部收藏'),
-                Tab(text: '稍后阅读'),
-              ],
+            _SectionTabs(controller: _tab),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Hairline(color: c.hairlineStrong),
             ),
-          ),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _FolderListView(library: library, onNewFolder: () => _showNewFolderDialog(context)),
-                _BookmarkList(filter: BookmarkFilter.all),
-                _BookmarkList(filter: BookmarkFilter.readLater),
-              ],
+            Expanded(
+              child: TabBarView(
+                controller: _tab,
+                children: const [
+                  _ClippingList(filter: BookmarkFilter.all),
+                  _ClippingList(filter: BookmarkFilter.readLater),
+                ],
+              ),
             ),
-          ),
-          _BookmarkStats(library: library),
-        ],
-      ),
-    );
-  }
-
-  void _showNewFolderDialog(BuildContext context) {
-    final controller = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('新建文件夹'),
-        content: TextField(controller: controller, autofocus: true,
-            decoration: const InputDecoration(hintText: '输入文件夹名称')),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
-          FilledButton(onPressed: () => Navigator.pop(ctx), child: const Text('创建')),
-        ],
+            _BookmarkStats(library: library),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _FolderListView extends StatelessWidget {
-  final LibraryState library;
-  final VoidCallback onNewFolder;
-  const _FolderListView({required this.library, required this.onNewFolder});
+/// 衬线栏目切换：全部 / 稍后读。
+class _SectionTabs extends StatelessWidget {
+  final TabController controller;
+  const _SectionTabs({required this.controller});
+
+  static const _labels = ['全部收藏', '稍后阅读'];
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final brightness = theme.brightness;
-
-    if (library.bookmarks.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(40),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Icon(Icons.folder_off_rounded, size: 48, color: AppTheme.hairStrong(brightness)),
-            const SizedBox(height: 16),
-            Text('还没有文件夹', style: theme.textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Text('点击右上角创建第一个文件夹', style: theme.textTheme.bodyMedium),
-            const SizedBox(height: 20),
-            FilledButton.icon(
-              onPressed: onNewFolder,
-              icon: const Icon(Icons.add_rounded, size: 18),
-              label: const Text('新建文件夹'),
-            ),
-          ]),
-        ),
-      );
-    }
-
-    final folders = [
-      _FolderData(name: '未分类', icon: Icons.folder_rounded, count: library.bookmarks.length),
-    ];
-
-    return ListView.builder(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.only(top: 6, bottom: 32),
-      itemCount: folders.length,
-      itemBuilder: (context, index) {
-        final folder = folders[index];
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: theme.cardTheme.color,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppTheme.hair(brightness)),
-            ),
-            child: Row(children: [
-              Container(
-                width: 40, height: 40,
-                decoration: BoxDecoration(
-                  color: AppTheme.tint(brightness), borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(folder.icon, size: 20, color: theme.colorScheme.primary),
+    final c = context.colors;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+      child: Row(
+        children: List.generate(_labels.length, (i) {
+          final active = controller.index == i;
+          return Padding(
+            padding: const EdgeInsets.only(right: 24),
+            child: GestureDetector(
+              onTap: () => controller.animateTo(i),
+              behavior: HitTestBehavior.opaque,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(_labels[i],
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: active ? c.ink : c.inkTertiary,
+                      )),
+                  const SizedBox(height: 4),
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    height: 2,
+                    width: active ? 18 : 0,
+                    color: c.accent,
+                  ),
+                ],
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(folder.name, style: theme.textTheme.titleSmall?.copyWith(fontSize: 14)),
-                    const SizedBox(height: 2),
-                    Text('${folder.count} 篇文章',
-                        style: theme.textTheme.bodySmall?.copyWith(fontSize: 11, fontWeight: FontWeight.w400)),
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_right_rounded, size: 20, color: AppTheme.hairStrong(brightness)),
-            ]),
-          ),
-        );
-      },
+            ),
+          );
+        }),
+      ),
     );
   }
 }
 
-class _FolderData {
-  final String name;
-  final IconData icon;
-  final int count;
-  const _FolderData({required this.name, required this.icon, required this.count});
-}
-
 enum BookmarkFilter { all, readLater }
 
-class _BookmarkList extends ConsumerStatefulWidget {
+class _ClippingList extends ConsumerWidget {
   final BookmarkFilter filter;
-  const _BookmarkList({required this.filter});
+  const _ClippingList({required this.filter});
 
   @override
-  ConsumerState<_BookmarkList> createState() => _BookmarkListState();
-}
-
-class _BookmarkListState extends ConsumerState<_BookmarkList>
-    with AutomaticKeepAliveClientMixin {
-  @override
-  bool get wantKeepAlive => true;
-
-  @override
-  Widget build(BuildContext context) {
-    super.build(context);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final c = context.colors;
     final library = ref.watch(libraryStoreProvider);
 
-    List<Article> items;
-    switch (widget.filter) {
-      case BookmarkFilter.all:
-        items = library.bookmarks;
-        break;
-      case BookmarkFilter.readLater:
-        items = library.bookmarks.where((a) => a.isReadLater).toList();
-        break;
-    }
+    final items = switch (filter) {
+      BookmarkFilter.all => library.bookmarks,
+      BookmarkFilter.readLater =>
+        library.bookmarks.where((a) => a.isReadLater).toList(),
+    };
 
     if (items.isEmpty) {
       return ListView(
@@ -231,14 +151,12 @@ class _BookmarkListState extends ConsumerState<_BookmarkList>
             child: Padding(
               padding: const EdgeInsets.all(40),
               child: Column(mainAxisSize: MainAxisSize.min, children: [
-                Icon(Icons.bookmark_border_rounded, size: 48,
-                    color: AppTheme.hairStrong(Theme.of(context).brightness)),
+                Icon(Icons.bookmark_border_rounded, size: 44, color: c.hairlineStrong),
                 const SizedBox(height: 14),
-                Text('还没有收藏', style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 6),
-                Text('点击文章卡片的收藏按钮，内容会保存在这里',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 13, height: 1.5)),
+                Text('剪报集空空如也', style: theme.textTheme.titleLarge),
+                const SizedBox(height: 8),
+                Text('点击文章的收藏按钮，内容会剪存在这里',
+                    textAlign: TextAlign.center, style: theme.textTheme.bodyMedium),
               ]),
             ),
           ),
@@ -246,19 +164,66 @@ class _BookmarkListState extends ConsumerState<_BookmarkList>
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: () async {},
-      child: ListView.builder(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.only(top: 6, bottom: 32),
-        itemCount: items.length,
-        itemBuilder: (context, index) {
-          final article = items[index];
-          return ArticleCard(
-            article: article,
-            onTap: () => context.push('/reader/${article.id}'),
-          );
-        },
+    // 按日期分组（保持 bookmarks 原有顺序，最新在前）。
+    final groups = <String, List<Article>>{};
+    for (final a in items) {
+      groups.putIfAbsent(_dateKey(a.publishedAt), () => []).add(a);
+    }
+
+    final children = <Widget>[];
+    groups.forEach((label, list) {
+      children.add(_DateHeader(label: label, count: list.length));
+      for (var i = 0; i < list.length; i++) {
+        if (i > 0) children.add(const Hairline());
+        children.add(ArticleRow(
+          article: list[i],
+          onTap: () => context.push('/reader/${list[i].id}'),
+        ));
+      }
+    });
+
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.only(bottom: 24),
+      children: children,
+    );
+  }
+
+  String _dateKey(DateTime? time) {
+    if (time == null) return '未标注日期';
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final d = DateTime(time.year, time.month, time.day);
+    final diff = today.difference(d).inDays;
+    if (diff == 0) return '今天';
+    if (diff == 1) return '昨天';
+    if (time.year == now.year) return '${time.month} 月 ${time.day} 日';
+    return '${time.year} 年 ${time.month} 月';
+  }
+}
+
+/// 杂志日期头：kicker 日期 + 篇数 + 右侧延伸发丝线。
+class _DateHeader extends StatelessWidget {
+  final String label;
+  final int count;
+  const _DateHeader({required this.label, required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final c = context.colors;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(label, style: theme.textTheme.titleMedium),
+          const SizedBox(width: 8),
+          Text('$count 篇',
+              style: theme.textTheme.labelMedium?.copyWith(color: c.inkTertiary)),
+          const SizedBox(width: 12),
+          Expanded(child: Hairline(color: c.hairlineStrong)),
+        ],
       ),
     );
   }
@@ -270,26 +235,31 @@ class _BookmarkStats extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final brightness = theme.brightness;
+    final c = context.colors;
     return Container(
-      padding: EdgeInsets.fromLTRB(20, 12, 20, 14 + MediaQuery.paddingOf(context).bottom),
+      padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + MediaQuery.paddingOf(context).bottom),
       decoration: BoxDecoration(
-        color: theme.cardTheme.color,
-        border: Border(top: BorderSide(color: AppTheme.hair(brightness), width: 0.5)),
+        color: c.paper,
+        border: Border(top: BorderSide(color: c.hairline, width: 0.5)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _StatItem(value: '${library.bookmarkCount}', label: '总收藏'),
-          Container(width: 1, height: 28, color: AppTheme.hair(brightness)),
-          _StatItem(value: '1', label: '文件夹'),
-          Container(width: 1, height: 28, color: AppTheme.hair(brightness)),
+          _StatDivider(),
           _StatItem(value: '${library.readLaterCount}', label: '稍后阅读'),
+          _StatDivider(),
+          _StatItem(value: '${library.readIds.length}', label: '已读'),
         ],
       ),
     );
   }
+}
+
+class _StatDivider extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) =>
+      Hairline(vertical: true, length: 26, color: context.colors.hairlineStrong);
 }
 
 class _StatItem extends StatelessWidget {
@@ -299,12 +269,15 @@ class _StatItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final c = context.colors;
     return Column(mainAxisSize: MainAxisSize.min, children: [
-      Text(value, style: TextStyle(
-          fontSize: 18, fontWeight: FontWeight.w800, color: Theme.of(context).colorScheme.primary)),
+      Text(value,
+          style: AppTheme.mono(theme.textTheme.titleLarge!.copyWith(
+            fontWeight: FontWeight.w800,
+          ))),
       const SizedBox(height: 2),
-      Text(label, style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          fontSize: 11, fontWeight: FontWeight.w400)),
+      Text(label, style: theme.textTheme.labelMedium?.copyWith(color: c.inkTertiary)),
     ]);
   }
 }

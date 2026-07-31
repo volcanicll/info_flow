@@ -7,7 +7,7 @@ import 'ticker_dictionary.dart';
 part 'ticker_resolver.g.dart';
 
 @riverpod
-TickerDictionary tickerDictionary(TickerDictionaryRef ref) {
+TickerDictionary tickerDictionary(Ref ref) {
   return TickerDictionary();
 }
 

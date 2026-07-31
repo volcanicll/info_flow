@@ -1,6 +1,8 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:info_flow/core/storage/kv_storage.dart';
+
 part 'ai_config.g.dart';
 
 /// AI 配置：LLM API key 与 base url。
@@ -14,20 +16,14 @@ class AiConfig extends _$AiConfig {
   static const _kBaseUrl = 'ai_base_url';
   static const _kModel = 'ai_model';
 
-  @override
-  AiConfigState build() {
-    _load();
-    return const AiConfigState();
-  }
+  SharedPreferences get _prefs => ref.read(sharedPreferencesProvider);
 
-  Future<void> _load() async {
-    final prefs = await SharedPreferences.getInstance();
-    state = AiConfigState(
-      apiKey: prefs.getString(_kApiKey) ?? '',
-      baseUrl: prefs.getString(_kBaseUrl) ?? 'https://api.openai.com/v1',
-      model: prefs.getString(_kModel) ?? 'gpt-4o-mini',
-    );
-  }
+  @override
+  AiConfigState build() => AiConfigState(
+        apiKey: _prefs.getString(_kApiKey) ?? '',
+        baseUrl: _prefs.getString(_kBaseUrl) ?? 'https://api.openai.com/v1',
+        model: _prefs.getString(_kModel) ?? 'gpt-4o-mini',
+      );
 
   /// 是否启用真实 LLM
   bool get llmEnabled => state.apiKey.trim().isNotEmpty;
@@ -37,20 +33,18 @@ class AiConfig extends _$AiConfig {
     String? baseUrl,
     String? model,
   }) async {
-    final prefs = await SharedPreferences.getInstance();
     state = AiConfigState(
       apiKey: apiKey ?? state.apiKey,
       baseUrl: baseUrl ?? state.baseUrl,
       model: model ?? state.model,
     );
-    if (apiKey != null) await prefs.setString(_kApiKey, apiKey);
-    if (baseUrl != null) await prefs.setString(_kBaseUrl, baseUrl);
-    if (model != null) await prefs.setString(_kModel, model);
+    if (apiKey != null) await _prefs.setString(_kApiKey, apiKey);
+    if (baseUrl != null) await _prefs.setString(_kBaseUrl, baseUrl);
+    if (model != null) await _prefs.setString(_kModel, model);
   }
 
   Future<void> clear() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_kApiKey);
+    await _prefs.remove(_kApiKey);
     state = AiConfigState(baseUrl: state.baseUrl, model: state.model);
   }
 }

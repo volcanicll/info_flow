@@ -3,13 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../app/theme.dart';
-import '../../../../core/state/article_cache.dart';
-import '../../../../shared/widgets/press_scale.dart';
-import '../../../feed/domain/entities/article.dart';
+import '../../../../shared/widgets/hairline.dart';
+import '../../../feed/presentation/widgets/article_row.dart';
+import '../controllers/search_controller.dart';
 
+/// 检索页（铅字风）：极简大输入行（无边框，仅底部粗墨线）+ 历史词铅字标签。
 class SearchPage extends ConsumerStatefulWidget {
   const SearchPage({super.key});
 
@@ -18,217 +18,137 @@ class SearchPage extends ConsumerStatefulWidget {
 }
 
 class _SearchPageState extends ConsumerState<SearchPage> {
-  final _searchController = TextEditingController();
+  final _controller = TextEditingController();
   final _focusNode = FocusNode();
-  List<Article> _results = [];
-  bool _hasSearched = false;
-  List<String> _history = [];
-  bool _loading = false;
-  int _activeFilter = 0;
   Timer? _debounce;
 
-  static const _kHistory = 'search_history';
-  static const _filterLabels = ['全部', '文章', '来源', '标签'];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadHistory();
-    _searchController.addListener(_onSearchChanged);
-  }
+  static const _hotKeywords = [
+    'GPT-5', '比亚迪财报', 'Rust 异步闭包', 'Vision Pro 2', 'DeepMind',
+  ];
 
   @override
   void dispose() {
     _debounce?.cancel();
-    _searchController.dispose();
+    _controller.dispose();
     _focusNode.dispose();
     super.dispose();
   }
 
-  void _onSearchChanged() {
-    setState(() {});
-    final text = _searchController.text.trim();
+  void _onChanged(String text) {
+    setState(() {}); // 刷新清除按钮
     _debounce?.cancel();
-    if (text.isEmpty) {
-      setState(() {
-        _hasSearched = false;
-        _results = [];
-      });
-      return;
-    }
-    // 边打字边出结果：200ms 防抖，避免每字符全量过滤
-    _debounce = Timer(const Duration(milliseconds: 200), () => _liveFilter(text));
-  }
-
-  Future<void> _loadHistory() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() => _history = prefs.getStringList(_kHistory) ?? []);
-  }
-
-  Future<void> _saveHistory(String keyword) async {
-    final prefs = await SharedPreferences.getInstance();
-    final next = [keyword, ..._history.where((h) => h != keyword)].take(10).toList();
-    setState(() => _history = next);
-    await prefs.setStringList(_kHistory, next);
-  }
-
-  Future<void> _clearHistory() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() => _history = []);
-    await prefs.remove(_kHistory);
-  }
-
-  void _doSearch([String? keyword]) {
-    final text = (keyword ?? _searchController.text).trim();
-    if (text.isEmpty) return;
-    _searchController.text = text;
-    _saveHistory(text);
-    _focusNode.unfocus();
-
-    setState(() { _loading = true; _hasSearched = true; });
-    final results = _runFilter(text);
-    setState(() { _results = results; _loading = false; });
-  }
-
-  /// 实时过滤（来自输入框防抖）：不写历史、不收起键盘。
-  void _liveFilter(String text) {
-    setState(() { _hasSearched = true; _loading = true; });
-    final results = _runFilter(text);
-    if (mounted) setState(() { _results = results; _loading = false; });
-  }
-
-  List<Article> _runFilter(String text) {
-    final cache = ref.read(articleCacheProvider);
-    final lower = text.toLowerCase();
-    return cache.values.where((a) {
-      switch (_activeFilter) {
-        case 1: return a.title.toLowerCase().contains(lower) || (a.summary?.toLowerCase().contains(lower) ?? false);
-        case 2: return a.feedName.toLowerCase().contains(lower);
-        case 3: return (a.sentiment?.toLowerCase().contains(lower) ?? false) || a.feedName.toLowerCase().contains(lower);
-        default: return a.title.toLowerCase().contains(lower) || (a.summary?.toLowerCase().contains(lower) ?? false) ||
-            a.feedName.toLowerCase().contains(lower) || (a.sentiment?.toLowerCase().contains(lower) ?? false);
-      }
-    }).toList()..sort((a, b) {
-      final at = a.title.toLowerCase().contains(lower) ? 0 : 1;
-      final bt = b.title.toLowerCase().contains(lower) ? 0 : 1;
-      return at.compareTo(bt);
+    _debounce = Timer(const Duration(milliseconds: 200), () {
+      ref.read(searchControllerProvider.notifier).query(text);
     });
+  }
+
+  void _submit([String? keyword]) {
+    final text = (keyword ?? _controller.text).trim();
+    if (text.isEmpty) return;
+    _controller.text = text;
+    _focusNode.unfocus();
+    ref.read(searchControllerProvider.notifier).submit(text);
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final brightness = theme.brightness;
+    final state = ref.watch(searchControllerProvider);
 
     return Scaffold(
-      body: Column(
-        children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(10, 6, 18, 12),
-            child: Row(
-              children: [
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () => context.pop(),
-                    borderRadius: BorderRadius.circular(999),
-                    child: const SizedBox(width: 40, height: 40,
-                        child: Icon(Icons.arrow_back_rounded, size: 22)),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: AppTheme.surface2(brightness),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppTheme.hair(brightness)),
-                    ),
-                    child: TextField(
-                      controller: _searchController, focusNode: _focusNode,
-                      autofocus: true,
-                      textInputAction: TextInputAction.search,
-                      onSubmitted: _doSearch,
-                      decoration: InputDecoration(
-                        hintText: '搜索文章、订阅源…',
-                        hintStyle: TextStyle(fontSize: 15, color: theme.textTheme.bodySmall?.color),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 11),
-                        prefixIcon: Icon(Icons.search_rounded, size: 19,
-                            color: theme.textTheme.bodySmall?.color),
-                        suffixIcon: _searchController.text.isNotEmpty
-                            ? IconButton(
-                                icon: Icon(Icons.clear_rounded, size: 18,
-                                    color: theme.textTheme.bodySmall?.color),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  setState(() { _hasSearched = false; _results = []; });
-                                },
-                              )
-                            : null,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                PressScale(
-                  pressedScale: 0.92,
-                  onTap: () => context.pop(),
-                  child: Text('取消', style: TextStyle(
-                      fontSize: 14, color: theme.colorScheme.primary)),
-                ),
-              ],
+      body: SafeArea(
+        child: Column(
+          children: [
+            _SearchField(
+              controller: _controller,
+              focusNode: _focusNode,
+              onChanged: _onChanged,
+              onSubmit: _submit,
+              onClear: () {
+                _controller.clear();
+                ref.read(searchControllerProvider.notifier).clear();
+                setState(() {});
+              },
+              onCancel: () => context.pop(),
             ),
-          ),
-          // Filter chips
-          if (_hasSearched)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: Row(
-                children: List.generate(_filterLabels.length, (i) {
-                  final active = _activeFilter == i;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: PressScale(
-                      pressedScale: 0.94,
-                      onTap: () { setState(() => _activeFilter = i); if (_hasSearched) _doSearch(); },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: active ? theme.colorScheme.primary : AppTheme.surface2(brightness),
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(
-                            color: active ? theme.colorScheme.primary : AppTheme.hair(brightness),
-                          ),
-                        ),
-                        child: Text(_filterLabels[i], style: TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.w600,
-                          color: active ? theme.colorScheme.onPrimary : theme.textTheme.bodySmall?.color,
-                        )),
-                      ),
+            if (state.hasSearched) _FilterRow(active: state.filter),
+            Expanded(
+              child: state.hasSearched
+                  ? _ResultList(state: state)
+                  : _Suggestions(
+                      hot: _hotKeywords,
+                      onTap: _submit,
                     ),
-                  );
-                }),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 极简大输入行：无边框，仅底部粗墨线。
+class _SearchField extends StatelessWidget {
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final ValueChanged<String> onChanged;
+  final ValueChanged<String> onSubmit;
+  final VoidCallback onClear;
+  final VoidCallback onCancel;
+  const _SearchField({
+    required this.controller,
+    required this.focusNode,
+    required this.onChanged,
+    required this.onSubmit,
+    required this.onClear,
+    required this.onCancel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final c = context.colors;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 16, 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: c.ink, width: 2)),
+              ),
+              child: TextField(
+                controller: controller,
+                focusNode: focusNode,
+                autofocus: true,
+                textInputAction: TextInputAction.search,
+                onChanged: onChanged,
+                onSubmitted: onSubmit,
+                style: theme.textTheme.headlineMedium,
+                cursorColor: c.accent,
+                decoration: InputDecoration(
+                  isDense: true,
+                  hintText: '检索',
+                  hintStyle: theme.textTheme.headlineMedium?.copyWith(color: c.inkTertiary),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.only(bottom: 8),
+                  suffixIcon: controller.text.isNotEmpty
+                      ? IconButton(
+                          icon: Icon(Icons.close_rounded, size: 20, color: c.inkTertiary),
+                          onPressed: onClear,
+                        )
+                      : null,
+                ),
               ),
             ),
-          // Results header
-          if (_hasSearched && !_loading)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: Row(children: [
-                Text('找到 ${_results.length} 篇相关内容',
-                    style: theme.textTheme.bodySmall?.copyWith(fontSize: 12, fontWeight: FontWeight.w400)),
-                const Spacer(),
-                Text('筛选', style: TextStyle(
-                    fontSize: 12, color: theme.colorScheme.primary, fontWeight: FontWeight.w600)),
-              ]),
+          ),
+          const SizedBox(width: 12),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: GestureDetector(
+              onTap: onCancel,
+              child: Text('取消', style: theme.textTheme.bodyLarge?.copyWith(color: c.inkSecondary)),
             ),
-          // Content
-          Expanded(
-            child: _hasSearched
-                ? _SearchResults(results: _results, keyword: _searchController.text.trim(), loading: _loading)
-                : _SearchSuggestions(history: _history, onTapHistory: _doSearch, onClearHistory: _clearHistory),
           ),
         ],
       ),
@@ -236,223 +156,206 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   }
 }
 
-// ─── Suggestions ──────────────────────────────────────────────────
+/// 过滤范围：铅字标签行。
+class _FilterRow extends ConsumerWidget {
+  final SearchFilter active;
+  const _FilterRow({required this.active});
 
-class _SearchSuggestions extends StatelessWidget {
-  final List<String> history;
-  final ValueChanged<String> onTapHistory;
-  final VoidCallback onClearHistory;
-  const _SearchSuggestions({required this.history, required this.onTapHistory, required this.onClearHistory});
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+      child: Row(
+        children: SearchFilter.values.map((f) {
+          return Padding(
+            padding: const EdgeInsets.only(right: 18),
+            child: _Letterpress(
+              label: f.label,
+              active: f == active,
+              onTap: () => ref.read(searchControllerProvider.notifier).setFilter(f),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+/// 结果列表：复用信息流目录行，发丝线分隔。
+class _ResultList extends StatelessWidget {
+  final SearchState state;
+  const _ResultList({required this.state});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final brightness = theme.brightness;
-
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+    final c = context.colors;
+    if (state.results.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(40),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Icon(Icons.search_off_rounded, size: 44, color: c.hairlineStrong),
+            const SizedBox(height: 14),
+            Text('未找到「${state.query.trim()}」', style: theme.textTheme.titleLarge),
+            const SizedBox(height: 8),
+            Text('换个关键词试试', style: theme.textTheme.bodyMedium),
+          ]),
+        ),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('热门搜索', style: theme.textTheme.bodySmall?.copyWith(fontSize: 13, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 10),
-        Wrap(spacing: 7, runSpacing: 9, children: [
-          _HotTag(text: 'GPT-5', rank: '1'),
-          _HotTag(text: '比亚迪财报', rank: '2'),
-          _HotTag(text: 'Rust 异步闭包', rank: '3'),
-          _HotTag(text: 'Vision Pro 2', rank: '4'),
-          _HotTag(text: 'DeepMind', rank: '5'),
-        ]),
-        const SizedBox(height: 24),
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text('搜索历史', style: theme.textTheme.bodySmall?.copyWith(fontSize: 13, fontWeight: FontWeight.w700)),
-          if (history.isNotEmpty)
-            PressScale(
-              pressedScale: 0.94,
-              onTap: onClearHistory,
-              child: Row(children: [
-                Icon(Icons.delete_outline_rounded, size: 14, color: theme.textTheme.bodySmall?.color),
-                const SizedBox(width: 3),
-                Text('清空', style: TextStyle(fontSize: 12, color: theme.textTheme.bodySmall?.color)),
-              ]),
-            ),
-        ]),
-        const SizedBox(height: 6),
-        if (history.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Text('还没有搜索记录', style: theme.textTheme.bodyMedium?.copyWith(fontSize: 13)),
-          )
-        else
-          ...history.map((h) => Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: PressScale(
-              pressedScale: 0.97,
-              onTap: () => onTapHistory(h),
-              child: Row(children: [
-                Icon(Icons.history_rounded, size: 17, color: AppTheme.hairStrong(brightness)),
-                const SizedBox(width: 8),
-                Expanded(child: Text(h, style: theme.textTheme.bodyMedium?.copyWith(fontSize: 14))),
-                Icon(Icons.north_west_rounded, size: 14, color: AppTheme.hairStrong(brightness)),
-              ]),
-            ),
-          )),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+          child: Text('找到 ${state.results.length} 篇相关内容',
+              style: theme.textTheme.bodySmall?.copyWith(color: c.inkTertiary)),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Hairline(color: c.hairlineStrong),
+        ),
+        Expanded(
+          child: ListView.separated(
+            padding: const EdgeInsets.only(bottom: 24),
+            itemCount: state.results.length,
+            separatorBuilder: (_, _) => const Hairline(),
+            itemBuilder: (context, index) {
+              final a = state.results[index];
+              return ArticleRow(
+                article: a,
+                onTap: () => context.push('/reader/${a.id}'),
+              );
+            },
+          ),
+        ),
       ],
     );
   }
 }
 
-class _HotTag extends StatelessWidget {
-  final String text;
-  final String rank;
-  const _HotTag({required this.text, required this.rank});
+/// 建议态：热门 + 历史，均以铅字标签排布。
+class _Suggestions extends ConsumerWidget {
+  final List<String> hot;
+  final ValueChanged<String> onTap;
+  const _Suggestions({required this.hot, required this.onTap});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final brightness = theme.brightness;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
-      decoration: BoxDecoration(
-        color: theme.cardTheme.color,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppTheme.hair(brightness)),
-      ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Text(rank, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppTheme.down(brightness))),
-        const SizedBox(width: 5),
-        Text(text, style: TextStyle(fontSize: 13, color: theme.textTheme.bodyLarge?.color)),
-      ]),
-    );
-  }
-}
+    final c = context.colors;
+    final history = ref.watch(searchHistoryProvider);
 
-// ─── Results ──────────────────────────────────────────────────────
-
-class _SearchResults extends StatelessWidget {
-  final List<Article> results;
-  final String keyword;
-  final bool loading;
-  const _SearchResults({required this.results, required this.keyword, required this.loading});
-
-  @override
-  Widget build(BuildContext context) {
-    if (loading) return const Center(child: CircularProgressIndicator());
-    if (results.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Icon(Icons.search_off_rounded, size: 48,
-                color: AppTheme.hairStrong(Theme.of(context).brightness)),
-            const SizedBox(height: 14),
-            Text('未找到「$keyword」相关内容', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Text('换个关键词试试', style: Theme.of(context).textTheme.bodyMedium),
-          ]),
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+      children: [
+        Text('热门检索', style: theme.textTheme.labelMedium?.copyWith(color: c.accent)),
+        const SizedBox(height: 14),
+        Wrap(
+          spacing: 18,
+          runSpacing: 14,
+          children: [
+            for (var i = 0; i < hot.length; i++)
+              _RankTag(rank: i + 1, label: hot[i], onTap: () => onTap(hot[i])),
+          ],
         ),
-      );
-    }
-    return ListView.builder(
-      padding: const EdgeInsets.only(top: 8, bottom: 16),
-      itemCount: results.length,
-      itemBuilder: (context, index) => _HighlightCard(article: results[index], keyword: keyword),
-    );
-  }
-}
-
-class _HighlightCard extends StatelessWidget {
-  final Article article;
-  final String keyword;
-  const _HighlightCard({required this.article, required this.keyword});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final brightness = theme.brightness;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-      child: GestureDetector(
-        onTap: () => context.push('/reader/${article.id}'),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: theme.cardTheme.color,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppTheme.hair(brightness)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _HighlightedText(
-                text: article.title, keyword: keyword,
-                style: theme.textTheme.titleLarge?.copyWith(fontSize: 15, letterSpacing: -0.1),
-                maxLines: 2,
+        const SizedBox(height: 32),
+        Row(
+          children: [
+            Text('检索历史', style: theme.textTheme.labelMedium?.copyWith(color: c.inkTertiary)),
+            const Spacer(),
+            if (history.isNotEmpty)
+              GestureDetector(
+                onTap: () => ref.read(searchHistoryProvider.notifier).clear(),
+                child: Text('清空',
+                    style: theme.textTheme.labelLarge?.copyWith(color: c.inkTertiary)),
               ),
-              if (article.summary != null) ...[
-                const SizedBox(height: 6),
-                _HighlightedText(
-                  text: article.summary!, keyword: keyword,
-                  style: theme.textTheme.bodyMedium?.copyWith(fontSize: 13, height: 1.5),
-                  maxLines: 2,
-                ),
-              ],
-              const SizedBox(height: 8),
-              Row(children: [
-                Text(article.feedName, style: theme.textTheme.bodySmall?.copyWith(
-                    fontSize: 11, fontWeight: FontWeight.w400)),
-                const SizedBox(width: 8),
-                if (article.publishedAt != null)
-                  Text(_formatTime(article.publishedAt),
-                      style: theme.textTheme.bodySmall?.copyWith(fontSize: 11, fontWeight: FontWeight.w400)),
-              ]),
-            ],
+          ],
+        ),
+        const SizedBox(height: 14),
+        if (history.isEmpty)
+          Text('还没有检索记录', style: theme.textTheme.bodyMedium?.copyWith(color: c.inkTertiary))
+        else
+          Wrap(
+            spacing: 18,
+            runSpacing: 14,
+            children: history
+                .map((h) => _Letterpress(label: h, active: false, onTap: () => onTap(h)))
+                .toList(),
+          ),
+      ],
+    );
+  }
+}
+
+/// 铅字标签：字距拉开的纯文字，激活态加墨色下划线。
+class _Letterpress extends StatelessWidget {
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+  const _Letterpress({required this.label, required this.active, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final c = context.colors;
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: active ? c.ink : Colors.transparent,
+              width: 1.5,
+            ),
+          ),
+        ),
+        padding: const EdgeInsets.only(bottom: 2),
+        child: Text(
+          label,
+          style: theme.textTheme.bodyLarge?.copyWith(
+            color: active ? c.ink : c.inkSecondary,
+            fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+            letterSpacing: 0.5,
           ),
         ),
       ),
     );
   }
-
-  String _formatTime(DateTime? time) {
-    if (time == null) return '';
-    final diff = DateTime.now().difference(time);
-    if (diff.inMinutes < 60) return '${diff.inMinutes}分钟前';
-    if (diff.inHours < 24) return '${diff.inHours}小时前';
-    if (diff.inDays < 7) return '${diff.inDays}天前';
-    return '${time.month}/${time.day}';
-  }
 }
 
-class _HighlightedText extends StatelessWidget {
-  final String text;
-  final String keyword;
-  final TextStyle? style;
-  final int? maxLines;
-  const _HighlightedText({required this.text, required this.keyword, this.style, this.maxLines});
+/// 排名热词：序号（编辑红）+ 铅字词。
+class _RankTag extends StatelessWidget {
+  final int rank;
+  final String label;
+  final VoidCallback onTap;
+  const _RankTag({required this.rank, required this.label, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    if (keyword.isEmpty) {
-      return Text(text, style: style, maxLines: maxLines, overflow: TextOverflow.ellipsis);
-    }
-    final lower = text.toLowerCase();
-    final kwLower = keyword.toLowerCase();
-    final spans = <TextSpan>[];
-    var start = 0;
-    while (true) {
-      final idx = lower.indexOf(kwLower, start);
-      if (idx == -1) { spans.add(TextSpan(text: text.substring(start))); break; }
-      if (idx > start) spans.add(TextSpan(text: text.substring(start, idx)));
-      spans.add(TextSpan(
-        text: text.substring(idx, idx + keyword.length),
-        style: TextStyle(
-          backgroundColor: AppTheme.tint(Theme.of(context).brightness),
-          color: Theme.of(context).colorScheme.primary,
-          fontWeight: FontWeight.w600,
-        ),
-      ));
-      start = idx + keyword.length;
-    }
-    return Text.rich(TextSpan(children: spans, style: style),
-        maxLines: maxLines, overflow: TextOverflow.ellipsis);
+    final theme = Theme.of(context);
+    final c = context.colors;
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('$rank',
+              style: AppTheme.mono(theme.textTheme.labelLarge!.copyWith(
+                color: rank <= 3 ? c.accent : c.inkTertiary,
+                fontWeight: FontWeight.w800,
+              ))),
+          const SizedBox(width: 6),
+          Text(label,
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: c.ink,
+                letterSpacing: 0.3,
+              )),
+        ],
+      ),
+    );
   }
 }

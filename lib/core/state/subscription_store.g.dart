@@ -6,21 +6,57 @@ part of 'subscription_store.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$subscriptionStoreHash() => r'd723e13c2b8f7c8bb7cd902b4b83f016d72f3bed';
+// GENERATED CODE - DO NOT MODIFY BY HAND
+// ignore_for_file: type=lint, type=warning
 
-/// See also [SubscriptionStore].
 @ProviderFor(SubscriptionStore)
-final subscriptionStoreProvider =
-    NotifierProvider<SubscriptionStore, Set<String>>.internal(
-      SubscriptionStore.new,
-      name: r'subscriptionStoreProvider',
-      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$subscriptionStoreHash,
-      dependencies: null,
-      allTransitiveDependencies: null,
-    );
+final subscriptionStoreProvider = SubscriptionStoreProvider._();
 
-typedef _$SubscriptionStore = Notifier<Set<String>>;
-// ignore_for_file: type=lint
-// ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package
+final class SubscriptionStoreProvider
+    extends $NotifierProvider<SubscriptionStore, Set<String>> {
+  SubscriptionStoreProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'subscriptionStoreProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$subscriptionStoreHash();
+
+  @$internal
+  @override
+  SubscriptionStore create() => SubscriptionStore();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(Set<String> value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<Set<String>>(value),
+    );
+  }
+}
+
+String _$subscriptionStoreHash() => r'ec14b3130e12de3f608cee37a69d743161940775';
+
+abstract class _$SubscriptionStore extends $Notifier<Set<String>> {
+  Set<String> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<Set<String>, Set<String>>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<Set<String>, Set<String>>,
+              Set<String>,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}

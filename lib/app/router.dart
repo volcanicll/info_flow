@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:info_flow/features/signal_hub/presentation/pages/pulse_page.dart';
 import 'package:info_flow/features/feed/presentation/pages/feed_page.dart';
@@ -69,13 +68,6 @@ GoRouter goRouter(Ref ref) {
                 path: '/feed',
                 name: 'feed',
                 builder: (context, state) => const FeedPage(),
-                routes: [
-                  GoRoute(
-                    path: 'subscription',
-                    name: 'feedSubscription',
-                    builder: (context, state) => const SubscriptionPage(),
-                  ),
-                ],
               ),
             ],
           ),
@@ -121,6 +113,12 @@ GoRouter goRouter(Ref ref) {
         name: 'search',
         pageBuilder: (context, state) =>
             _fadeSlideTransition(state, const SearchPage()),
+      ),
+      GoRoute(
+        path: '/subscription',
+        name: 'subscription',
+        pageBuilder: (context, state) =>
+            _fadeSlideTransition(state, const SubscriptionPage()),
       ),
       GoRoute(
         path: '/crypto-radar',

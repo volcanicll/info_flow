@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../app/theme.dart';
+
 /// Reusable empty state: icon + title + optional description + optional action
 class EmptyState extends StatelessWidget {
   final IconData icon;
@@ -20,9 +22,7 @@ class EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final hairStrong = theme.brightness == Brightness.dark
-        ? const Color(0xFF4A4A60)
-        : const Color(0xFFD0CFDC);
+    final c = context.colors;
 
     return Center(
       child: Padding(
@@ -30,9 +30,9 @@ class EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 48, color: hairStrong),
+            Icon(icon, size: 44, color: c.hairlineStrong),
             const SizedBox(height: 16),
-            Text(title, style: theme.textTheme.titleMedium),
+            Text(title, style: theme.textTheme.titleLarge),
             if (description != null) ...[
               const SizedBox(height: 8),
               Text(

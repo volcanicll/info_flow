@@ -6,22 +6,51 @@ part of 'ticker_resolver.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$tickerDictionaryHash() => r'7929de2a85072669b2737f365930a3822d925860';
+// GENERATED CODE - DO NOT MODIFY BY HAND
+// ignore_for_file: type=lint, type=warning
 
-/// See also [tickerDictionary].
 @ProviderFor(tickerDictionary)
-final tickerDictionaryProvider = AutoDisposeProvider<TickerDictionary>.internal(
-  tickerDictionary,
-  name: r'tickerDictionaryProvider',
-  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-      ? null
-      : _$tickerDictionaryHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
+final tickerDictionaryProvider = TickerDictionaryProvider._();
 
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-typedef TickerDictionaryRef = AutoDisposeProviderRef<TickerDictionary>;
-// ignore_for_file: type=lint
-// ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package
+final class TickerDictionaryProvider
+    extends
+        $FunctionalProvider<
+          TickerDictionary,
+          TickerDictionary,
+          TickerDictionary
+        >
+    with $Provider<TickerDictionary> {
+  TickerDictionaryProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'tickerDictionaryProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$tickerDictionaryHash();
+
+  @$internal
+  @override
+  $ProviderElement<TickerDictionary> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  TickerDictionary create(Ref ref) {
+    return tickerDictionary(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(TickerDictionary value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<TickerDictionary>(value),
+    );
+  }
+}
+
+String _$tickerDictionaryHash() => r'8dce374f0272b4eb793141d267e2ec656e1044c8';

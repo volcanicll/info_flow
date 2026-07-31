@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:info_flow/core/network/api_client.dart';
 import 'package:html/parser.dart' as html_parser;
 import 'package:xml/xml.dart';
 
@@ -223,9 +224,5 @@ class HttpDateParser {
 }
 
 final rssRepositoryProvider = Provider<RssRepository>((ref) {
-  final dio = Dio(BaseOptions(
-    connectTimeout: const Duration(seconds: 10),
-    receiveTimeout: const Duration(seconds: 12),
-  ));
-  return RssRepository(dio);
+  return RssRepository(ref.watch(dioProvider));
 });

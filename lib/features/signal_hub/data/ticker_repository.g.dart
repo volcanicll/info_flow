@@ -6,41 +6,92 @@ part of 'ticker_repository.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$tickerRepositoryHash() => r'6bd0c5c21fea91d8b565cc25761405e19f926adb';
+// GENERATED CODE - DO NOT MODIFY BY HAND
+// ignore_for_file: type=lint, type=warning
 
-/// See also [tickerRepository].
 @ProviderFor(tickerRepository)
-final tickerRepositoryProvider = AutoDisposeProvider<TickerRepository>.internal(
-  tickerRepository,
-  name: r'tickerRepositoryProvider',
-  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-      ? null
-      : _$tickerRepositoryHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
+final tickerRepositoryProvider = TickerRepositoryProvider._();
 
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-typedef TickerRepositoryRef = AutoDisposeProviderRef<TickerRepository>;
-String _$tickerQuotesHash() => r'aeb197d47f39d20a1f27f1fda69cc442db1d6897';
+final class TickerRepositoryProvider
+    extends
+        $FunctionalProvider<
+          TickerRepository,
+          TickerRepository,
+          TickerRepository
+        >
+    with $Provider<TickerRepository> {
+  TickerRepositoryProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'tickerRepositoryProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
 
-/// See also [tickerQuotes].
-@ProviderFor(tickerQuotes)
-final tickerQuotesProvider =
-    AutoDisposeFutureProvider<Map<String, TickerQuote>>.internal(
-      tickerQuotes,
-      name: r'tickerQuotesProvider',
-      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$tickerQuotesHash,
-      dependencies: null,
-      allTransitiveDependencies: null,
+  @override
+  String debugGetCreateSourceHash() => _$tickerRepositoryHash();
+
+  @$internal
+  @override
+  $ProviderElement<TickerRepository> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  TickerRepository create(Ref ref) {
+    return tickerRepository(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(TickerRepository value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<TickerRepository>(value),
     );
+  }
+}
 
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-typedef TickerQuotesRef =
-    AutoDisposeFutureProviderRef<Map<String, TickerQuote>>;
-// ignore_for_file: type=lint
-// ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package
+String _$tickerRepositoryHash() => r'1ed97844e0ed2abbcba94be51c2c2097cb34136c';
+
+@ProviderFor(tickerQuotes)
+final tickerQuotesProvider = TickerQuotesProvider._();
+
+final class TickerQuotesProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<Map<String, TickerQuote>>,
+          Map<String, TickerQuote>,
+          FutureOr<Map<String, TickerQuote>>
+        >
+    with
+        $FutureModifier<Map<String, TickerQuote>>,
+        $FutureProvider<Map<String, TickerQuote>> {
+  TickerQuotesProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'tickerQuotesProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$tickerQuotesHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<Map<String, TickerQuote>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<Map<String, TickerQuote>> create(Ref ref) {
+    return tickerQuotes(ref);
+  }
+}
+
+String _$tickerQuotesHash() => r'ab0674fb2c915ec5e6f0d7ab2b131088e2507881';

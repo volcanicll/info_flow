@@ -6,160 +6,94 @@ part of 'feed_controller.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$feedControllerHash() => r'17fd41b34821f0b55a62059667ab2838970ff059';
+// GENERATED CODE - DO NOT MODIFY BY HAND
+// ignore_for_file: type=lint, type=warning
 
-/// Copied from Dart SDK
-class _SystemHash {
-  _SystemHash._();
-
-  static int combine(int hash, int value) {
-    // ignore: parameter_assignments
-    hash = 0x1fffffff & (hash + value);
-    // ignore: parameter_assignments
-    hash = 0x1fffffff & (hash + ((0x0007ffff & hash) << 10));
-    return hash ^ (hash >> 6);
-  }
-
-  static int finish(int hash) {
-    // ignore: parameter_assignments
-    hash = 0x1fffffff & (hash + ((0x03ffffff & hash) << 3));
-    // ignore: parameter_assignments
-    hash = hash ^ (hash >> 11);
-    return 0x1fffffff & (hash + ((0x00003fff & hash) << 15));
-  }
-}
-
-abstract class _$FeedController
-    extends BuildlessAutoDisposeAsyncNotifier<List<Article>> {
-  late final FeedType feedType;
-
-  FutureOr<List<Article>> build(FeedType feedType);
-}
-
-/// See also [FeedController].
 @ProviderFor(FeedController)
-const feedControllerProvider = FeedControllerFamily();
+final feedControllerProvider = FeedControllerFamily._();
 
-/// See also [FeedController].
-class FeedControllerFamily extends Family<AsyncValue<List<Article>>> {
-  /// See also [FeedController].
-  const FeedControllerFamily();
+final class FeedControllerProvider
+    extends $AsyncNotifierProvider<FeedController, List<Article>> {
+  FeedControllerProvider._({
+    required FeedControllerFamily super.from,
+    required FeedType super.argument,
+  }) : super(
+         retry: null,
+         name: r'feedControllerProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
 
-  /// See also [FeedController].
-  FeedControllerProvider call(FeedType feedType) {
-    return FeedControllerProvider(feedType);
+  @override
+  String debugGetCreateSourceHash() => _$feedControllerHash();
+
+  @override
+  String toString() {
+    return r'feedControllerProvider'
+        ''
+        '($argument)';
   }
 
+  @$internal
   @override
-  FeedControllerProvider getProviderOverride(
-    covariant FeedControllerProvider provider,
-  ) {
-    return call(provider.feedType);
-  }
-
-  static const Iterable<ProviderOrFamily>? _dependencies = null;
-
-  @override
-  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
-
-  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
-
-  @override
-  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
-      _allTransitiveDependencies;
-
-  @override
-  String? get name => r'feedControllerProvider';
-}
-
-/// See also [FeedController].
-class FeedControllerProvider
-    extends
-        AutoDisposeAsyncNotifierProviderImpl<FeedController, List<Article>> {
-  /// See also [FeedController].
-  FeedControllerProvider(FeedType feedType)
-    : this._internal(
-        () => FeedController()..feedType = feedType,
-        from: feedControllerProvider,
-        name: r'feedControllerProvider',
-        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-            ? null
-            : _$feedControllerHash,
-        dependencies: FeedControllerFamily._dependencies,
-        allTransitiveDependencies:
-            FeedControllerFamily._allTransitiveDependencies,
-        feedType: feedType,
-      );
-
-  FeedControllerProvider._internal(
-    super._createNotifier, {
-    required super.name,
-    required super.dependencies,
-    required super.allTransitiveDependencies,
-    required super.debugGetCreateSourceHash,
-    required super.from,
-    required this.feedType,
-  }) : super.internal();
-
-  final FeedType feedType;
-
-  @override
-  FutureOr<List<Article>> runNotifierBuild(covariant FeedController notifier) {
-    return notifier.build(feedType);
-  }
-
-  @override
-  Override overrideWith(FeedController Function() create) {
-    return ProviderOverride(
-      origin: this,
-      override: FeedControllerProvider._internal(
-        () => create()..feedType = feedType,
-        from: from,
-        name: null,
-        dependencies: null,
-        allTransitiveDependencies: null,
-        debugGetCreateSourceHash: null,
-        feedType: feedType,
-      ),
-    );
-  }
-
-  @override
-  AutoDisposeAsyncNotifierProviderElement<FeedController, List<Article>>
-  createElement() {
-    return _FeedControllerProviderElement(this);
-  }
+  FeedController create() => FeedController();
 
   @override
   bool operator ==(Object other) {
-    return other is FeedControllerProvider && other.feedType == feedType;
+    return other is FeedControllerProvider && other.argument == argument;
   }
 
   @override
   int get hashCode {
-    var hash = _SystemHash.combine(0, runtimeType.hashCode);
-    hash = _SystemHash.combine(hash, feedType.hashCode);
-
-    return _SystemHash.finish(hash);
+    return argument.hashCode;
   }
 }
 
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-mixin FeedControllerRef on AutoDisposeAsyncNotifierProviderRef<List<Article>> {
-  /// The parameter `feedType` of this provider.
-  FeedType get feedType;
-}
+String _$feedControllerHash() => r'c9b9db87e0e436097f0ad87960ebea06c5d3ec5e';
 
-class _FeedControllerProviderElement
-    extends
-        AutoDisposeAsyncNotifierProviderElement<FeedController, List<Article>>
-    with FeedControllerRef {
-  _FeedControllerProviderElement(super.provider);
+final class FeedControllerFamily extends $Family
+    with
+        $ClassFamilyOverride<
+          FeedController,
+          AsyncValue<List<Article>>,
+          List<Article>,
+          FutureOr<List<Article>>,
+          FeedType
+        > {
+  FeedControllerFamily._()
+    : super(
+        retry: null,
+        name: r'feedControllerProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  FeedControllerProvider call(FeedType feedType) =>
+      FeedControllerProvider._(argument: feedType, from: this);
 
   @override
-  FeedType get feedType => (origin as FeedControllerProvider).feedType;
+  String toString() => r'feedControllerProvider';
 }
 
-// ignore_for_file: type=lint
-// ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package
+abstract class _$FeedController extends $AsyncNotifier<List<Article>> {
+  late final _$args = ref.$arg as FeedType;
+  FeedType get feedType => _$args;
+
+  FutureOr<List<Article>> build(FeedType feedType);
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<AsyncValue<List<Article>>, List<Article>>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<List<Article>>, List<Article>>,
+              AsyncValue<List<Article>>,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, () => build(_$args));
+  }
+}

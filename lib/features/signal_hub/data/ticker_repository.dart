@@ -96,7 +96,7 @@ class TickerRepository {
 }
 
 @riverpod
-TickerRepository tickerRepository(TickerRepositoryRef ref) {
+TickerRepository tickerRepository(Ref ref) {
   // 复用 core/network 已注册的共享 dioProvider（含统一拦截器/超时）。
   final dio = ref.watch(dioProvider);
   final crypto = BinanceApi(dio);
@@ -105,7 +105,7 @@ TickerRepository tickerRepository(TickerRepositoryRef ref) {
 }
 
 @riverpod
-Future<Map<String, TickerQuote>> tickerQuotes(TickerQuotesRef ref) {
+Future<Map<String, TickerQuote>> tickerQuotes(Ref ref) {
   final cache = ref.watch(articleCacheProvider);
   final syms = <String>{};
   for (final a in cache.values) {

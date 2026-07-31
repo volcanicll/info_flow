@@ -18,14 +18,15 @@ class TickerChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         decoration: BoxDecoration(
-          color: theme.colorScheme.primary.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: theme.dividerColor, width: 0.5),
+          borderRadius: BorderRadius.circular(2),
         ),
         child: Text(
           '#${ref.symbol}',
           style: TextStyle(
             fontSize: 11,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.3,
             color: theme.colorScheme.primary,
           ),
         ),

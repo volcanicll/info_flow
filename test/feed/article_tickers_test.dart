@@ -10,7 +10,7 @@ void main() {
 
   test('copyWith 携带 tickers', () {
     final a = _buildArticle();
-    final ref = TickerRef(
+    final ref = const TickerRef(
       symbol: 'ETH',
       asset: AssetClass.crypto,
       mentions: 2,
@@ -23,7 +23,7 @@ void main() {
   test('toJson/fromJson 往返保持 tickers，旧数据缺失时回退空', () {
     final a = _buildArticle().copyWith(
       tickers: [
-        TickerRef(symbol: 'BTC', asset: AssetClass.crypto, mentions: 1, inTitle: false),
+        const TickerRef(symbol: 'BTC', asset: AssetClass.crypto, mentions: 1, inTitle: false),
       ],
     );
     final json = a.toJson();
@@ -36,7 +36,7 @@ void main() {
   });
 }
 
-Article _buildArticle() => Article(
+Article _buildArticle() => const Article(
       id: 'a1',
       feedId: 'f1',
       feedName: '测试源',

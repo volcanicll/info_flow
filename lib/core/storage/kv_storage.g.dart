@@ -6,37 +6,109 @@ part of 'kv_storage.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$themeModeNotifierHash() => r'6d138544a5cf7144195a8b87829b81704ad88b96';
+// GENERATED CODE - DO NOT MODIFY BY HAND
+// ignore_for_file: type=lint, type=warning
 
-/// See also [ThemeModeNotifier].
 @ProviderFor(ThemeModeNotifier)
-final themeModeNotifierProvider =
-    AutoDisposeNotifierProvider<ThemeModeNotifier, ThemeMode>.internal(
-      ThemeModeNotifier.new,
-      name: r'themeModeNotifierProvider',
-      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$themeModeNotifierHash,
-      dependencies: null,
-      allTransitiveDependencies: null,
+final themeModeProvider = ThemeModeNotifierProvider._();
+
+final class ThemeModeNotifierProvider
+    extends $NotifierProvider<ThemeModeNotifier, ThemeMode> {
+  ThemeModeNotifierProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'themeModeProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$themeModeNotifierHash();
+
+  @$internal
+  @override
+  ThemeModeNotifier create() => ThemeModeNotifier();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ThemeMode value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ThemeMode>(value),
     );
+  }
+}
 
-typedef _$ThemeModeNotifier = AutoDisposeNotifier<ThemeMode>;
-String _$fontSizeNotifierHash() => r'af2cecae79af5dfee7d26e7122b68052e5510ff3';
+String _$themeModeNotifierHash() => r'f0175a254345ad4c6fcf34e62beed6225c675b7c';
 
-/// See also [FontSizeNotifier].
+abstract class _$ThemeModeNotifier extends $Notifier<ThemeMode> {
+  ThemeMode build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<ThemeMode, ThemeMode>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<ThemeMode, ThemeMode>,
+              ThemeMode,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
+
 @ProviderFor(FontSizeNotifier)
-final fontSizeNotifierProvider =
-    AutoDisposeNotifierProvider<FontSizeNotifier, double>.internal(
-      FontSizeNotifier.new,
-      name: r'fontSizeNotifierProvider',
-      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$fontSizeNotifierHash,
-      dependencies: null,
-      allTransitiveDependencies: null,
-    );
+final fontSizeProvider = FontSizeNotifierProvider._();
 
-typedef _$FontSizeNotifier = AutoDisposeNotifier<double>;
-// ignore_for_file: type=lint
-// ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package
+final class FontSizeNotifierProvider
+    extends $NotifierProvider<FontSizeNotifier, double> {
+  FontSizeNotifierProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'fontSizeProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$fontSizeNotifierHash();
+
+  @$internal
+  @override
+  FontSizeNotifier create() => FontSizeNotifier();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(double value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<double>(value),
+    );
+  }
+}
+
+String _$fontSizeNotifierHash() => r'ad57a3d5bd63a203d69eb580f136f4fedf3c624a';
+
+abstract class _$FontSizeNotifier extends $Notifier<double> {
+  double build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<double, double>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<double, double>,
+              double,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}

@@ -6,7 +6,7 @@ import 'package:info_flow/features/signal_hub/presentation/widgets/ticker_chip.d
 import 'package:info_flow/features/signal_hub/presentation/widgets/ticker_badge.dart';
 
 void main() {
-  final ref = TickerRef(symbol: 'ETH', asset: AssetClass.crypto, mentions: 1, inTitle: true);
+  final ref = const TickerRef(symbol: 'ETH', asset: AssetClass.crypto, mentions: 1, inTitle: true);
 
   testWidgets('TickerChip 渲染符号', (tester) async {
     await tester.pumpWidget(MaterialApp(
@@ -24,7 +24,7 @@ void main() {
   });
 
   testWidgets('TickerBadge 有 quote 时显示涨跌幅', (tester) async {
-    final q = TickerQuote(
+    final q = const TickerQuote(
       symbol: 'ETH',
       asset: AssetClass.crypto,
       price: 1847.2,

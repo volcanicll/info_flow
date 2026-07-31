@@ -2,11 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/theme.dart';
 import '../../../../core/state/library_store.dart';
 import '../../../../shared/widgets/animated_entrance.dart';
 import '../../../../shared/widgets/article_card_shimmer.dart';
+import '../../../../shared/widgets/empty_state.dart';
+import '../../../../shared/widgets/hairline.dart';
+import '../../../../shared/widgets/press_scale.dart';
 import '../controllers/feed_controller.dart';
-import '../widgets/article_card.dart';
+import '../widgets/article_headline.dart';
+import '../widgets/article_row.dart';
 
 class FeedPage extends ConsumerStatefulWidget {
   const FeedPage({super.key});
@@ -19,10 +24,12 @@ class _FeedPageState extends ConsumerState<FeedPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
+  static const _sections = ['推荐', '关注', '热榜'];
+
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: _sections.length, vsync: this);
     _tabController.addListener(_onTabChanged);
   }
 
@@ -40,91 +47,52 @@ class _FeedPageState extends ConsumerState<FeedPage>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final canvas = theme.scaffoldBackgroundColor;
-    final brand = theme.colorScheme.primary;
-    final t1 = theme.textTheme.headlineLarge?.color ?? Colors.black;
-    final t3 = theme.textTheme.bodySmall?.color ?? Colors.grey;
+    final c = context.colors;
 
     return Scaffold(
       body: Column(
         children: [
-          Container(
-            color: canvas,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+          // ── 报头：刊名 + 检索 ──
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 10, 12, 6),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                const SizedBox(height: 6),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
-                  child: Row(
-                    children: [
-                      Text('InfoFlow',
-                          style: theme.textTheme.headlineLarge),
-                      const Spacer(),
-                      Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () {},
-                          borderRadius: BorderRadius.circular(999),
-                          child: const SizedBox(
-                            width: 40, height: 40,
-                            child: Icon(Icons.notifications_none_rounded, size: 22),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 2),
-                      Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () => context.push('/search'),
-                          borderRadius: BorderRadius.circular(999),
-                          child: const SizedBox(
-                            width: 40, height: 40,
-                            child: Icon(Icons.search_rounded, size: 22),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                Text('INFOFLOW',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 3,
+                      color: c.accent,
+                    )),
+                const Spacer(),
+                _MastheadIcon(
+                  icon: Icons.notifications_none_rounded,
+                  onTap: () {},
                 ),
-                SizedBox(
-                  height: 40,
-                  child: TabBar(
-                    controller: _tabController,
-                    indicatorColor: brand,
-                    indicatorWeight: 3,
-                    indicatorSize: TabBarIndicatorSize.label,
-                    indicatorPadding:
-                        const EdgeInsets.symmetric(horizontal: 0),
-                    labelColor: t1,
-                    unselectedLabelColor: t3,
-                    labelStyle: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
-                    unselectedLabelStyle: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
-                    dividerColor: Colors.transparent,
-                    splashFactory: NoSplash.splashFactory,
-                    overlayColor:
-                        WidgetStateProperty.all(Colors.transparent),
-                    tabs: const [
-                      Tab(text: '推荐'),
-                      Tab(text: '关注'),
-                      Tab(text: '热榜'),
-                    ],
-                  ),
+                _MastheadIcon(
+                  icon: Icons.search_rounded,
+                  onTap: () => context.push('/search'),
                 ),
               ],
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+            child: Text('今日要闻', style: theme.textTheme.headlineLarge),
+          ),
+          // ── 栏目切换：衬线小字 + 墨线下划线 ──
+          _SectionTabs(
+            controller: _tabController,
+            sections: _sections,
+            onTap: (i) => _tabController.animateTo(i),
+          ),
+          const Hairline(),
           Expanded(
             child: TabBarView(
               controller: _tabController,
               physics: const ClampingScrollPhysics(),
-              children: [
+              children: const [
                 _ArticleList(feedType: FeedType.recommend),
                 _ArticleList(feedType: FeedType.following),
                 _ArticleList(feedType: FeedType.hot),
@@ -132,6 +100,75 @@ class _FeedPageState extends ConsumerState<FeedPage>
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _MastheadIcon extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  const _MastheadIcon({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return PressScale(
+      pressedScale: 0.85,
+      onTap: onTap,
+      child: SizedBox(
+        width: 40,
+        height: 40,
+        child: Icon(icon, size: 22, color: context.colors.ink),
+      ),
+    );
+  }
+}
+
+class _SectionTabs extends StatelessWidget {
+  final TabController controller;
+  final List<String> sections;
+  final ValueChanged<int> onTap;
+
+  const _SectionTabs({
+    required this.controller,
+    required this.sections,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 10),
+      child: Row(
+        children: List.generate(sections.length, (i) {
+          final active = controller.index == i;
+          return Padding(
+            padding: const EdgeInsets.only(right: 22),
+            child: PressScale(
+              pressedScale: 0.94,
+              onTap: () => onTap(i),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    sections[i],
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: active ? c.ink : c.inkTertiary,
+                        ),
+                  ),
+                  const SizedBox(height: 4),
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    height: 2,
+                    width: active ? 18 : 0,
+                    color: c.accent,
+                  ),
+                ],
+              ),
+            ),
+          );
+        }),
       ),
     );
   }
@@ -168,146 +205,82 @@ class _ArticleListState extends ConsumerState<_ArticleList>
   void _onScroll() {
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
-      ref
-          .read(feedControllerProvider(widget.feedType).notifier)
-          .loadMore();
+      ref.read(feedControllerProvider(widget.feedType).notifier).loadMore();
     }
   }
 
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final articlesAsync =
-        ref.watch(feedControllerProvider(widget.feedType));
-    final notifier =
-        ref.read(feedControllerProvider(widget.feedType).notifier);
+    final articlesAsync = ref.watch(feedControllerProvider(widget.feedType));
+    final notifier = ref.read(feedControllerProvider(widget.feedType).notifier);
     final library = ref.watch(libraryStoreProvider);
     final unreadCount =
-        articlesAsync.valueOrNull?.where((a) => !library.isRead(a.id)).length ?? 0;
+        articlesAsync.value?.where((a) => !library.isRead(a.id)).length ?? 0;
 
     return Column(
       children: [
-        // Mark all read bar
-        if (unreadCount > 0)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              children: [
-                Text(
-                  '$unreadCount 篇新内容',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontSize: 12, fontWeight: FontWeight.w400,
-                      ),
-                ),
-                const Spacer(),
-                GestureDetector(
-                  onTap: () => _markAllRead(),
-                  child: Text(
-                    '全部已读',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+        if (unreadCount > 0) _UnreadBar(count: unreadCount, onMarkAll: _markAllRead),
         Expanded(
           child: RefreshIndicator(
             onRefresh: () => notifier.refresh(),
+            color: context.colors.accent,
             child: articlesAsync.when(
               loading: () => ListView.builder(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.only(top: 4, bottom: 16),
                 itemCount: 4,
-                itemBuilder: (_, __) => const ArticleCardShimmer(),
+                itemBuilder: (_, _) => const ArticleCardShimmer(),
               ),
-              error: (err, stack) => ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.only(top: 120),
-                children: [
-                  Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Column(
-                        children: [
-                          Icon(Icons.wifi_off_rounded,
-                              size: 48,
-                              color: theme.textTheme.bodySmall?.color),
-                          const SizedBox(height: 16),
-                          Text('加载失败', style: theme.textTheme.titleMedium),
-                          const SizedBox(height: 8),
-                          Text('网络连接异常，请检查后重试',
-                              style: theme.textTheme.bodyMedium),
-                          const SizedBox(height: 16),
-                          FilledButton.icon(
-                            onPressed: () => ref.invalidate(
-                                feedControllerProvider(widget.feedType)),
-                            icon: const Icon(Icons.refresh_rounded, size: 18),
-                            label: const Text('重试'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+              error: (err, stack) => _ErrorView(
+                onRetry: () =>
+                    ref.invalidate(feedControllerProvider(widget.feedType)),
               ),
               data: (articles) {
                 if (articles.isEmpty) {
                   return ListView(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.only(top: 120),
-                    children: [
-                      Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(32),
-                          child: Column(
-                            children: [
-                              Icon(Icons.article_outlined,
-                                  size: 48,
-                                  color: theme.textTheme.bodySmall?.color),
-                              const SizedBox(height: 16),
-                              Text('暂无内容',
-                                  style: theme.textTheme.titleMedium),
-                              const SizedBox(height: 8),
-                              Text('下拉刷新或添加订阅源',
-                                  style: theme.textTheme.bodyMedium),
-                            ],
-                          ),
-                        ),
+                    padding: const EdgeInsets.only(top: 100),
+                    children: const [
+                      EmptyState(
+                        icon: Icons.article_outlined,
+                        title: '暂无内容',
+                        description: '下拉刷新或添加订阅源',
                       ),
                     ],
                   );
                 }
-                return ListView.builder(
+                return ListView.separated(
                   controller: _scrollController,
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.only(top: 4, bottom: 16),
+                  padding: const EdgeInsets.only(bottom: 16),
                   itemCount: articles.length + (notifier.hasMore ? 1 : 0),
+                  separatorBuilder: (_, index) =>
+                      index == 0 ? const SizedBox.shrink() : const Hairline(),
                   itemBuilder: (context, index) {
                     if (index == articles.length) {
                       return const Padding(
-                        padding: EdgeInsets.all(16),
+                        padding: EdgeInsets.all(20),
                         child: Center(
                           child: SizedBox(
-                            width: 20, height: 20,
+                            width: 18,
+                            height: 18,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           ),
                         ),
                       );
                     }
-                    final cardType = CardType.values[index % CardType.values.length];
-                    return AnimatedEntrance(
-                      index: index,
-                      child: ArticleCard(
-                        article: articles[index],
-                        cardType: cardType,
-                        onTap: () =>
-                            context.push('/reader/${articles[index].id}'),
-                      ),
-                    );
+                    final article = articles[index];
+                    final child = index == 0
+                        ? ArticleHeadlineCard(
+                            article: article,
+                            onTap: () => context.push('/reader/${article.id}'),
+                          )
+                        : ArticleRow(
+                            article: article,
+                            onTap: () => context.push('/reader/${article.id}'),
+                          );
+                    return AnimatedEntrance(index: index, child: child);
                   },
                 );
               },
@@ -319,13 +292,64 @@ class _ArticleListState extends ConsumerState<_ArticleList>
   }
 
   void _markAllRead() {
-    final articles =
-        ref.read(feedControllerProvider(widget.feedType)).valueOrNull;
+    final articles = ref.read(feedControllerProvider(widget.feedType)).value;
     if (articles == null || articles.isEmpty) return;
     for (final article in articles) {
       ref.read(libraryStoreProvider.notifier).markRead(article.id);
     }
   }
+}
 
-  ThemeData get theme => Theme.of(context);
+class _UnreadBar extends StatelessWidget {
+  final int count;
+  final VoidCallback onMarkAll;
+  const _UnreadBar({required this.count, required this.onMarkAll});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 4),
+      child: Row(
+        children: [
+          Text('$count 篇未读',
+              style: TextStyle(fontSize: 12, color: c.inkTertiary)),
+          const Spacer(),
+          PressScale(
+            pressedScale: 0.9,
+            onTap: onMarkAll,
+            child: Text('全部标记已读',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.3,
+                  color: c.accent,
+                )),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ErrorView extends StatelessWidget {
+  final VoidCallback onRetry;
+  const _ErrorView({required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.only(top: 100),
+      children: [
+        EmptyState(
+          icon: Icons.wifi_off_rounded,
+          title: '加载失败',
+          description: '网络连接异常，请检查后重试',
+          actionLabel: '重试',
+          onAction: onRetry,
+        ),
+      ],
+    );
+  }
 }

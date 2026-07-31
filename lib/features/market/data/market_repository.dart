@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:info_flow/core/network/api_client.dart';
 
 import '../domain/models/market_quote.dart';
 
@@ -137,8 +138,9 @@ class MarketRepository {
       }
 
       return results;
-    } catch (_) {
-      return [];
+    } catch (e) {
+      // 不再静默吞错：统一转为 AppException 抛出，由上层呈现
+      throw mapToAppException(e);
     }
   }
 
@@ -180,9 +182,5 @@ class MarketRepository {
 }
 
 final marketRepositoryProvider = Provider<MarketRepository>((ref) {
-  final dio = Dio(BaseOptions(
-    connectTimeout: const Duration(seconds: 8),
-    receiveTimeout: const Duration(seconds: 10),
-  ));
-  return MarketRepository(dio);
+  return MarketRepository(ref.watch(dioProvider));
 });

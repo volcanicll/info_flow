@@ -5,7 +5,7 @@ import '../../../../shared/widgets/press_scale.dart';
 import '../../domain/entities/ticker_quote.dart';
 import '../../domain/entities/ticker_ref.dart';
 
-/// 含实时价格 + 涨跌幅的标的徽章。用于脉搏页与未来的 Ticker Lens。
+/// 含实时价格 + 涨跌幅的标的徽章（财经报纸风：等宽数字 + 细线描边）。
 /// quote 为 null 时显示占位「--」，颜色为中性。
 class TickerBadge extends StatelessWidget {
   final TickerRef ref;
@@ -17,14 +17,15 @@ class TickerBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final brightness = theme.brightness;
+    final neutral = theme.textTheme.bodySmall?.color ?? Colors.grey;
     final hasQuote = quote != null;
     final color = !hasQuote
-        ? (theme.textTheme.bodySmall?.color ?? Colors.grey)
+        ? neutral
         : (quote!.changePercent > 0
             ? AppTheme.up(brightness)
             : quote!.changePercent < 0
                 ? AppTheme.down(brightness)
-                : (theme.textTheme.bodySmall?.color ?? Colors.grey));
+                : neutral);
 
     final priceText = hasQuote ? _formatPrice(quote!.price) : '--';
     final chgText = hasQuote
@@ -35,10 +36,10 @@ class TickerBadge extends StatelessWidget {
       pressedScale: 0.92,
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
         decoration: BoxDecoration(
-          border: Border.all(color: color.withValues(alpha: 0.4), width: 1),
-          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppTheme.hairStrong(brightness), width: 0.5),
+          borderRadius: BorderRadius.circular(2),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -46,23 +47,23 @@ class TickerBadge extends StatelessWidget {
             Text(ref.symbol,
                 style: TextStyle(
                   fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.5,
+                  color: theme.textTheme.bodyLarge?.color,
+                )),
+            const SizedBox(width: 8),
+            Text(priceText,
+                style: AppTheme.mono(TextStyle(
+                  fontSize: 11,
+                  color: theme.textTheme.bodyMedium?.color,
+                ))),
+            const SizedBox(width: 6),
+            Text(chgText,
+                style: AppTheme.mono(TextStyle(
+                  fontSize: 10.5,
                   fontWeight: FontWeight.w700,
                   color: color,
-                )),
-            const SizedBox(width: 6),
-            Text(priceText,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                  color: color,
-                )),
-            const SizedBox(width: 4),
-            Text(chgText,
-                style: TextStyle(
-                  fontSize: 10,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                  color: color,
-                )),
+                ))),
           ],
         ),
       ),
@@ -71,7 +72,6 @@ class TickerBadge extends StatelessWidget {
 
   String _formatPrice(double p) {
     if (p >= 1000) {
-      // 千分位
       final s = p.toStringAsFixed(2);
       final parts = s.split('.');
       final left = parts[0].replaceAllMapped(
