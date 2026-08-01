@@ -58,17 +58,19 @@ class _FeedPageState extends ConsumerState<FeedPage>
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Text('INFOFLOW',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 3,
-                      color: c.accent,
-                    )),
+                Text(
+                  'INFOFLOW',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 3,
+                    color: c.accent,
+                  ),
+                ),
                 const Spacer(),
                 _MastheadIcon(
                   icon: Icons.notifications_none_rounded,
-                  onTap: () {},
+                  onTap: () => _showNotificationsSheet(context),
                 ),
                 _MastheadIcon(
                   icon: Icons.search_rounded,
@@ -103,6 +105,64 @@ class _FeedPageState extends ConsumerState<FeedPage>
       ),
     );
   }
+}
+
+void _showNotificationsSheet(BuildContext context) {
+  showModalBottomSheet(
+    context: context,
+    showDragHandle: true,
+    backgroundColor: context.colors.paper,
+    builder: (ctx) {
+      final theme = Theme.of(ctx);
+      final c = ctx.colors;
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('通知中心', style: theme.textTheme.headlineMedium),
+              const SizedBox(height: 4),
+              Text(
+                '订阅源动态与信号提醒将在此展示',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: c.inkTertiary,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 28),
+                decoration: BoxDecoration(
+                  border: Border.all(color: c.hairline, width: 0.5),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.notifications_none_rounded,
+                      size: 40,
+                      color: c.hairlineStrong,
+                    ),
+                    const SizedBox(height: 12),
+                    Text('暂无新通知', style: theme.textTheme.titleMedium),
+                    const SizedBox(height: 4),
+                    Text(
+                      '强信号提醒将在这里出现',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: c.inkTertiary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
 }
 
 class _MastheadIcon extends StatelessWidget {
@@ -153,9 +213,11 @@ class _SectionTabs extends StatelessWidget {
                 children: [
                   Text(
                     sections[i],
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: active ? c.ink : c.inkTertiary,
-                        ),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontSize: 16,
+                      fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                      color: active ? c.ink : c.inkTertiary,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   AnimatedContainer(
@@ -220,7 +282,8 @@ class _ArticleListState extends ConsumerState<_ArticleList>
 
     return Column(
       children: [
-        if (unreadCount > 0) _UnreadBar(count: unreadCount, onMarkAll: _markAllRead),
+        if (unreadCount > 0)
+          _UnreadBar(count: unreadCount, onMarkAll: _markAllRead),
         Expanded(
           child: RefreshIndicator(
             onRefresh: () => notifier.refresh(),
@@ -312,19 +375,23 @@ class _UnreadBar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 4),
       child: Row(
         children: [
-          Text('$count 篇未读',
-              style: TextStyle(fontSize: 12, color: c.inkTertiary)),
+          Text(
+            '$count 篇未读',
+            style: TextStyle(fontSize: 12, color: c.inkTertiary),
+          ),
           const Spacer(),
           PressScale(
             pressedScale: 0.9,
             onTap: onMarkAll,
-            child: Text('全部标记已读',
-                style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.3,
-                  color: c.accent,
-                )),
+            child: Text(
+              '全部标记已读',
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.3,
+                color: c.accent,
+              ),
+            ),
           ),
         ],
       ),

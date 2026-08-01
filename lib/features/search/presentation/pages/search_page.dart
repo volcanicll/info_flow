@@ -23,7 +23,11 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   Timer? _debounce;
 
   static const _hotKeywords = [
-    'GPT-5', '比亚迪财报', 'Rust 异步闭包', 'Vision Pro 2', 'DeepMind',
+    'GPT-5',
+    '比亚迪财报',
+    'Rust 异步闭包',
+    'Vision Pro 2',
+    'DeepMind',
   ];
 
   @override
@@ -74,10 +78,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
             Expanded(
               child: state.hasSearched
                   ? _ResultList(state: state)
-                  : _Suggestions(
-                      hot: _hotKeywords,
-                      onTap: _submit,
-                    ),
+                  : _Suggestions(hot: _hotKeywords, onTap: _submit),
             ),
           ],
         ),
@@ -129,12 +130,18 @@ class _SearchField extends StatelessWidget {
                 decoration: InputDecoration(
                   isDense: true,
                   hintText: '检索',
-                  hintStyle: theme.textTheme.headlineMedium?.copyWith(color: c.inkTertiary),
+                  hintStyle: theme.textTheme.headlineMedium?.copyWith(
+                    color: c.inkTertiary,
+                  ),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.only(bottom: 8),
                   suffixIcon: controller.text.isNotEmpty
                       ? IconButton(
-                          icon: Icon(Icons.close_rounded, size: 20, color: c.inkTertiary),
+                          icon: Icon(
+                            Icons.close_rounded,
+                            size: 20,
+                            color: c.inkTertiary,
+                          ),
                           onPressed: onClear,
                         )
                       : null,
@@ -147,7 +154,12 @@ class _SearchField extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 8),
             child: GestureDetector(
               onTap: onCancel,
-              child: Text('取消', style: theme.textTheme.bodyLarge?.copyWith(color: c.inkSecondary)),
+              child: Text(
+                '取消',
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: c.inkSecondary,
+                ),
+              ),
             ),
           ),
         ],
@@ -172,7 +184,8 @@ class _FilterRow extends ConsumerWidget {
             child: _Letterpress(
               label: f.label,
               active: f == active,
-              onTap: () => ref.read(searchControllerProvider.notifier).setFilter(f),
+              onTap: () =>
+                  ref.read(searchControllerProvider.notifier).setFilter(f),
             ),
           );
         }).toList(),
@@ -194,13 +207,19 @@ class _ResultList extends StatelessWidget {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(40),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Icon(Icons.search_off_rounded, size: 44, color: c.hairlineStrong),
-            const SizedBox(height: 14),
-            Text('未找到「${state.query.trim()}」', style: theme.textTheme.titleLarge),
-            const SizedBox(height: 8),
-            Text('换个关键词试试', style: theme.textTheme.bodyMedium),
-          ]),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.search_off_rounded, size: 44, color: c.hairlineStrong),
+              const SizedBox(height: 14),
+              Text(
+                '未找到「${state.query.trim()}」',
+                style: theme.textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              Text('换个关键词试试', style: theme.textTheme.bodyMedium),
+            ],
+          ),
         ),
       );
     }
@@ -209,8 +228,10 @@ class _ResultList extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
-          child: Text('找到 ${state.results.length} 篇相关内容',
-              style: theme.textTheme.bodySmall?.copyWith(color: c.inkTertiary)),
+          child: Text(
+            '找到 ${state.results.length} 篇相关内容',
+            style: theme.textTheme.bodySmall?.copyWith(color: c.inkTertiary),
+          ),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -223,8 +244,10 @@ class _ResultList extends StatelessWidget {
             separatorBuilder: (_, _) => const Hairline(),
             itemBuilder: (context, index) {
               final a = state.results[index];
+              final query = state.query.trim();
               return ArticleRow(
                 article: a,
+                highlightQuery: query.isEmpty ? null : query,
                 onTap: () => context.push('/reader/${a.id}'),
               );
             },
@@ -250,7 +273,10 @@ class _Suggestions extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
       children: [
-        Text('热门检索', style: theme.textTheme.labelMedium?.copyWith(color: c.accent)),
+        Text(
+          '热门检索',
+          style: theme.textTheme.labelMedium?.copyWith(color: c.accent),
+        ),
         const SizedBox(height: 14),
         Wrap(
           spacing: 18,
@@ -263,25 +289,43 @@ class _Suggestions extends ConsumerWidget {
         const SizedBox(height: 32),
         Row(
           children: [
-            Text('检索历史', style: theme.textTheme.labelMedium?.copyWith(color: c.inkTertiary)),
+            Text(
+              '检索历史',
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: c.inkTertiary,
+              ),
+            ),
             const Spacer(),
             if (history.isNotEmpty)
               GestureDetector(
                 onTap: () => ref.read(searchHistoryProvider.notifier).clear(),
-                child: Text('清空',
-                    style: theme.textTheme.labelLarge?.copyWith(color: c.inkTertiary)),
+                child: Text(
+                  '清空',
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: c.inkTertiary,
+                  ),
+                ),
               ),
           ],
         ),
         const SizedBox(height: 14),
         if (history.isEmpty)
-          Text('还没有检索记录', style: theme.textTheme.bodyMedium?.copyWith(color: c.inkTertiary))
+          Text(
+            '还没有检索记录',
+            style: theme.textTheme.bodyMedium?.copyWith(color: c.inkTertiary),
+          )
         else
           Wrap(
             spacing: 18,
             runSpacing: 14,
             children: history
-                .map((h) => _Letterpress(label: h, active: false, onTap: () => onTap(h)))
+                .map(
+                  (h) => _Letterpress(
+                    label: h,
+                    active: false,
+                    onTap: () => onTap(h),
+                  ),
+                )
                 .toList(),
           ),
       ],
@@ -294,7 +338,11 @@ class _Letterpress extends StatelessWidget {
   final String label;
   final bool active;
   final VoidCallback onTap;
-  const _Letterpress({required this.label, required this.active, required this.onTap});
+  const _Letterpress({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -331,7 +379,11 @@ class _RankTag extends StatelessWidget {
   final int rank;
   final String label;
   final VoidCallback onTap;
-  const _RankTag({required this.rank, required this.label, required this.onTap});
+  const _RankTag({
+    required this.rank,
+    required this.label,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -343,17 +395,23 @@ class _RankTag extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('$rank',
-              style: AppTheme.mono(theme.textTheme.labelLarge!.copyWith(
+          Text(
+            '$rank',
+            style: AppTheme.mono(
+              theme.textTheme.labelLarge!.copyWith(
                 color: rank <= 3 ? c.accent : c.inkTertiary,
                 fontWeight: FontWeight.w800,
-              ))),
+              ),
+            ),
+          ),
           const SizedBox(width: 6),
-          Text(label,
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: c.ink,
-                letterSpacing: 0.3,
-              )),
+          Text(
+            label,
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: c.ink,
+              letterSpacing: 0.3,
+            ),
+          ),
         ],
       ),
     );

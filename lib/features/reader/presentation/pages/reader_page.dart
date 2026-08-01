@@ -50,8 +50,9 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
   void _onScroll() {
     if (!_scrollController.hasClients) return;
     final pos = _scrollController.position;
-    final progress =
-        pos.maxScrollExtent <= 0 ? 1.0 : pos.pixels / pos.maxScrollExtent;
+    final progress = pos.maxScrollExtent <= 0
+        ? 1.0
+        : pos.pixels / pos.maxScrollExtent;
     ref.read(readerControllerProvider.notifier).setProgress(progress);
   }
 
@@ -135,6 +136,7 @@ class _ReaderPageState extends ConsumerState<ReaderPage> {
               if (_controller == null) _initWebView(article);
             },
             onSettings: () => showReadingSettings(context, ref),
+            onSummary: () => _showAiSummary(context, ref, article),
           ),
           Expanded(
             child: state.isNativeMode
@@ -182,8 +184,10 @@ class _Header extends ConsumerWidget {
             icon: Icons.ios_share_rounded,
             color: paper.ink,
             size: 20,
-            onTap: () => Share.share('${article.title}\n${article.url}',
-                subject: article.title),
+            onTap: () => Share.share(
+              '${article.title}\n${article.url}',
+              subject: article.title,
+            ),
           ),
           ReaderIconBtn(
             icon: Icons.more_horiz_rounded,
@@ -197,6 +201,93 @@ class _Header extends ConsumerWidget {
 }
 
 /// 模式切换栏：阅读模式 / 网页原文 + 排版设置。
+void _showAiSummary(BuildContext context, WidgetRef ref, Article article) {
+  final theme = Theme.of(context);
+  final c = context.colors;
+  showModalBottomSheet(
+    context: context,
+    showDragHandle: true,
+    backgroundColor: c.paper,
+    builder: (ctx) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.auto_awesome, size: 16, color: c.accent),
+                const SizedBox(width: 6),
+                Text('AI 智能摘要', style: theme.textTheme.titleLarge),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              article.title,
+              style: theme.textTheme.bodySmall?.copyWith(color: c.inkTertiary),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 16),
+            if (article.summary != null) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: c.tint,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+                child: Text(
+                  article.summary!,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: c.ink,
+                    height: 1.65,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                '· 摘要来自订阅源提供的文章简介，填入 LLM API key 可获更深度的提炼',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: c.inkTertiary,
+                ),
+              ),
+            ] else ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                decoration: BoxDecoration(
+                  border: Border.all(color: c.hairline, width: 0.5),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.auto_awesome_outlined,
+                      size: 28,
+                      color: c.hairlineStrong,
+                    ),
+                    const SizedBox(height: 10),
+                    Text('该源未提供摘要', style: theme.textTheme.titleMedium),
+                    const SizedBox(height: 4),
+                    Text(
+                      '可在 AI 助手页提问获取内容解读',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: c.inkTertiary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
 class _ModeBar extends StatelessWidget {
   final Article article;
   final ReaderViewState state;
@@ -204,6 +295,7 @@ class _ModeBar extends StatelessWidget {
   final VoidCallback onNative;
   final VoidCallback onWeb;
   final VoidCallback onSettings;
+  final VoidCallback onSummary;
 
   const _ModeBar({
     required this.article,
@@ -212,6 +304,7 @@ class _ModeBar extends StatelessWidget {
     required this.onNative,
     required this.onWeb,
     required this.onSettings,
+    required this.onSummary,
   });
 
   @override
@@ -239,6 +332,12 @@ class _ModeBar extends StatelessWidget {
             onTap: onWeb,
           ),
           const Spacer(),
+          ReaderIconBtn(
+            icon: Icons.auto_awesome_rounded,
+            color: paper.inkSecondary,
+            size: 20,
+            onTap: onSummary,
+          ),
           ReaderIconBtn(
             icon: Icons.text_fields_rounded,
             color: paper.inkSecondary,

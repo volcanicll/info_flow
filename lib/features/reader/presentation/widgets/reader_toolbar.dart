@@ -43,7 +43,11 @@ class ReaderIconBtn extends StatelessWidget {
     return PressScale(
       pressedScale: 0.85,
       onTap: onTap,
-      child: SizedBox(width: 40, height: 40, child: Icon(icon, size: size, color: color)),
+      child: SizedBox(
+        width: 40,
+        height: 40,
+        child: Icon(icon, size: size, color: color),
+      ),
     );
   }
 }
@@ -99,7 +103,11 @@ class ReaderModeToggle extends StatelessWidget {
 class ReaderBottomBar extends ConsumerWidget {
   final Article article;
   final ReaderPaper paper;
-  const ReaderBottomBar({super.key, required this.article, required this.paper});
+  const ReaderBottomBar({
+    super.key,
+    required this.article,
+    required this.paper,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -115,29 +123,38 @@ class ReaderBottomBar extends ConsumerWidget {
       ),
       child: Padding(
         padding: EdgeInsets.fromLTRB(
-            28, 12, 28, 14 + MediaQuery.paddingOf(context).bottom),
+          28,
+          12,
+          28,
+          14 + MediaQuery.paddingOf(context).bottom,
+        ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             _BarAction(
-              icon: isLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+              icon: isLiked
+                  ? Icons.favorite_rounded
+                  : Icons.favorite_border_rounded,
               label: '点赞',
               color: isLiked ? c.love : paper.inkSecondary,
-              onTap: () =>
-                  ref.read(libraryStoreProvider.notifier).toggleLike(article.id),
+              onTap: () => ref
+                  .read(libraryStoreProvider.notifier)
+                  .toggleLike(article.id),
             ),
             _BarAction(
               icon: Icons.mode_comment_outlined,
               label: '评论',
               color: paper.inkSecondary,
-              onTap: () {},
+              onTap: () => _showCommentSheet(context, article, paper),
             ),
             _BarAction(
               icon: Icons.ios_share_rounded,
               label: '分享',
               color: paper.inkSecondary,
-              onTap: () => Share.share('${article.title}\n${article.url}',
-                  subject: article.title),
+              onTap: () => Share.share(
+                '${article.title}\n${article.url}',
+                subject: article.title,
+              ),
             ),
             _BarAction(
               icon: isBookmarked
@@ -145,14 +162,79 @@ class ReaderBottomBar extends ConsumerWidget {
                   : Icons.bookmark_border_rounded,
               label: '收藏',
               color: isBookmarked ? c.accent : paper.inkSecondary,
-              onTap: () =>
-                  ref.read(libraryStoreProvider.notifier).toggleBookmark(article),
+              onTap: () => ref
+                  .read(libraryStoreProvider.notifier)
+                  .toggleBookmark(article),
             ),
           ],
         ),
       ),
     );
   }
+}
+
+void _showCommentSheet(
+  BuildContext context,
+  Article article,
+  ReaderPaper paper,
+) {
+  final ctrl = TextEditingController();
+  showModalBottomSheet(
+    context: context,
+    showDragHandle: true,
+    backgroundColor: context.colors.paper,
+    builder: (ctx) => Padding(
+      padding: EdgeInsets.fromLTRB(
+        20,
+        0,
+        20,
+        MediaQuery.of(ctx).viewInsets.bottom + 20,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('发表评论', style: Theme.of(ctx).textTheme.titleLarge),
+          const SizedBox(height: 4),
+          Text(
+            '「${article.title}」',
+            style: Theme.of(
+              ctx,
+            ).textTheme.bodySmall?.copyWith(color: ctx.colors.inkTertiary),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: ctrl,
+            autofocus: true,
+            maxLines: 4,
+            decoration: const InputDecoration(hintText: '写下你的想法…'),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('取消'),
+              ),
+              const SizedBox(width: 8),
+              FilledButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text('评论功能即将上线')));
+                },
+                child: const Text('发送'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _BarAction extends StatelessWidget {
@@ -199,7 +281,11 @@ void showReadingSettings(BuildContext context, WidgetRef ref) {
         final theme = Theme.of(ctx);
         return Padding(
           padding: EdgeInsets.fromLTRB(
-              20, 0, 20, MediaQuery.of(ctx).viewInsets.bottom + 24),
+            20,
+            0,
+            20,
+            MediaQuery.of(ctx).viewInsets.bottom + 24,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -216,7 +302,9 @@ void showReadingSettings(BuildContext context, WidgetRef ref) {
               ),
               const SizedBox(height: 8),
               _SettingRow(
-                  label: '行高', value: state.lineHeight.toStringAsFixed(2)),
+                label: '行高',
+                value: state.lineHeight.toStringAsFixed(2),
+              ),
               Slider(
                 value: state.lineHeight,
                 min: 1.3,
@@ -245,8 +333,11 @@ void showReadingSettings(BuildContext context, WidgetRef ref) {
                         ),
                       ),
                       child: selected
-                          ? Icon(Icons.check_rounded,
-                              size: 18, color: readerPaperTones[i].ink)
+                          ? Icon(
+                              Icons.check_rounded,
+                              size: 18,
+                              color: readerPaperTones[i].ink,
+                            )
                           : null,
                     ),
                   );

@@ -95,7 +95,12 @@ class FeedController extends _$FeedController {
   List<RssSource> _sourcesForType(FeedType type) {
     switch (type) {
       case FeedType.recommend:
-        return RssSources.all;
+        // 推荐流 = 全部内置源 + 用户自定义源
+        final store = ref.read(subscriptionStoreProvider.notifier);
+        return [
+          ...RssSources.all,
+          ...store.customSources.map((c) => c.toRssSource()),
+        ];
       case FeedType.following:
         final ids = _subscribedIds;
         if (ids == null || ids.isEmpty) {
@@ -105,8 +110,11 @@ class FeedController extends _$FeedController {
               .toList();
         }
         return ids
-            .map((id) =>
-                ref.read(subscriptionStoreProvider.notifier).resolveSource(id))
+            .map(
+              (id) => ref
+                  .read(subscriptionStoreProvider.notifier)
+                  .resolveSource(id),
+            )
             .whereType<RssSource>()
             .toList();
       case FeedType.hot:
@@ -196,8 +204,7 @@ class FeedController extends _$FeedController {
     if (index == -1) return;
 
     final article = articles[index];
-    final updated =
-        article.copyWith(isBookmarked: !article.isBookmarked);
+    final updated = article.copyWith(isBookmarked: !article.isBookmarked);
     articles[index] = updated;
     state = AsyncData(List.from(articles));
   }

@@ -49,9 +49,7 @@ class ReaderNativeView extends StatelessWidget {
           // 衬线大标题
           Text(
             article.title,
-            style: theme.textTheme.displayMedium?.copyWith(
-              color: paper.ink,
-            ),
+            style: theme.textTheme.displayMedium?.copyWith(color: paper.ink),
           ),
           const SizedBox(height: 16),
           // 作者/来源/时间栏
@@ -115,8 +113,9 @@ class _MetaLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final host = Uri.tryParse(article.url)?.host ?? article.feedName;
-    final readTime =
-        ((article.content ?? article.summary ?? '').length / 400).ceil().clamp(1, 30);
+    final readTime = ((article.content ?? article.summary ?? '').length / 400)
+        .ceil()
+        .clamp(1, 30);
     return DefaultTextStyle(
       style: TextStyle(
         fontSize: 12.5,
@@ -127,7 +126,9 @@ class _MetaLine extends StatelessWidget {
         children: [
           Text(_formatTime(article.publishedAt)),
           _dot(paper),
-          Flexible(child: Text(host, maxLines: 1, overflow: TextOverflow.ellipsis)),
+          Flexible(
+            child: Text(host, maxLines: 1, overflow: TextOverflow.ellipsis),
+          ),
           _dot(paper),
           Text('约 $readTime 分钟'),
         ],
@@ -136,9 +137,9 @@ class _MetaLine extends StatelessWidget {
   }
 
   Widget _dot(ReaderPaper paper) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        child: Text('·', style: TextStyle(color: paper.inkSecondary)),
-      );
+    padding: const EdgeInsets.symmetric(horizontal: 8),
+    child: Text('·', style: TextStyle(color: paper.inkSecondary)),
+  );
 }
 
 class _SummaryQuote extends StatelessWidget {
@@ -161,23 +162,26 @@ class _SummaryQuote extends StatelessWidget {
             children: [
               Icon(Icons.auto_awesome, size: 13, color: c.accent),
               const SizedBox(width: 6),
-              Text('AI 摘要',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1,
-                    color: c.accent,
-                  )),
+              Text(
+                'AI 摘要',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1,
+                  color: c.accent,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
           Text(
             summary,
-            style: AppTheme.mono(TextStyle(
+            style: TextStyle(
               fontSize: 14,
               height: 1.7,
               color: paper.inkSecondary,
-            )),
+              fontStyle: FontStyle.italic,
+            ),
           ),
         ],
       ),

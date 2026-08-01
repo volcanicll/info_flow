@@ -23,18 +23,27 @@ class ChatInputBar extends StatefulWidget {
 
 class _ChatInputBarState extends State<ChatInputBar> {
   bool _focused = false;
+  bool _hasText = false;
 
   @override
   void initState() {
     super.initState();
     widget.focusNode.addListener(_onFocusChange);
+    widget.controller.addListener(_onTextChange);
+    _hasText = widget.controller.text.trim().isNotEmpty;
   }
 
   void _onFocusChange() => setState(() => _focused = widget.focusNode.hasFocus);
 
+  void _onTextChange() {
+    final hasText = widget.controller.text.trim().isNotEmpty;
+    if (hasText != _hasText) setState(() => _hasText = hasText);
+  }
+
   @override
   void dispose() {
     widget.focusNode.removeListener(_onFocusChange);
+    widget.controller.removeListener(_onTextChange);
     super.dispose();
   }
 
@@ -50,14 +59,20 @@ class _ChatInputBarState extends State<ChatInputBar> {
         border: Border(top: BorderSide(color: c.hairline, width: 0.5)),
       ),
       padding: EdgeInsets.fromLTRB(
-          20, 12, 12, 12 + MediaQuery.paddingOf(context).bottom),
+        20,
+        12,
+        12,
+        12 + MediaQuery.paddingOf(context).bottom,
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: lineColor, width: 1.5)),
+                border: Border(
+                  bottom: BorderSide(color: lineColor, width: 1.5),
+                ),
               ),
               child: TextField(
                 controller: widget.controller,
@@ -78,7 +93,11 @@ class _ChatInputBarState extends State<ChatInputBar> {
             ),
           ),
           const SizedBox(width: 12),
-          _SendButton(sending: widget.sending, onTap: widget.onSend),
+          _SendButton(
+            sending: widget.sending,
+            enabled: _hasText && !widget.sending,
+            onTap: widget.onSend,
+          ),
         ],
       ),
     );
@@ -87,14 +106,19 @@ class _ChatInputBarState extends State<ChatInputBar> {
 
 class _SendButton extends StatelessWidget {
   final bool sending;
+  final bool enabled;
   final VoidCallback onTap;
-  const _SendButton({required this.sending, required this.onTap});
+  const _SendButton({
+    required this.sending,
+    required this.enabled,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
     return GestureDetector(
-      onTap: sending ? null : onTap,
+      onTap: enabled ? onTap : null,
       child: SizedBox(
         width: 40,
         height: 40,
@@ -103,10 +127,17 @@ class _SendButton extends StatelessWidget {
                 child: SizedBox(
                   width: 18,
                   height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 1.5, color: c.inkTertiary),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 1.5,
+                    color: c.inkTertiary,
+                  ),
                 ),
               )
-            : Icon(Icons.arrow_upward_rounded, size: 24, color: c.ink),
+            : Icon(
+                Icons.arrow_upward_rounded,
+                size: 24,
+                color: enabled ? c.ink : c.hairlineStrong,
+              ),
       ),
     );
   }
