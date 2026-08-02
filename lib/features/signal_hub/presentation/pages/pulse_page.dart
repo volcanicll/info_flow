@@ -7,6 +7,7 @@ import '../../../../shared/widgets/animated_entrance.dart';
 import '../../../../shared/widgets/hairline.dart';
 import '../../../feed/presentation/widgets/article_row.dart';
 import '../../domain/entities/ticker_quote.dart';
+import '../../../market/presentation/widgets/fear_greed_strip.dart';
 import '../controllers/pulse_controller.dart';
 import '../widgets/ticker_badge.dart';
 
@@ -30,6 +31,7 @@ class PulsePage extends ConsumerWidget {
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
               SliverToBoxAdapter(child: _Masthead(theme: theme)),
+              const SliverToBoxAdapter(child: FearGreedStrip()),
               if (state.articles.isEmpty)
                 SliverFillRemaining(
                   hasScrollBody: false,

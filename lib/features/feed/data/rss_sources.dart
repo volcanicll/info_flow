@@ -8,7 +8,9 @@ enum FeedCategory {
   product('产品'),
   openSource('开源'),
   business('商业'),
-  news('资讯');
+  news('资讯'),
+  macro('宏观'),
+  community('社区');
 
   final String label;
   const FeedCategory(this.label);
@@ -74,6 +76,20 @@ class RssSources {
   static const Color _cV2ex = Color(0xFFE2A63B);
   static const Color _cProductHunt = Color(0xFFDA552F);
   static const Color _cHuggingFace = Color(0xFFFFD21E);
+  static const Color _cCnbc = Color(0xFF0B5AA6);
+  static const Color _cReuters = Color(0xFFFF8000);
+  static const Color _cBloomberg = Color(0xFF191919);
+  static const Color _cMit = Color(0xFF9A1B1B);
+  static const Color _cGoogle = Color(0xFF4285F4);
+  static const Color _cOpenai = Color(0xFF10A37F);
+  static const Color _cArxiv = Color(0xFFB31B1B);
+  static const Color _cTldr = Color(0xFF5B21B6);
+  static const Color _cGitHubBlog = Color(0xFF6E5494);
+  static const Color _cSmol = Color(0xFF0F766E);
+  static const Color _cLobsters = Color(0xFFBE2300);
+  static const Color _cReddit = Color(0xFFFF4500);
+  static const Color _cJuejin = Color(0xFF007FFF);
+  static const Color _cSegmentfault = Color(0xFF029F5B);
 
   static const List<RssSource> all = [
     // ====== 科技 ======
@@ -282,6 +298,159 @@ class RssSources {
       color: _cHuggingFace,
       description: 'AI 趋势模型与论文',
     ),
+
+    // ====== 宏观金融（来自 TechDaily 宏观模块） ======
+    RssSource(
+      id: 'cnbc-markets',
+      name: 'CNBC Markets',
+      feedUrl: 'https://www.cnbc.com/id/100003114/device/rss/rss.html',
+      siteUrl: 'https://www.cnbc.com',
+      category: FeedCategory.macro,
+      color: _cCnbc,
+      description: '全球市场与宏观要闻',
+    ),
+    RssSource(
+      id: 'reuters-business',
+      name: 'Reuters Business',
+      feedUrl: 'https://www.reutersagency.com/feed/',
+      siteUrl: 'https://www.reuters.com',
+      category: FeedCategory.macro,
+      color: _cReuters,
+      description: '路透商业与金融资讯',
+    ),
+    RssSource(
+      id: 'bloomberg-markets',
+      name: 'Bloomberg Markets',
+      feedUrl: 'https://feeds.bloomberg.com/markets/news.rss',
+      siteUrl: 'https://www.bloomberg.com/markets',
+      category: FeedCategory.macro,
+      color: _cBloomberg,
+      description: '彭博市场与宏观数据',
+    ),
+
+    // ====== AI 官方 / 研究博客（来自 TechDaily AI 资讯模块） ======
+    RssSource(
+      id: 'mit-tech-ai',
+      name: 'MIT Tech Review AI',
+      feedUrl:
+          'https://www.technologyreview.com/topic/artificial-intelligence/feed',
+      siteUrl: 'https://www.technologyreview.com',
+      category: FeedCategory.ai,
+      color: _cMit,
+      description: 'MIT 科技评论人工智能专题',
+    ),
+    RssSource(
+      id: 'google-ai',
+      name: 'Google AI Blog',
+      feedUrl: 'https://research.google/blog/rss',
+      siteUrl: 'https://research.google',
+      category: FeedCategory.ai,
+      color: _cGoogle,
+      description: 'Google Research 官方博客',
+    ),
+    RssSource(
+      id: 'openai-news',
+      name: 'OpenAI Blog',
+      feedUrl: 'https://openai.com/news/rss.xml',
+      siteUrl: 'https://openai.com',
+      category: FeedCategory.ai,
+      color: _cOpenai,
+      description: 'OpenAI 官方新闻与研究',
+    ),
+    RssSource(
+      id: 'arxiv-cs-ai',
+      name: 'ArXiv CS.AI',
+      feedUrl: 'https://rss.arxiv.org/rss/cs.ai',
+      siteUrl: 'https://arxiv.org/list/cs.AI/recent',
+      category: FeedCategory.ai,
+      color: _cArxiv,
+      description: '人工智能领域最新论文预印本',
+    ),
+    RssSource(
+      id: 'tldr-tech',
+      name: 'TLDR Tech',
+      feedUrl: 'https://tldr.tech/tech.rss',
+      siteUrl: 'https://tldr.tech',
+      category: FeedCategory.tech,
+      color: _cTldr,
+      description: '开发者每日科技摘要',
+    ),
+
+    // ====== Agent Code 前沿（来自 TechDaily Agent Code 模块） ======
+    RssSource(
+      id: 'github-blog',
+      name: 'GitHub Blog',
+      feedUrl: 'https://github.blog/feed/',
+      siteUrl: 'https://github.blog',
+      category: FeedCategory.tech,
+      color: _cGitHubBlog,
+      description: 'GitHub 官方博客（Copilot / Agent）',
+    ),
+    RssSource(
+      id: 'smol-ai',
+      name: 'Smol AI News',
+      feedUrl: 'https://news.smol.ai/rss.xml',
+      siteUrl: 'https://news.smol.ai',
+      category: FeedCategory.ai,
+      color: _cSmol,
+      description: 'AI 编程与 Agent 前沿动态',
+    ),
+
+    // ====== 技术社区（来自 TechDaily 社区模块） ======
+    RssSource(
+      id: 'lobsters',
+      name: 'Lobsters',
+      feedUrl: 'https://lobste.rs/rss',
+      siteUrl: 'https://lobste.rs',
+      category: FeedCategory.community,
+      color: _cLobsters,
+      description: '黑客与开发者技术社区',
+    ),
+    RssSource(
+      id: 'reddit-programming',
+      name: 'Reddit r/programming',
+      feedUrl: 'https://www.reddit.com/r/programming/.rss',
+      siteUrl: 'https://www.reddit.com/r/programming',
+      category: FeedCategory.community,
+      color: _cReddit,
+      description: '编程与软件开发社区热帖',
+    ),
+    RssSource(
+      id: 'reddit-ml',
+      name: 'Reddit r/MachineLearning',
+      feedUrl: 'https://www.reddit.com/r/MachineLearning/.rss',
+      siteUrl: 'https://www.reddit.com/r/MachineLearning',
+      category: FeedCategory.community,
+      color: _cReddit,
+      description: '机器学习研究者社区热帖',
+    ),
+    RssSource(
+      id: 'reddit-localllama',
+      name: 'Reddit r/LocalLLaMA',
+      feedUrl: 'https://www.reddit.com/r/LocalLLaMA/.rss',
+      siteUrl: 'https://www.reddit.com/r/LocalLLaMA',
+      category: FeedCategory.community,
+      color: _cReddit,
+      description: '本地大模型社区（LLM/Agent）',
+    ),
+    RssSource(
+      id: 'juejin',
+      name: '掘金',
+      feedUrl: 'https://rsshub.app/juejin/category/6809637773838385159',
+      siteUrl: 'https://juejin.cn',
+      category: FeedCategory.community,
+      color: _cJuejin,
+      description: '中文开发者社区热门文章',
+    ),
+    RssSource(
+      id: 'segmentfault',
+      name: 'SegmentFault',
+      feedUrl: 'https://segmentfault.com/questions/hot/rss',
+      siteUrl: 'https://segmentfault.com',
+      category: FeedCategory.community,
+      color: _cSegmentfault,
+      description: '中文技术问答社区热门问题',
+    ),
   ];
 
   /// 按分类获取
@@ -303,6 +472,13 @@ class RssSources {
     'v2ex',
     'producthunt',
     'huggingface',
+    'cnbc-markets',
+    'mit-tech-ai',
+    'openai-news',
+    'github-blog',
+    'lobsters',
+    'reddit-programming',
+    'juejin',
   ];
 
   /// 根据 id 查找

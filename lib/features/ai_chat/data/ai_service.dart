@@ -6,12 +6,21 @@ import '../../../core/state/ai_config.dart';
 import '../../../core/state/article_cache.dart';
 import '../../../features/feed/data/rss_sources.dart';
 import '../../../features/feed/domain/entities/article.dart';
+import '../../../features/market/data/fear_greed_repository.dart';
+import '../../../features/market/data/market_repository.dart';
+import '../../../features/market/domain/models/fear_greed_index.dart';
+import '../../../features/market/domain/models/market_quote.dart';
+import '../../../features/precious_metals/data/metals_repository.dart';
+import '../../../features/precious_metals/domain/models/metal_price.dart';
 
 class AiService {
   AiService(this._ref);
   final Ref _ref;
 
   Future<String> reply(String userMessage) async {
+    if (RegExp(r'每日播报|日报|daily\s*brief').hasMatch(userMessage.trim())) {
+      return dailyBrief();
+    }
     final config = _ref.read(aiConfigProvider);
     if (config.apiKey.trim().isNotEmpty) {
       try {
@@ -22,6 +31,117 @@ class AiService {
     }
     await Future.delayed(const Duration(milliseconds: 500));
     return _localReply(userMessage);
+  }
+
+  /// 每日播报：聚合市场数据（恐惧贪婪 / 加密 / 贵金属）与今日要闻，
+  /// 生成一份类 TechDaily 的日报。配置 LLM 时走真实模型，否则本地规则。
+  Future<String> dailyBrief() async {
+    final config = _ref.read(aiConfigProvider);
+    if (config.apiKey.trim().isNotEmpty) {
+      try {
+        return await _callLlm('请生成今天的每日播报', config);
+      } catch (_) {
+        return _localDailyBrief(await _fetchMarketSnapshot());
+      }
+    }
+    return _localDailyBrief(await _fetchMarketSnapshot());
+  }
+
+  /// 并行拉取市场快照；任一源失败不影响其它（静默降级为 null）。
+  Future<({FearGreedIndex? fng, List<MarketQuote> crypto, List<MetalPrice> metals})>
+      _fetchMarketSnapshot() async {
+    final fearRepo = _ref.read(fearGreedRepositoryProvider);
+    final marketRepo = _ref.read(marketRepositoryProvider);
+    final metalsRepo = _ref.read(metalsRepositoryProvider);
+
+    final results = await Future.wait([
+      fearRepo.fetchIndex(),
+      marketRepo.fetchCryptoQuotes(['BTC', 'ETH', 'SOL', 'BNB']),
+      metalsRepo.fetchPrices(),
+    ]);
+
+    return (
+      fng: results[0] as FearGreedIndex?,
+      crypto: results[1] as List<MarketQuote>,
+      metals: results[2] as List<MetalPrice>,
+    );
+  }
+
+  String _localDailyBrief(
+    ({FearGreedIndex? fng, List<MarketQuote> crypto, List<MetalPrice> metals})
+        market,
+  ) {
+    final cache = _ref.read(articleCacheProvider);
+    final articles = cache.values.toList();
+    final buf = StringBuffer();
+
+    buf.writeln('📰 **每日播报**');
+    buf.writeln();
+
+    // ── 市场情绪 ──
+    final fng = market.fng;
+    if (fng != null) {
+      buf.writeln('**市场情绪**：${fng.classification}（${fng.value}/100）');
+    }
+
+    // ── 加密行情 ──
+    if (market.crypto.isNotEmpty) {
+      buf.writeln();
+      buf.writeln('**加密行情**');
+      for (final q in market.crypto) {
+        final arrow = q.changePercent >= 0 ? '📈' : '📉';
+        buf.writeln(
+            '· $arrow ${q.symbol} \$${_fmtPrice(q.price)} '
+            '(${q.changePercent >= 0 ? '+' : ''}${q.changePercent.toStringAsFixed(2)}%)');
+      }
+    }
+
+    // ── 贵金属 ──
+    if (market.metals.isNotEmpty) {
+      buf.writeln();
+      buf.writeln('**贵金属**');
+      for (final m in market.metals) {
+        buf.writeln(
+            '· ${m.code} ${m.priceFormatted} ${m.currency} '
+            '(${m.changeFormatted})');
+      }
+    }
+
+    // ── 今日要闻 ──
+    final sorted = List<Article>.from(articles)
+      ..sort((a, b) {
+        final ta = a.publishedAt ?? DateTime(2000);
+        final tb = b.publishedAt ?? DateTime(2000);
+        return tb.compareTo(ta);
+      });
+    final top = sorted.take(5).toList();
+
+    if (top.isNotEmpty) {
+      buf.writeln();
+      buf.writeln('**今日要闻**');
+      buf.writeln();
+      for (var i = 0; i < top.length; i++) {
+        final a = top[i];
+        buf.writeln('${i + 1}. **【${a.feedName}】** ${a.title}');
+        if (a.summary != null && a.summary!.isNotEmpty) {
+          buf.writeln('   > ${a.summary}');
+        }
+        buf.writeln();
+      }
+    } else {
+      buf.writeln();
+      buf.writeln('当前还没有加载文章，请先在「信息流」下拉刷新后再来生成播报。');
+    }
+
+    buf.writeln('---');
+    buf.writeln('前往「脉搏」可查看市场情绪与实时行情，或问我具体话题。');
+    return buf.toString();
+  }
+
+  String _fmtPrice(double v) {
+    if (v >= 1000) return v.toStringAsFixed(0);
+    if (v >= 1) return v.toStringAsFixed(2);
+    return v.toStringAsFixed(4);
   }
 
   String _localReply(String message) {

@@ -94,6 +94,7 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.fromLTRB(20, 0, 12, 10),
                 children: [
+                  _QuickTag(label: '每日播报', onTap: () => _send('每日播报')),
                   _QuickTag(label: '今日要闻', onTap: () => _send('今日要闻有哪些？')),
                   _QuickTag(label: '推荐订阅源', onTap: () => _send('推荐一些优质订阅源')),
                   _QuickTag(label: '趋势洞察', onTap: () => _send('总结一下今日趋势洞察')),
