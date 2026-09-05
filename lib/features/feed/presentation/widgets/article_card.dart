@@ -1,8 +1,10 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../features/signal_hub/presentation/widgets/ticker_chip.dart';
+import '../../../../features/smart_money/data/smart_money_signals.dart';
 import '../../domain/entities/article.dart';
 import 'article_row.dart';
 
@@ -108,18 +110,32 @@ class AiSummaryTag extends StatelessWidget {
 }
 
 /// 标的标签行：最多渲染 4 个 [TickerChip]。
-class ArticleTickers extends StatelessWidget {
+class ArticleTickers extends ConsumerWidget {
   final Article article;
   const ArticleTickers({super.key, required this.article});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (article.tickers.isEmpty) return const SizedBox.shrink();
+    // 复合标记：任一标的当天有聪明钱净流入 → 徽章行尾追加 ◆ 提示
+    final flows = ref.watch(smartMoneyFlowIndexProvider).value;
+    final smartHit = article.tickers.any((t) =>
+        (flows?.netInflowBySymbol[t.symbol.toUpperCase()] ?? 0) > 0);
     return Wrap(
       spacing: 6,
       runSpacing: 4,
-      children:
-          article.tickers.take(4).map((t) => TickerChip(ref: t)).toList(),
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        ...article.tickers.take(4).map((t) => TickerChip(ref: t)),
+        if (smartHit)
+          Text('◆ 聪明钱',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFFB98AE8)
+                        : const Color(0xFF8E44AD),
+                    fontWeight: FontWeight.w700,
+                  )),
+      ],
     );
   }
 }

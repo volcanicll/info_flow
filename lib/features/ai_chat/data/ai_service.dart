@@ -9,10 +9,15 @@ import '../../../features/market/data/fear_greed_repository.dart';
 import '../../../features/market/data/market_repository.dart';
 import '../../../features/market/domain/models/fear_greed_index.dart';
 import '../../../features/market/domain/models/market_quote.dart';
+import '../../../features/smart_money/data/smart_money_briefing.dart';
 
 class AiService {
   AiService(this._ref);
   final Ref _ref;
+
+  /// 聪明钱简报缓存：10 分钟 TTL，避免每轮对话都打上游接口。
+  String? _smartBriefCache;
+  DateTime _smartBriefAt = DateTime.fromMillisecondsSinceEpoch(0);
 
   Future<String> reply(String userMessage) async {
     if (RegExp(r'每日播报|日报|daily\s*brief').hasMatch(userMessage.trim())) {
@@ -28,6 +33,20 @@ class AiService {
     }
     await Future.delayed(const Duration(milliseconds: 500));
     return _localReply(userMessage);
+  }
+
+  /// 聪明钱简报：超过 TTL 就重新拉取，失败时保留旧值或返回 null。
+  Future<String?> _smartBrief() async {
+    if (DateTime.now().difference(_smartBriefAt) <
+        const Duration(minutes: 10)) {
+      return _smartBriefCache;
+    }
+    final brief = await fetchSmartBriefing(_ref);
+    if (brief != null) {
+      _smartBriefCache = brief;
+      _smartBriefAt = DateTime.now();
+    }
+    return _smartBriefCache;
   }
 
   /// 每日播报：聚合链上情绪（恐惧贪婪 / 加密行情）与最新链上要闻
@@ -221,6 +240,9 @@ class AiService {
         '- 【${a.feedName}】${a.title}${a.summary != null ? '：${a.summary}' : ''}')
         .join('\n');
 
+    // 聪明钱简报：懒加载 + TTL，拉不到时静默降级为纯资讯上下文
+    final smartBrief = await _smartBrief();
+
     final resp = await dio.post<Map<String, dynamic>>(
       '${config.baseUrl}/chat/completions',
       options: Options(
@@ -238,6 +260,7 @@ class AiService {
             'role': 'system',
             'content': '你是 InfoFlow 生产级链上智能投研助手，专注于 Robinhood、BSC、Base、Solana 四大区块链生态及全链加密情报分析。为你提供准确、专业、去伪存真的链上数据解读、代币合约安全评估与Alpha洞察。'
                 '以下是系统最新捕获的链上情报，回答时可参考：\n$context'
+                '${smartBrief == null ? '' : '\n$smartBrief'}'
           },
           {'role': 'user', 'content': userMessage},
         ],

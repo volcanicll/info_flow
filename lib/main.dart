@@ -7,6 +7,7 @@ import 'app/theme.dart';
 import 'app/router.dart';
 import 'core/notifications/notification_service.dart';
 import 'core/storage/kv_storage.dart';
+import 'features/smart_money/data/smart_money_alerts.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,11 +35,23 @@ void main() async {
   ));
 }
 
-class InfoFlowApp extends ConsumerWidget {
+class InfoFlowApp extends ConsumerStatefulWidget {
   const InfoFlowApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<InfoFlowApp> createState() => _InfoFlowAppState();
+}
+
+class _InfoFlowAppState extends ConsumerState<InfoFlowApp> {
+  @override
+  void initState() {
+    super.initState();
+    // 启动聪明钱后台告警轮询（keepAlive，60s 增量拉 tape）
+    ref.read(smartMoneyAlertsProvider);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(goRouterProvider);
     final themeMode = ref.watch(themeModeProvider);
 

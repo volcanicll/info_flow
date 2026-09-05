@@ -24,10 +24,11 @@ class ThemeModeNotifier extends _$ThemeModeNotifier {
     if (saved != null) {
       return ThemeMode.values.firstWhere(
         (m) => m.name == saved,
-        orElse: () => ThemeMode.system,
+        orElse: () => ThemeMode.dark,
       );
     }
-    return ThemeMode.system;
+    // 加密终端定位：默认深色，用户显式选过的主题优先
+    return ThemeMode.dark;
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {

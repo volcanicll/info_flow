@@ -5,6 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme.dart';
 import '../../../../shared/widgets/hairline.dart';
 import '../../../../shared/widgets/icon_btn.dart';
+import '../../../smart_money/data/models/rht_token.dart';
+import '../../../smart_money/data/smart_money_signals.dart';
+import '../../../smart_money/presentation/format.dart';
 import '../../domain/models/onchain_token.dart';
 import '../controllers/token_screener_controller.dart';
 
@@ -281,7 +284,7 @@ class _ChainPill extends StatelessWidget {
   }
 }
 
-class _TokenCard extends StatelessWidget {
+class _TokenCard extends ConsumerWidget {
   final OnChainToken token;
   const _TokenCard({required this.token});
 
@@ -313,11 +316,15 @@ class _TokenCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final c = context.colors;
     final chainColor = _getChainColor(token.chain);
     final isUp = token.priceChange24h >= 0;
+
+    // 聪明钱动向：该合约地址出现在 24h 被追踪钱包成交里才显示
+    final flowIndex = ref.watch(smartMoneyFlowIndexProvider).value;
+    final flow = flowIndex?.byAddress[token.address.toLowerCase()];
 
     return InkWell(
       onTap: () {
@@ -430,6 +437,59 @@ class _TokenCard extends StatelessWidget {
                   value: '${token.txns24hBuys}/${token.txns24hSells}',
                 ),
               ],
+            ),
+            if (flow != null) _SmartMoneyStrip(flow: flow),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 聪明钱动向条：被追踪大户在该代币上的 24h 净买卖与首买人。
+class _SmartMoneyStrip extends StatelessWidget {
+  final RhtTokenFlow flow;
+
+  const _SmartMoneyStrip({required this.flow});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final c = context.colors;
+    final netUp = flow.netUsd >= 0;
+    final fb = flow.firstBuyer;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: (netUp ? c.up : c.down).withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Row(
+          children: [
+            Text('聪明钱',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.5,
+                )),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                '${flow.traders}位大户24h净${netUp ? '买入' : '卖出'}'
+                '${fb == null ? '' : ' · 首买${fb.handle}'}',
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.labelSmall
+                    ?.copyWith(color: c.inkSecondary),
+              ),
+            ),
+            Text(
+              '${netUp ? '+' : '-'}${usd(flow.netUsd.abs())}',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: netUp ? c.up : c.down,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ],
         ),

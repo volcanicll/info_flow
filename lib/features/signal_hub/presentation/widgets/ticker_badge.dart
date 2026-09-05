@@ -7,11 +7,19 @@ import '../../domain/entities/ticker_ref.dart';
 
 /// 含实时价格 + 涨跌幅的标的徽章（财经报纸风：等宽数字 + 细线描边）。
 /// quote 为 null 时显示占位「--」，颜色为中性。
+/// [smartMoney] 为 true 时带「◆」复合标记：该标的同时有聪明钱净流入。
 class TickerBadge extends StatelessWidget {
   final TickerRef ref;
   final TickerQuote? quote;
+  final bool smartMoney;
   final VoidCallback? onTap;
-  const TickerBadge({super.key, required this.ref, this.quote, this.onTap});
+  const TickerBadge({
+    super.key,
+    required this.ref,
+    this.quote,
+    this.smartMoney = false,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -38,12 +46,25 @@ class TickerBadge extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
         decoration: BoxDecoration(
-          border: Border.all(color: AppTheme.hairStrong(brightness), width: 0.5),
+          border: Border.all(
+            color: smartMoney
+                ? AppTheme.radar(brightness)
+                : AppTheme.hairStrong(brightness),
+            width: smartMoney ? 0.9 : 0.5,
+          ),
           borderRadius: BorderRadius.circular(2),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (smartMoney) ...[
+              Text('◆',
+                  style: TextStyle(
+                    fontSize: 9,
+                    color: AppTheme.radar(brightness),
+                  )),
+              const SizedBox(width: 4),
+            ],
             Text(ref.symbol,
                 style: TextStyle(
                   fontSize: 11,

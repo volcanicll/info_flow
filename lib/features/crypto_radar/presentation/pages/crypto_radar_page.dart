@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../shared/widgets/auto_refresh.dart';
+import '../../../../shared/widgets/editorial_card.dart';
 import '../../../../shared/widgets/hairline.dart';
 import '../../../../shared/widgets/icon_btn.dart';
 import '../controllers/crypto_radar_controller.dart';
 import '../../data/watchlist_quotes.dart';
+import '../../../smart_money/presentation/widgets/resonance_section.dart';
 import '../widgets/radar_signal_list.dart';
 import '../widgets/radar_views.dart';
 import '../widgets/watchlist_section.dart';
@@ -67,6 +70,8 @@ class CryptoRadarPage extends ConsumerWidget {
 
   Widget _body(BuildContext context, WidgetRef ref, CryptoRadarState state) {
     final notifier = ref.read(cryptoRadarProvider.notifier);
+    final theme = Theme.of(context);
+    final c = context.colors;
     switch (state.status) {
       case ScanStatus.idle:
         return RadarMessageView(
@@ -93,6 +98,33 @@ class CryptoRadarPage extends ConsumerWidget {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.only(bottom: 24),
             children: [
+              EditorialCard(
+                onTap: () => context.push('/smart-money'),
+                underline: true,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('SMART MONEY · LIVE TAPE',
+                              style: theme.textTheme.labelSmall
+                                  ?.copyWith(color: c.accent, letterSpacing: 1.2)),
+                          const SizedBox(height: 4),
+                          Text('聪明钱实盘 Tape',
+                              style: theme.textTheme.titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.w700)),
+                          const SizedBox(height: 2),
+                          Text('108 个大户钱包逐笔成交 · 跟单链 · 战绩榜',
+                              style: theme.textTheme.labelSmall
+                                  ?.copyWith(color: c.inkTertiary)),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.chevron_right_rounded, color: c.inkTertiary),
+                  ],
+                ),
+              ),
               AutoRefresh(
                 interval: const Duration(seconds: 45),
                 onRefresh: () async {
@@ -114,6 +146,7 @@ class CryptoRadarPage extends ConsumerWidget {
               if (state.combinedSignals.isNotEmpty)
                 RadarSignalSection(
                     kicker: 'COMBINED · 四维评分', title: '综合', signals: state.combinedSignals),
+              const ResonanceSection(),
               if (state.heatList.isNotEmpty)
                 RadarHeatSection(heatList: state.heatList),
             ],

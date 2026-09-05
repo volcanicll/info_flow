@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import 'package:info_flow/features/signal_hub/presentation/pages/pulse_page.dart';
 import 'package:info_flow/features/feed/presentation/pages/feed_page.dart';
+import 'package:info_flow/features/smart_money/presentation/pages/smart_money_page.dart';
+import 'package:info_flow/features/smart_money/presentation/pages/smart_money_terminal_page.dart';
 import 'package:info_flow/features/reader/presentation/pages/reader_page.dart';
 import 'package:info_flow/features/subscription/presentation/pages/subscription_page.dart';
 import 'package:info_flow/features/ai_chat/presentation/pages/ai_chat_page.dart';
@@ -58,7 +59,7 @@ GoRouter goRouter(Ref ref) {
               GoRoute(
                 path: '/market',
                 name: 'market',
-                builder: (context, state) => const PulsePage(),
+                builder: (context, state) => const SmartMoneyTerminalPage(),
               ),
             ],
           ),
@@ -125,6 +126,12 @@ GoRouter goRouter(Ref ref) {
         name: 'cryptoRadar',
         pageBuilder: (context, state) =>
             _fadeSlideTransition(state, const CryptoRadarPage()),
+      ),
+      GoRoute(
+        path: '/smart-money',
+        name: 'smartMoney',
+        pageBuilder: (context, state) =>
+            _fadeSlideTransition(state, const SmartMoneyPage()),
       ),
       GoRoute(
         path: '/token-screener',

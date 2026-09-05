@@ -7,10 +7,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:info_flow/core/storage/kv_storage.dart';
 import 'package:info_flow/app/router.dart';
 import 'package:info_flow/app/theme.dart';
+import 'package:dio/dio.dart';
 import 'package:info_flow/features/market/presentation/controllers/fear_greed_controller.dart';
-import 'package:info_flow/features/onchain_radar/data/onchain_radar_repository.dart';
-import 'package:info_flow/features/onchain_radar/presentation/controllers/onchain_radar_controller.dart';
-import 'package:info_flow/features/signal_hub/presentation/controllers/pulse_controller.dart';
+import 'package:info_flow/features/smart_money/data/datasources/rht_api.dart';
+import 'package:info_flow/features/smart_money/data/smart_money_repository.dart';
+import 'package:info_flow/features/smart_money/data/smart_money_signals.dart';
 import 'package:info_flow/features/token_screener/domain/models/onchain_token.dart';
 import 'package:info_flow/features/token_screener/presentation/controllers/token_screener_controller.dart';
 import 'package:info_flow/features/feed/domain/entities/article.dart';
@@ -93,41 +94,25 @@ void main() {
       ),
     ];
 
-    final sampleSnapshot = RadarSnapshot(
-      trending: sampleTokens,
-      launches: [sampleTokens[0], sampleTokens[1]],
-      whaleSignals: [
-        WhaleSignal(
-          tokenSymbol: 'SOL',
-          chain: 'SOL',
-          action: '🟢 聪明钱大额买入',
-          amountUsd: 150000,
-          priceUsd: 142.80,
-          time: DateTime.now().subtract(const Duration(minutes: 3)),
-          txHash: '0x8f19...dex',
-        ),
-        WhaleSignal(
-          tokenSymbol: 'AERO',
-          chain: 'BASE',
-          action: '🟢 巨鲸大额建仓',
-          amountUsd: 95000,
-          priceUsd: 1.18,
-          time: DateTime.now().subtract(const Duration(minutes: 8)),
-          txHash: '0x3a4b...dex',
-        ),
-      ],
-      robinhoodTokens: [sampleTokens[3]],
-    );
-
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
 
+    // 聪明钱数据源整体隔离：不可达地址 + 100ms 超时，WS/轮询快速失败落离线态，
+    // 避免测试期内留有真实网络的 pending timer。
+    final isolatedRht = RhtApi(
+      Dio(BaseOptions(
+        connectTimeout: const Duration(milliseconds: 100),
+        receiveTimeout: const Duration(milliseconds: 100),
+      )),
+      baseUrl: 'http://127.0.0.1:1',
+    );
+
     final container = ProviderContainer(overrides: [
       sharedPreferencesProvider.overrideWithValue(prefs),
-      pulseControllerProvider.overrideWith(() => _MockPulseController()),
       fearGreedIndexProvider.overrideWith((ref) async => null),
-      onChainRadarProvider
-          .overrideWith(() => _MockOnChainRadarNotifier(sampleSnapshot)),
+      rhtApiProvider.overrideWithValue(isolatedRht),
+      smartMoneyFlowIndexProvider.overrideWith((ref) async =>
+          const SmartMoneyFlowIndex(byAddress: {}, bySymbol: {})),
       tokenScreenerProvider
           .overrideWith(() => _MockTokenScreenerNotifier(sampleTokens)),
       feedControllerProvider(FeedType.recommend)
@@ -139,7 +124,6 @@ void main() {
       coinDetailProvider.overrideWith(_MockCoinDetail.new),
       chatControllerProvider.overrideWith(_MockChatController.new),
     ]);
-    addTearDown(container.dispose);
 
     await tester.pumpWidget(
       UncontrolledProviderScope(
@@ -157,41 +141,26 @@ void main() {
     );
     await stepPump(tester, 500);
 
-    print('   --> 验证底栏导航 Tab: [雷达, 情报, 探测, 投研, 我的]');
-    expect(find.text('雷达'), findsWidgets);
+    print('   --> 验证底栏导航 Tab: [终端, 情报, 探测, 投研, 我的]');
+    expect(find.text('终端'), findsWidgets);
     expect(find.text('情报'), findsWidgets);
     expect(find.text('探测'), findsWidgets);
     expect(find.text('投研'), findsWidgets);
     expect(find.text('我的'), findsWidgets);
     print('   ✅ 平台主外壳加载成功!\n');
 
-    // 2. 测试 Tab 0: 多链雷达
-    print('【流程 2/7】测试 Tab 0: 链上多链雷达 (On-Chain Radar)...');
-    expect(find.text('ON-CHAIN RADAR · 链上雷达'), findsOneWidget);
-    expect(find.text('多链雷达'), findsOneWidget);
-    expect(find.text('全部生态'), findsOneWidget);
-    expect(find.text('Solana'), findsWidgets);
-    expect(find.text('Base'), findsWidgets);
-    expect(find.text('BSC'), findsWidgets);
-    expect(find.text('Robinhood'), findsWidgets);
-
-    print('   --> 切换生态链药丸: 点击「Solana」');
-    await tester.tap(find.text('Solana').first);
-    await stepPump(tester);
-
-    print('   --> 切换生态链药丸: 点击「Base」');
-    await tester.tap(find.text('Base').first);
-    await stepPump(tester);
-
-    print('   --> 检查热门 DEX 池横向滑动区: 找到 \$SOL, \$AERO');
-    expect(find.text('DEX 热门池子 · 实时'), findsOneWidget);
-    expect(find.text('SOL'), findsWidgets);
-    expect(find.text('AERO'), findsWidgets);
-
-    print('   --> 检查巨鲸聪明钱异动区: 找到大额买入信号');
-    expect(find.text('巨鲸与聪明钱雷达'), findsOneWidget);
-    expect(find.textContaining('大额买入'), findsWidgets);
-    print('   ✅ 多链雷达模块交互正常!\n');
+    // 2. 测试 Tab 0: 聪明钱终端
+    // 断言仅覆盖与数据状态无关的静态结构（标题/区块头/入口），
+    // tape 与榜单数据依赖外网，离线时呈现空态即视为通过。
+    print('【流程 2/7】测试 Tab 0: 聪明钱终端 (Smart Money Terminal)...');
+    expect(find.text('聪明钱终端'), findsOneWidget);
+    expect(find.text('24H 净盈亏'), findsOneWidget);
+    expect(find.text('LIVE TAPE · 实盘'), findsOneWidget);
+    expect(find.text('SMART RESONANCE · 三源共振'), findsOneWidget);
+    expect(find.text('COPY FLOW · 抱团跟单'), findsOneWidget);
+    expect(find.text('TOP TRADERS · 24H 盈亏榜'), findsOneWidget);
+    expect(find.text('进入完整终端 · 榜单 / 跟单 / 平仓 / 关注'), findsOneWidget);
+    print('   ✅ 聪明钱终端首页结构完整!\n');
 
     // 3. 测试 Tab 1: 链上情报
     print('【流程 3/7】测试 Tab 1: 链上情报流 (Chain Intel)...');
@@ -296,30 +265,11 @@ void main() {
     print('=============================================================');
     print('🎉 InfoFlow Terminal 五大核心模块端到端使用流程全部测试通过！');
     print('=============================================================\n');
+
+    // 在测试体内销毁容器：终端页有周期定时器（WS/轮询/面板刷新），
+    // 必须在 flutter_test 检查 pending timer 之前全部取消。
+    container.dispose();
   });
-}
-
-class _MockPulseController extends PulseController {
-  @override
-  PulseState build() => PulseState.empty;
-}
-
-class _MockOnChainRadarNotifier extends OnChainRadarNotifier {
-  final RadarSnapshot _snapshot;
-  _MockOnChainRadarNotifier(this._snapshot);
-
-  @override
-  OnChainRadarState build() => OnChainRadarState(snapshot: _snapshot);
-
-  @override
-  Future<void> selectChain(ChainType? chain) async {
-    state = state.copyWith(chainFilter: chain, snapshot: _snapshot);
-  }
-
-  @override
-  Future<void> load({ChainType? filter, bool isRefresh = false}) async {
-    state = state.copyWith(chainFilter: filter, snapshot: _snapshot);
-  }
 }
 
 class _MockTokenScreenerNotifier extends TokenScreenerNotifier {
@@ -331,11 +281,6 @@ class _MockTokenScreenerNotifier extends TokenScreenerNotifier {
         selectedChain: ChainType.solana,
         results: _tokens,
       );
-
-  @override
-  Future<void> selectChain(ChainType chain) async {
-    state = state.copyWith(selectedChain: chain, results: _tokens);
-  }
 
   @override
   Future<void> search(String query) async {

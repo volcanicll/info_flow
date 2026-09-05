@@ -41,7 +41,7 @@ final class SubscriptionStoreProvider
   }
 }
 
-String _$subscriptionStoreHash() => r'0b96596ab220955a4ebb8a61eb12f51c3015a0a7';
+String _$subscriptionStoreHash() => r'c62b8e205538a023af733e16e4fcb252647f8e9f';
 
 abstract class _$SubscriptionStore extends $Notifier<Set<String>> {
   Set<String> build();

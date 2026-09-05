@@ -6,10 +6,16 @@ import 'package:info_flow/core/storage/kv_storage.dart';
 import 'package:info_flow/features/feed/domain/entities/article.dart';
 import 'package:info_flow/features/feed/presentation/widgets/article_card.dart';
 import 'package:info_flow/features/signal_hub/domain/entities/ticker_ref.dart';
+import 'package:info_flow/features/smart_money/data/smart_money_signals.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // 注：ArticleCard 委托 ArticleRow（ConsumerWidget，watch libraryStore），
-// 需 ProviderScope 覆盖 sharedPreferencesProvider。
+// 需 ProviderScope 覆盖 sharedPreferencesProvider；ArticleTickers 还会
+// watch 聪明钱净流索引，测试中给空索引避免真实网络请求。
+final _emptyFlowIndex =
+    smartMoneyFlowIndexProvider.overrideWith((ref) async =>
+        const SmartMoneyFlowIndex(byAddress: {}, bySymbol: {}));
+
 void main() {
   testWidgets('article.tickers 非空时卡片显示 TickerChip', (tester) async {
     SharedPreferences.setMockInitialValues({});
@@ -25,7 +31,10 @@ void main() {
       ],
     );
     await tester.pumpWidget(ProviderScope(
-      overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        _emptyFlowIndex,
+      ],
       child: MaterialApp(
         theme: AppTheme.lightTheme,
         home: Scaffold(
@@ -47,7 +56,10 @@ void main() {
       url: 'https://example.com/a2',
     );
     await tester.pumpWidget(ProviderScope(
-      overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        _emptyFlowIndex,
+      ],
       child: MaterialApp(
         theme: AppTheme.lightTheme,
         home: Scaffold(
