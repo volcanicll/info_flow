@@ -111,10 +111,30 @@ class _SmartMoneyPageState extends ConsumerState<SmartMoneyPage>
       case SmartTab.tape:
         return TapeView(state: state);
       case SmartTab.traders:
-        return PanelList(
-          items: state.traders,
-          emptyMessage: state.panelsLoading ? '加载中…' : '暂无数据，下拉重试',
-          itemBuilder: (context, t, i) => TraderRow(trader: t, rank: i + 1),
+        final showFomo = state.leaderboardWindow != '24h';
+        final list = showFomo
+            ? (state.fomoLeadersLoading
+                ? const PanelPlaceholder(message: '加载中…')
+                : (state.fomoLeaders == null
+                    ? const PanelPlaceholder(message: '暂无数据，下拉重试')
+                    : PanelList(
+                        items: state.fomoLeaders!,
+                        emptyMessage: '暂无数据，下拉重试',
+                        itemBuilder: (context, e, _) => FomoLeaderRow(entry: e),
+                      )))
+            : PanelList(
+                items: state.traders,
+                emptyMessage: state.panelsLoading ? '加载中…' : '暂无数据，下拉重试',
+                itemBuilder: (context, t, i) => TraderRow(trader: t, rank: i + 1),
+              );
+        return Column(
+          children: [
+            LeaderWindowChips(
+              active: state.leaderboardWindow,
+              onChanged: ref.read(smartMoneyProvider.notifier).setLeaderboardWindow,
+            ),
+            Expanded(child: list),
+          ],
         );
       case SmartTab.closed:
         return PanelList(

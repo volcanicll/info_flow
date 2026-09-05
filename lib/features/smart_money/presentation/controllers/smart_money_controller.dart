@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../core/network/api_client.dart';
+import '../../data/datasources/fomo_api.dart';
 import '../../data/models/rht_models.dart';
 import '../../data/models/rht_position.dart';
 import '../../data/models/rht_token.dart';
@@ -39,6 +40,12 @@ class SmartMoneyState {
   /// 关键字过滤：匹配代币 symbol / 交易员 handle。
   final String filter;
 
+  /// 大户榜时间窗：'24h' 用 robinhoodtrenches 榜（含胜率/仓位状态），
+  /// '7d'/'30d'/'all' 用 fomoapi 跨链榜（fomoLeaders 非空即生效）。
+  final String leaderboardWindow;
+  final List<FomoLeaderEntry>? fomoLeaders;
+  final bool fomoLeadersLoading;
+
   const SmartMoneyState({
     this.conn = RhtTapeConn.connecting,
     this.error,
@@ -53,6 +60,9 @@ class SmartMoneyState {
     this.flows = const [],
     this.tokenFlows = const [],
     this.filter = '',
+    this.leaderboardWindow = '24h',
+    this.fomoLeaders,
+    this.fomoLeadersLoading = false,
   });
 
   /// tape 是否有数据可展示。
@@ -73,6 +83,10 @@ class SmartMoneyState {
     List<RhtFlowChain>? flows,
     List<RhtTokenFlow>? tokenFlows,
     String? filter,
+    String? leaderboardWindow,
+    List<FomoLeaderEntry>? fomoLeaders,
+    bool clearFomoLeaders = false,
+    bool? fomoLeadersLoading,
   }) {
     return SmartMoneyState(
       conn: conn ?? this.conn,
@@ -88,6 +102,9 @@ class SmartMoneyState {
       flows: flows ?? this.flows,
       tokenFlows: tokenFlows ?? this.tokenFlows,
       filter: filter ?? this.filter,
+      leaderboardWindow: leaderboardWindow ?? this.leaderboardWindow,
+      fomoLeaders: clearFomoLeaders ? null : (fomoLeaders ?? this.fomoLeaders),
+      fomoLeadersLoading: fomoLeadersLoading ?? this.fomoLeadersLoading,
     );
   }
 }
@@ -175,6 +192,27 @@ class SmartMoney extends _$SmartMoney {
       if (ref.mounted && !silent) {
         state = state.copyWith(panelsLoading: false);
       }
+    }
+  }
+
+  /// 切换大户榜时间窗：24h 用 robinhoodtrenches 榜，
+  /// 更长窗口用 fomoapi 跨链榜（免 key，IP 限流）。
+  Future<void> setLeaderboardWindow(String window) async {
+    if (state.leaderboardWindow == window) return;
+    state = state.copyWith(
+      leaderboardWindow: window,
+      clearFomoLeaders: window == '24h',
+      fomoLeadersLoading: window != '24h',
+      clearError: true,
+    );
+    if (window == '24h') return;
+    try {
+      final rows = await ref.read(fomoApiProvider).leaderboard(window: window);
+      if (ref.mounted) state = state.copyWith(fomoLeaders: rows);
+    } catch (e) {
+      if (ref.mounted) state = state.copyWith(error: mapToAppException(e).message);
+    } finally {
+      if (ref.mounted) state = state.copyWith(fomoLeadersLoading: false);
     }
   }
 

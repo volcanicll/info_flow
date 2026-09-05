@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../core/notifications/notification_service.dart';
+import '../../../../core/state/fomo_api_key_store.dart';
 import '../../../../core/state/library_store.dart';
 import '../../../../core/storage/kv_storage.dart';
 import '../../../feed/data/rss_sources.dart';
@@ -118,6 +119,23 @@ class ProfilePage extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 4),
+            // 聪明钱数据源（fomoapi.io 免费档）
+            ProfileSection(
+              kicker: 'DATA · 数据源',
+              title: '聪明钱数据源',
+              children: [
+                ProfileRow(
+                  title: 'FOMO API Key',
+                  subtitle: 'fomoapi.io 免费档，解锁代币聪明钱持仓与更多窗口榜单',
+                  value: ref.watch(fomoApiKeyStoreProvider).trim().isEmpty
+                      ? '未配置'
+                      : '已配置',
+                  onTap: () => _showFomoKeySheet(
+                      context, ref, ref.read(fomoApiKeyStoreProvider)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
             // 关于与协议
             ProfileSection(
               kicker: 'ABOUT · 关于',
@@ -152,6 +170,63 @@ class ProfilePage extends ConsumerWidget {
     if (size <= 16) return '中 · 16pt';
     if (size <= 19) return '大';
     return '特大';
+  }
+
+  /// FOMO API Key 配置弹层：免费 key 到 fomoapi.io/dashboard 注册获取。
+  void _showFomoKeySheet(BuildContext context, WidgetRef ref, String current) {
+    final ctrl = TextEditingController(text: current);
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(
+            20, 0, 20, 24 + MediaQuery.of(ctx).viewInsets.bottom),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('FOMO API Key',
+                style: Theme.of(ctx).textTheme.headlineMedium),
+            const SizedBox(height: 6),
+            Text(
+              '配置后解锁：代币聪明钱持仓（谁在持、持仓量）。'
+              '免费档 10,000 请求/月，到 fomoapi.io/dashboard 免费注册；'
+              '不配置时多窗口收益榜仍可用（免 key）。',
+              style: Theme.of(ctx)
+                  .textTheme
+                  .labelSmall
+                  ?.copyWith(color: ctx.colors.inkTertiary),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: ctrl,
+              obscureText: true,
+              decoration: const InputDecoration(
+                isDense: true,
+                hintText: '粘贴 API Key',
+              ),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: () {
+                  ref
+                      .read(fomoApiKeyStoreProvider.notifier)
+                      .setKey(ctrl.text);
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('FOMO API Key 已保存')),
+                  );
+                },
+                child: const Text('保存'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showLanguageSheet(BuildContext context) {

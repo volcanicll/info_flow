@@ -41,7 +41,7 @@ final class SmartMoneyProvider
   }
 }
 
-String _$smartMoneyHash() => r'938492e6e2c333500f710c0fee3fda76902b9282';
+String _$smartMoneyHash() => r'98402764572b7c7d5d77b924a5918626def5b92a';
 
 abstract class _$SmartMoney extends $Notifier<SmartMoneyState> {
   SmartMoneyState build();

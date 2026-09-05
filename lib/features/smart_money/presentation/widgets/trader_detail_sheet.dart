@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../shared/widgets/hairline.dart';
@@ -112,10 +114,36 @@ class _TraderDetailSheetState extends State<_TraderDetailSheet> {
                             ?.copyWith(color: c.inkSecondary),
                       ),
                       if (d.solanaAddress != null)
-                        Text('Solana: ${d.solanaAddress}',
-                            overflow: TextOverflow.ellipsis,
+                        Text('Solana: ${_shorten(d.solanaAddress!)}',
                             style: theme.textTheme.labelSmall
                                 ?.copyWith(color: c.inkTertiary)),
+                      const SizedBox(height: 10),
+                      // 验身份操作行：复制双链地址 + 直达 fomo 主页交叉验证
+                      Row(
+                        children: [
+                          _VerifyAction(
+                            icon: Icons.copy_rounded,
+                            label: 'EVM',
+                            onTap: () => _copy(context, d.address),
+                          ),
+                          const SizedBox(width: 8),
+                          if (d.solanaAddress != null)
+                            _VerifyAction(
+                              icon: Icons.copy_rounded,
+                              label: 'SOL',
+                              onTap: () => _copy(context, d.solanaAddress!),
+                            ),
+                          const SizedBox(width: 8),
+                          if (d.profileUrl.isNotEmpty)
+                            _VerifyAction(
+                              icon: Icons.open_in_new_rounded,
+                              label: 'fomo 主页',
+                              onTap: () => launchUrl(
+                                  Uri.parse(d.profileUrl),
+                                  mode: LaunchMode.externalApplication),
+                            ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -159,6 +187,56 @@ class _TraderDetailSheetState extends State<_TraderDetailSheet> {
     final bags = [...d.bags];
     bags.sort((a, b) => (b.value ?? b.costUsd).compareTo(a.value ?? a.costUsd));
     return bags;
+  }
+
+  String _shorten(String addr) =>
+      addr.length > 14 ? '${addr.substring(0, 8)}…${addr.substring(addr.length - 4)}' : addr;
+
+  void _copy(BuildContext context, String value) {
+    Clipboard.setData(ClipboardData(text: value));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('地址已复制'), duration: Duration(seconds: 1)),
+    );
+  }
+}
+
+/// 验身份小按钮：细边框 + 图标 + 文案。
+class _VerifyAction extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _VerifyAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final c = context.colors;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(3),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          border: Border.all(color: c.hairlineStrong, width: 0.8),
+          borderRadius: BorderRadius.circular(3),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 13, color: c.accent),
+            const SizedBox(width: 5),
+            Text(label,
+                style: theme.textTheme.labelSmall
+                    ?.copyWith(fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
+    );
   }
 }
 

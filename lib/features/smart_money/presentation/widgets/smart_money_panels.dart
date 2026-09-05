@@ -5,11 +5,145 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../app/theme.dart';
 import '../../../../core/state/smart_money_watch_store.dart';
 import '../../../../shared/widgets/hairline.dart';
+import '../../data/datasources/fomo_api.dart';
 import '../../data/models/rht_position.dart';
 import '../../data/models/rht_token.dart';
 import '../../data/models/rht_trader.dart';
 import '../format.dart';
 import 'trader_detail_sheet.dart';
+
+/// 大户榜时间窗切换：24h 用 robinhoodtrenches 榜，更长窗口用 fomoapi 跨链榜。
+class LeaderWindowChips extends StatelessWidget {
+  final String active;
+  final ValueChanged<String> onChanged;
+
+  const LeaderWindowChips({
+    super.key,
+    required this.active,
+    required this.onChanged,
+  });
+
+  static const _windows = [
+    ('24h', '24H'),
+    ('7d', '7D'),
+    ('30d', '30D'),
+    ('all', '全部'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final c = context.colors;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+      child: Row(
+        children: [
+          for (final (value, label) in _windows) ...[
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => onChanged(value),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: value == active ? c.ink : c.hairlineStrong,
+                    width: value == active ? 1 : 0.6,
+                  ),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+                child: Text(label,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: value == active ? c.ink : c.inkTertiary,
+                      fontWeight:
+                          value == active ? FontWeight.w700 : FontWeight.w400,
+                      letterSpacing: 0.5,
+                    )),
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
+          const Spacer(),
+          Text(active == '24h' ? 'ROBINHOOD 链' : 'FOMO 全链',
+              style: theme.textTheme.labelSmall
+                  ?.copyWith(color: c.inkTertiary, fontSize: 10)),
+        ],
+      ),
+    );
+  }
+}
+
+/// fomoapi 跨链榜条目（7d/30d/全部窗口）。点击打开 fomo 主页。
+class FomoLeaderRow extends StatelessWidget {
+  final FomoLeaderEntry entry;
+
+  const FomoLeaderRow({super.key, required this.entry});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final c = context.colors;
+    final up = entry.pnlUsd >= 0;
+
+    return InkWell(
+      onTap: () => launchUrl(
+        Uri.parse('https://fomo.family/profile/${entry.handle}'),
+        mode: LaunchMode.externalApplication,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 30,
+              child: Text('${entry.rank}',
+                  style: theme.textTheme.titleSmall
+                      ?.copyWith(color: c.inkTertiary)),
+            ),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(entry.title,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.titleSmall
+                                ?.copyWith(fontWeight: FontWeight.w600)),
+                      ),
+                      if (entry.verified) ...[
+                        const SizedBox(width: 4),
+                        Icon(Icons.verified_rounded,
+                            size: 13, color: c.accent),
+                      ],
+                      const SizedBox(width: 6),
+                      Text('${count(entry.followers)}粉',
+                          style: theme.textTheme.labelSmall
+                              ?.copyWith(color: c.inkTertiary)),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text('${entry.trades}笔 · 成交${usd(entry.volumeUsd)} · 持仓${entry.holdings}个',
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelSmall
+                          ?.copyWith(color: c.inkSecondary)),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(signedUsd(entry.pnlUsd),
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: up ? c.up : c.down,
+                  fontWeight: FontWeight.w700,
+                )),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 /// 面板空态/加载态。
 class PanelPlaceholder extends StatelessWidget {

@@ -7,6 +7,7 @@ import '../../../../app/theme.dart';
 import '../../../../shared/widgets/hairline.dart';
 import '../../../../shared/widgets/icon_btn.dart';
 import '../../../../shared/widgets/section_header.dart';
+import '../../../smart_money/presentation/widgets/token_holders_section.dart';
 import '../../../token_screener/domain/models/onchain_token.dart';
 import '../controllers/coin_detail_controller.dart';
 
@@ -306,6 +307,9 @@ class _CoinDetailPageState extends ConsumerState<CoinDetailPage> {
             child: _SecurityCard(security: sec),
           ),
         ],
+
+        // 聪明钱持仓（需在设置中配置 FOMO API Key，未配置自动隐藏）
+        TokenHoldersSection(address: widget.address),
 
         // 链上池子与流动性指标
         if (oct != null) ...[
