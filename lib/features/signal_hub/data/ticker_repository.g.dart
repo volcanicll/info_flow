@@ -53,7 +53,7 @@ final class TickerRepositoryProvider
   }
 }
 
-String _$tickerRepositoryHash() => r'1ed97844e0ed2abbcba94be51c2c2097cb34136c';
+String _$tickerRepositoryHash() => r'c10ea9937aaa4d498ebe507ed99a0fbe7a506aa3';
 
 @ProviderFor(tickerQuotes)
 final tickerQuotesProvider = TickerQuotesProvider._();

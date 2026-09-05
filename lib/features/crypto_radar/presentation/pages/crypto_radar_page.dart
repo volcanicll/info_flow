@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme.dart';
+import '../../../../shared/widgets/auto_refresh.dart';
 import '../../../../shared/widgets/hairline.dart';
 import '../../../../shared/widgets/icon_btn.dart';
 import '../controllers/crypto_radar_controller.dart';
+import '../../data/watchlist_quotes.dart';
 import '../widgets/radar_signal_list.dart';
 import '../widgets/radar_views.dart';
+import '../widgets/watchlist_section.dart';
 
 /// 庄家雷达（表格化）：市场概览 + 分组信号表 + 热度榜，扫描进度为文字行。
 class CryptoRadarPage extends ConsumerWidget {
@@ -90,6 +93,15 @@ class CryptoRadarPage extends ConsumerWidget {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.only(bottom: 24),
             children: [
+              AutoRefresh(
+                interval: const Duration(seconds: 45),
+                onRefresh: () async {
+                  // 轻量轮询：仅刷新自选报价与 OI 异动，不动全量扫描
+                  ref.invalidate(watchlistQuotesProvider);
+                  await notifier.scanWatchlistOi();
+                },
+                child: const WatchlistSection(),
+              ),
               RadarOverview(state: state),
               if (state.highlights.isNotEmpty)
                 RadarHighlights(highlights: state.highlights),

@@ -11,8 +11,9 @@ import 'package:info_flow/features/profile/presentation/pages/profile_page.dart'
 import 'package:info_flow/features/search/presentation/pages/search_page.dart';
 import 'package:info_flow/features/bookmark/presentation/pages/bookmark_page.dart';
 import 'package:info_flow/features/crypto_radar/presentation/pages/crypto_radar_page.dart';
-import 'package:info_flow/features/ai_models/presentation/pages/ai_models_page.dart';
-import 'package:info_flow/features/precious_metals/presentation/pages/metals_page.dart';
+import 'package:info_flow/features/token_screener/presentation/pages/token_screener_page.dart';
+import 'package:info_flow/features/market/presentation/pages/market_overview_page.dart';
+import 'package:info_flow/features/market/presentation/pages/coin_detail_page.dart';
 import 'package:info_flow/shared/widgets/main_shell.dart';
 
 part 'router.g.dart';
@@ -28,8 +29,7 @@ CustomTransitionPage<void> _fadeSlideTransition(
     transitionDuration: const Duration(milliseconds: 240),
     reverseTransitionDuration: const Duration(milliseconds: 200),
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      final fade =
-          CurvedAnimation(parent: animation, curve: Curves.easeOut);
+      final fade = CurvedAnimation(parent: animation, curve: Curves.easeOut);
       final slide = Tween<Offset>(
         begin: const Offset(0, 0.04),
         end: Offset.zero,
@@ -74,18 +74,18 @@ GoRouter goRouter(Ref ref) {
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: '/ai-chat',
-                name: 'aiChat',
-                builder: (context, state) => const AiChatPage(),
+                path: '/screener',
+                name: 'screener',
+                builder: (context, state) => const TokenScreenerPage(),
               ),
             ],
           ),
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: '/bookmark',
-                name: 'bookmark',
-                builder: (context, state) => const BookmarkPage(),
+                path: '/ai-chat',
+                name: 'aiChat',
+                builder: (context, state) => const AiChatPage(),
               ),
             ],
           ),
@@ -127,16 +127,35 @@ GoRouter goRouter(Ref ref) {
             _fadeSlideTransition(state, const CryptoRadarPage()),
       ),
       GoRoute(
-        path: '/ai-models',
-        name: 'aiModels',
+        path: '/token-screener',
+        name: 'tokenScreener',
         pageBuilder: (context, state) =>
-            _fadeSlideTransition(state, const AiModelsPage()),
+            _fadeSlideTransition(state, const TokenScreenerPage()),
       ),
       GoRoute(
-        path: '/metals',
-        name: 'metals',
+        path: '/bookmark',
+        name: 'bookmark',
         pageBuilder: (context, state) =>
-            _fadeSlideTransition(state, const MetalsPage()),
+            _fadeSlideTransition(state, const BookmarkPage()),
+      ),
+      GoRoute(
+        path: '/market-overview',
+        name: 'marketOverview',
+        pageBuilder: (context, state) =>
+            _fadeSlideTransition(state, const MarketOverviewPage()),
+      ),
+      GoRoute(
+        path: '/coin/:symbol',
+        name: 'coinDetail',
+        pageBuilder: (context, state) {
+          final symbol = state.pathParameters['symbol']!.toUpperCase();
+          final address = state.uri.queryParameters['address'];
+          final chain = state.uri.queryParameters['chain'];
+          return _fadeSlideTransition(
+            state,
+            CoinDetailPage(symbol: symbol, address: address, chain: chain),
+          );
+        },
       ),
     ],
   );

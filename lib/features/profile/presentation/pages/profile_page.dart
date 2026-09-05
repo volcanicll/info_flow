@@ -4,13 +4,13 @@ import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../../app/theme.dart';
+import '../../../../core/notifications/notification_service.dart';
 import '../../../../core/state/library_store.dart';
-import '../../../../core/state/reading_stats.dart';
 import '../../../../core/storage/kv_storage.dart';
 import '../../../feed/data/rss_sources.dart';
 import '../widgets/profile_sections.dart';
 
-/// 我的（目录页）：章节化分组 + 页码式右对齐值，杂志目录排版。
+/// 个人中心：专注链上终端配置、自选池管理、GoPlus 安全设置与多链偏好。
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
 
@@ -21,7 +21,6 @@ class ProfilePage extends ConsumerWidget {
     final library = ref.watch(libraryStoreProvider);
     final themeMode = ref.watch(themeModeProvider);
     final fontSize = ref.watch(fontSizeProvider);
-    final readSecs = ref.watch(readingStatsProvider).totalReadSeconds;
 
     return Scaffold(
       body: SafeArea(
@@ -35,36 +34,79 @@ class ProfilePage extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('PROFILE · 我的',
+                  Text('TERMINAL · 链上终端',
                       style: theme.textTheme.labelMedium
                           ?.copyWith(color: c.accent)),
                   const SizedBox(height: 2),
-                  Text('我的', style: theme.textTheme.displayLarge),
+                  Text('终端设置', style: theme.textTheme.displayLarge),
                   const SizedBox(height: 4),
-                  Text('已订阅 ${RssSources.all.length} 个来源',
+                  Text('专注 Robinhood · BSC · Base · SOL 链上生态',
                       style: theme.textTheme.bodyMedium
                           ?.copyWith(color: c.inkTertiary)),
                 ],
               ),
             ),
-            // Reading stats
+            // On-chain Stats
             ProfileStats(items: [
-              (value: '${library.readIds.length}', label: '已读'),
-              (value: _readTimeLabel(readSecs), label: '阅读时长'),
-              (value: '${library.bookmarkCount}', label: '收藏'),
+              (value: '${library.bookmarkCount}', label: '自选/收藏'),
+              (value: '4', label: '核心链生态'),
+              (value: 'GoPlus', label: '安全审计引擎'),
             ]),
             const SizedBox(height: 8),
-            // 外观
+            // 功能专区
+            ProfileSection(
+              kicker: 'CHAIN TOOLS · 链上工具',
+              title: '链上工具',
+              children: [
+                ProfileRow(
+                  title: '我的自选 / 收藏池',
+                  subtitle: '已收藏的链上情报与标的',
+                  onTap: () => context.push('/bookmark'),
+                ),
+                ProfileRow(
+                  title: '代币探测与安全审计',
+                  subtitle: '全链合约检索与貔貅检测',
+                  onTap: () => context.push('/token-screener'),
+                ),
+                ProfileRow(
+                  title: '加密与异动雷达',
+                  subtitle: '大额异动与持仓扫描',
+                  onTap: () => context.push('/crypto-radar'),
+                ),
+                ProfileRow(
+                  title: 'Web3 情报源管理',
+                  subtitle: '已聚合 ${RssSources.all.length} 个专业链上情报源',
+                  onTap: () => context.push('/subscription'),
+                ),
+                ProfileRow(
+                  title: '链上异动提醒',
+                  subtitle: '捕获新异动或巨鲸信号时推送',
+                  trailing: Switch(
+                    value: ref.watch(signalNotifyPrefProvider),
+                    onChanged: (v) => ref
+                        .read(signalNotifyPrefProvider.notifier)
+                        .setEnabled(v),
+                  ),
+                ),
+                ProfileRow(
+                  title: '基准市场总览',
+                  subtitle: 'BTC · ETH · SOL · BNB 现货行情',
+                  onTap: () => context.push('/market-overview'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            // 外观设置
             ProfileSection(
               kicker: 'APPEARANCE · 外观',
-              title: '外观',
+              title: '外观与偏好',
               children: [
                 ProfileRow(
                   title: '深色模式',
                   trailing: _ThemeSeg(themeMode: themeMode),
                 ),
                 ProfileRow(
-                  title: '正文字号',
+                  title: '字号调节',
                   value: _fontSizeLabel(fontSize),
                   onTap: () => _showFontSizeSheet(context, ref, fontSize),
                 ),
@@ -76,65 +118,25 @@ class ProfilePage extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 4),
-            // 功能
-            ProfileSection(
-              kicker: 'FEATURES · 功能',
-              title: '功能',
-              children: [
-                ProfileRow(
-                  title: '我的收藏',
-                  onTap: () => context.push('/bookmark'),
-                ),
-                ProfileRow(
-                  title: '订阅管理',
-                  onTap: () => context.push('/subscription'),
-                ),
-                ProfileRow(
-                  title: '离线下载',
-                  subtitle: '即将推出',
-                  onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('离线下载功能开发中，敬请期待')),
-                  ),
-                ),
-                ProfileRow(
-                  title: '庄家雷达',
-                  subtitle: '币安合约市场扫描',
-                  onTap: () => context.push('/crypto-radar'),
-                ),
-                ProfileRow(
-                  title: '贵金属行情',
-                  subtitle: '金价银价实时报价',
-                  onTap: () => context.push('/metals'),
-                ),
-                ProfileRow(
-                  title: 'AI 模型排行',
-                  subtitle: 'HuggingFace 趋势模型',
-                  onTap: () => context.push('/ai-models'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            // 关于
+            // 关于与协议
             ProfileSection(
               kicker: 'ABOUT · 关于',
-              title: '关于',
+              title: '关于平台',
               children: [
+                const ProfileRow(
+                  title: '链上数据源',
+                  value: 'DexScreener + GoPlus',
+                ),
                 ProfileRow(
-                  title: '关于 InfoFlow',
-                  value: 'v1.0.0',
+                  title: '关于 InfoFlow Terminal',
+                  value: 'v2.0.0 (On-Chain)',
                   onTap: () => _showAboutDialog(context),
                 ),
                 ProfileRow(
-                  title: '帮助与反馈',
-                  onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('帮助文档即将上线')),
-                  ),
-                ),
-                ProfileRow(
-                  title: '推荐给朋友',
+                  title: '推荐给交易员朋友',
                   onTap: () => Share.share(
-                    '推荐你使用 InfoFlow，一款 AI 驱动的信息聚合 App',
-                    subject: 'InfoFlow',
+                    '推荐使用 InfoFlow 生产级链上信息平台，专注于 Robinhood, BSC, Base, SOL 链上生态！',
+                    subject: 'InfoFlow Terminal',
                   ),
                 ),
               ],
@@ -143,11 +145,6 @@ class ProfilePage extends ConsumerWidget {
         ),
       ),
     );
-  }
-
-  String _readTimeLabel(int secs) {
-    final m = secs ~/ 60;
-    return m < 60 ? '${m}m' : '${(m / 60).toStringAsFixed(1)}h';
   }
 
   String _fontSizeLabel(double size) {
@@ -161,8 +158,6 @@ class ProfilePage extends ConsumerWidget {
     final languages = [
       ('简体中文', 'zh_CN'),
       ('English', 'en'),
-      ('日本語', 'ja'),
-      ('한국어', 'ko'),
     ];
     showModalBottomSheet(
       context: context,
@@ -200,16 +195,17 @@ class ProfilePage extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('关于 InfoFlow'),
+        title: const Text('关于 InfoFlow Terminal'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('版本: v1.0.0', style: Theme.of(ctx).textTheme.bodyMedium),
+            Text('版本: v2.0.0 (生产级链上版)',
+                style: Theme.of(ctx).textTheme.bodyMedium),
             const SizedBox(height: 8),
             Text(
-              'InfoFlow 是一款 AI 驱动的信息聚合应用，'
-              '帮助您高效获取和阅读感兴趣的资讯。',
+              '专注于 Robinhood、BSC、Base、SOL 四大区块链生态。'
+              '聚合 DexScreener 流动性行情、GoPlus 智能合约貔貅审计、巨鲸聪明钱异动与全天候链上情报。',
               style: Theme.of(ctx).textTheme.bodySmall,
             ),
           ],
@@ -256,7 +252,7 @@ class ProfilePage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '示例正文：这是阅读器中正文的字号预览效果。',
+                    '示例：这是情报与代币研报的字号预览效果。',
                     style: TextStyle(fontSize: value),
                   ),
                 ],
@@ -269,7 +265,6 @@ class ProfilePage extends ConsumerWidget {
   }
 }
 
-/// 主题切换：铅字风三选项，激活态下方短墨线。
 class _ThemeSeg extends ConsumerWidget {
   final ThemeMode themeMode;
   const _ThemeSeg({required this.themeMode});

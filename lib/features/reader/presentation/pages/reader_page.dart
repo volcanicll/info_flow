@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -363,6 +364,7 @@ void _showMoreMenu(BuildContext context, WidgetRef ref, Article article) {
             leading: const Icon(Icons.access_time_rounded),
             title: const Text('稍后阅读'),
             onTap: () {
+              HapticFeedback.selectionClick();
               ref.read(libraryStoreProvider.notifier).toggleReadLater(article);
               Navigator.pop(ctx);
             },

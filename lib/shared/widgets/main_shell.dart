@@ -5,17 +5,17 @@ import '../../app/theme.dart';
 import 'hairline.dart';
 import 'press_scale.dart';
 
-/// 主框架：纸底底栏 + 顶部发丝线，激活态为墨点/短下划线（非色块）。
+/// 主框架：生产级链上终端底栏 + 发丝线分隔，激活态为墨线下划线。
 class MainShell extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
 
   const MainShell({super.key, required this.navigationShell});
 
   static const _tabs = [
-    _TabItem(Icons.graphic_eq_rounded, '脉搏'),
-    _TabItem(Icons.article_outlined, '信息流'),
-    _TabItem(Icons.auto_awesome_outlined, 'AI'),
-    _TabItem(Icons.bookmark_border_rounded, '收藏'),
+    _TabItem(Icons.radar_rounded, '雷达'),
+    _TabItem(Icons.newspaper_rounded, '情报'),
+    _TabItem(Icons.travel_explore_rounded, '探测'),
+    _TabItem(Icons.psychology_rounded, '投研'),
     _TabItem(Icons.person_outline_rounded, '我的'),
   ];
 
@@ -96,7 +96,6 @@ class _TabButton extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 5),
-          // 激活态：短墨线下划线，替代色块
           AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             curve: Curves.easeOut,

@@ -3,10 +3,13 @@ import 'package:info_flow/features/signal_hub/data/ticker_dictionary.dart';
 import 'package:info_flow/features/signal_hub/domain/entities/ticker_ref.dart';
 
 void main() {
-  test('词典包含主流加密与贵金属标的', () {
+  test('词典包含四大链主流加密与生态标的', () {
     final dict = TickerDictionary();
     final syms = dict.entries.map((e) => e.symbol).toSet();
-    expect(syms.containsAll(['BTC', 'ETH', 'XAU', 'XAG']), isTrue);
+    expect(
+      syms.containsAll(['BTC', 'ETH', 'SOL', 'BNB', 'AERO', 'HOOD']),
+      isTrue,
+    );
   });
 
   test('每个 entry 的别名均为小写且非空', () {
@@ -26,10 +29,17 @@ void main() {
     expect(eth.aliases.contains('以太坊'), isTrue);
   });
 
+  test('SOL 别名包含「solana」', () {
+    final dict = TickerDictionary();
+    final sol = dict.entries.firstWhere((e) => e.symbol == 'SOL');
+    expect(sol.aliases.contains('solana'), isTrue);
+  });
+
   test('asset 类别正确', () {
     final dict = TickerDictionary();
     final bySym = {for (final e in dict.entries) e.symbol: e.asset};
     expect(bySym['BTC'], AssetClass.crypto);
-    expect(bySym['XAU'], AssetClass.metal);
+    expect(bySym['SOL'], AssetClass.crypto);
+    expect(bySym['BNB'], AssetClass.crypto);
   });
 }

@@ -53,7 +53,7 @@ final class PulseControllerProvider
   }
 }
 
-String _$pulseControllerHash() => r'ba375aa442c77e35a340e85ec9679bdcb5234e4b';
+String _$pulseControllerHash() => r'78ab6f6785c60b291624a04c2f7435da436199f7';
 
 /// 脉搏控制器：装配时间线状态。
 ///

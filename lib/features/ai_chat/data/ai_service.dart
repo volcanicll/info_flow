@@ -4,14 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/state/ai_config.dart';
 import '../../../core/state/article_cache.dart';
-import '../../../features/feed/data/rss_sources.dart';
 import '../../../features/feed/domain/entities/article.dart';
 import '../../../features/market/data/fear_greed_repository.dart';
 import '../../../features/market/data/market_repository.dart';
 import '../../../features/market/domain/models/fear_greed_index.dart';
 import '../../../features/market/domain/models/market_quote.dart';
-import '../../../features/precious_metals/data/metals_repository.dart';
-import '../../../features/precious_metals/domain/models/metal_price.dart';
 
 class AiService {
   AiService(this._ref);
@@ -33,13 +30,12 @@ class AiService {
     return _localReply(userMessage);
   }
 
-  /// 每日播报：聚合市场数据（恐惧贪婪 / 加密 / 贵金属）与今日要闻，
-  /// 生成一份类 TechDaily 的日报。配置 LLM 时走真实模型，否则本地规则。
+  /// 每日播报：聚合链上情绪（恐惧贪婪 / 加密行情）与最新链上要闻
   Future<String> dailyBrief() async {
     final config = _ref.read(aiConfigProvider);
     if (config.apiKey.trim().isNotEmpty) {
       try {
-        return await _callLlm('请生成今天的每日播报', config);
+        return await _callLlm('请生成今天的链上加密与生态每日播报', config);
       } catch (_) {
         return _localDailyBrief(await _fetchMarketSnapshot());
       }
@@ -47,67 +43,52 @@ class AiService {
     return _localDailyBrief(await _fetchMarketSnapshot());
   }
 
-  /// 并行拉取市场快照；任一源失败不影响其它（静默降级为 null）。
-  Future<({FearGreedIndex? fng, List<MarketQuote> crypto, List<MetalPrice> metals})>
+  /// 并行拉取市场快照（恐惧贪婪指数 + 核心生态币行情）
+  Future<({FearGreedIndex? fng, List<MarketQuote> crypto})>
       _fetchMarketSnapshot() async {
     final fearRepo = _ref.read(fearGreedRepositoryProvider);
     final marketRepo = _ref.read(marketRepositoryProvider);
-    final metalsRepo = _ref.read(metalsRepositoryProvider);
 
     final results = await Future.wait([
       fearRepo.fetchIndex(),
       marketRepo.fetchCryptoQuotes(['BTC', 'ETH', 'SOL', 'BNB']),
-      metalsRepo.fetchPrices(),
     ]);
 
     return (
       fng: results[0] as FearGreedIndex?,
       crypto: results[1] as List<MarketQuote>,
-      metals: results[2] as List<MetalPrice>,
     );
   }
 
   String _localDailyBrief(
-    ({FearGreedIndex? fng, List<MarketQuote> crypto, List<MetalPrice> metals})
-        market,
+    ({FearGreedIndex? fng, List<MarketQuote> crypto}) market,
   ) {
     final cache = _ref.read(articleCacheProvider);
     final articles = cache.values.toList();
     final buf = StringBuffer();
 
-    buf.writeln('📰 **每日播报**');
+    buf.writeln('⚡ **链上加密情报每日播报**');
     buf.writeln();
 
     // ── 市场情绪 ──
     final fng = market.fng;
     if (fng != null) {
-      buf.writeln('**市场情绪**：${fng.classification}（${fng.value}/100）');
+      buf.writeln('**市场情绪指数**：${fng.classification}（${fng.value}/100）');
     }
 
-    // ── 加密行情 ──
+    // ── 核心标的行情 ──
     if (market.crypto.isNotEmpty) {
       buf.writeln();
-      buf.writeln('**加密行情**');
+      buf.writeln('**四大生态基准标的**');
       for (final q in market.crypto) {
         final arrow = q.changePercent >= 0 ? '📈' : '📉';
         buf.writeln(
-            '· $arrow ${q.symbol} \$${_fmtPrice(q.price)} '
+            '· $arrow **${q.symbol}** \$${_fmtPrice(q.price)} '
             '(${q.changePercent >= 0 ? '+' : ''}${q.changePercent.toStringAsFixed(2)}%)');
       }
     }
 
-    // ── 贵金属 ──
-    if (market.metals.isNotEmpty) {
-      buf.writeln();
-      buf.writeln('**贵金属**');
-      for (final m in market.metals) {
-        buf.writeln(
-            '· ${m.code} ${m.priceFormatted} ${m.currency} '
-            '(${m.changeFormatted})');
-      }
-    }
-
-    // ── 今日要闻 ──
+    // ── 今日链上情报 ──
     final sorted = List<Article>.from(articles)
       ..sort((a, b) {
         final ta = a.publishedAt ?? DateTime(2000);
@@ -118,7 +99,7 @@ class AiService {
 
     if (top.isNotEmpty) {
       buf.writeln();
-      buf.writeln('**今日要闻**');
+      buf.writeln('**链上要闻与生态速递**');
       buf.writeln();
       for (var i = 0; i < top.length; i++) {
         final a = top[i];
@@ -130,11 +111,11 @@ class AiService {
       }
     } else {
       buf.writeln();
-      buf.writeln('当前还没有加载文章，请先在「信息流」下拉刷新后再来生成播报。');
+      buf.writeln('当前情报流尚未拉取，请在「情报」页面下拉刷新获取最新动态。');
     }
 
     buf.writeln('---');
-    buf.writeln('前往「脉搏」可查看市场情绪与实时行情，或问我具体话题。');
+    buf.writeln('提示：在「探测」页面可输入任意 CA 地址进行 GoPlus 貔貅安全检测，或在「雷达」追踪 Robinhood / Solana / Base / BSC 异动。');
     return buf.toString();
   }
 
@@ -149,28 +130,44 @@ class AiService {
     final articles = cache.values.toList();
     final lower = message.toLowerCase();
 
+    // 1. 合约安全与貔貅检测引导
+    if (RegExp(r'合约|安全|貔貅|honeypot|rug|税|审计|开源').hasMatch(lower)) {
+      return '🛡️ **代币合约安全审计指引**\n\n'
+          '你可以直接在「探测 (Screener)」页面输入代币合约地址（CA），平台将通过 GoPlus 自动化执行：\n'
+          '• **貔貅检测**：验证是否可正常卖出\n'
+          '• **买卖税率**：检测买税/卖税是否过高\n'
+          '• **权限审计**：检查铸造权 (Mint) 与冻结权 (Freeze) 是否已丢弃\n'
+          '• **持仓集中度**：Top 10 持币大户占比分析\n\n'
+          '立即前往底栏「探测」页面开始体检！';
+    }
+
+    // 2. 四大链生态问答
+    if (lower.contains('solana') || lower.contains('sol') || lower.contains('pump')) {
+      return '🟣 **Solana 链上动态**\n\n'
+          'Solana 当前以极低 Gas 和高 TPS 驱动 Meme 与 DeFi 生态（如 Pump.fun, Raydium, Jupiter）。\n'
+          '前往「雷达 → Solana」可查看热门流动性池与发射异动；在情报流可过滤 Solana 官方博客与 Solana Floor 动态。';
+    }
+
+    if (lower.contains('base') || lower.contains('clanker') || lower.contains('virtual')) {
+      return '🔵 **Base 链上动态**\n\n'
+          'Base 是 Coinbase 孵化的以太坊 L2，目前 AI Agent 代币（Virtuals / Clanker）与 Aerodrome 活跃度极高。\n'
+          '前往「雷达 → Base」可实时监控 Base 交易量靠前的交易对与智能合约安全性。';
+    }
+
+    if (lower.contains('bsc') || lower.contains('bnb') || lower.contains('four')) {
+      return '🟡 **BSC (BNB Smart Chain) 动态**\n\n'
+          'BSC 生态以 PancakeSwap 与 Four.meme 为核心，流动性充足。\n'
+          '进行 BSC 代币交互时请务必使用「探测」检测是否存在恶意黑名单或超高买卖税。';
+    }
+
+    if (lower.contains('robinhood') || lower.contains('hood')) {
+      return '🟢 **Robinhood 加密与链上布局**\n\n'
+          'Robinhood 不仅支持 BTC, ETH, SOL, DOGE, SHIB, PEPE 等现货资产交易，其自建 Robinhood Chain 及与 Arbitrum 的合作正在加速落地。\n'
+          '前往「雷达 → Robinhood」可专属监控 Robinhood 官方上架资产涨跌幅与异动排行榜。';
+    }
+
     if (RegExp(r'今日|今天|最新|要闻|热点|新闻').hasMatch(message)) {
       return _localHighlights(articles);
-    }
-
-    if (RegExp(r'推荐|订阅|源|rss|关注').hasMatch(lower)) {
-      return _localRecommendSources();
-    }
-
-    if (RegExp(r'亮点|头条|精选|重要').hasMatch(message)) {
-      return _localHighlights(articles);
-    }
-
-    if (RegExp(r'总结|摘要|分析|洞察|趋势|insight|digest').hasMatch(message)) {
-      return _localInsight(articles);
-    }
-
-    if (RegExp(r'黄金|贵金属|金价|白银|行情|金属|gold|metal').hasMatch(lower)) {
-      return '关于贵金属行情，建议前往「市场 → 贵金属行情」查看实时金价和银价数据。';
-    }
-
-    if (RegExp(r'模型|API|排行榜|ai模型|hugging').hasMatch(lower)) {
-      return '想了解最新 AI 模型排名？前往「市场 → AI 排行」查看 HuggingFace 趋势模型榜单。';
     }
 
     final matched = articles.where((a) {
@@ -180,21 +177,21 @@ class AiService {
     }).take(3).toList();
 
     if (matched.isEmpty) {
-      return '我在当前已加载的文章中没找到与「$message」直接相关的内容。\n\n'
+      return '我在当前链上情报库中暂未找到与「$message」直接相关的内容。\n\n'
           '你可以：\n'
-          '• 换个关键词再试\n'
-          '• 在信息流下拉加载更多文章\n'
-          '• 问我「今日要闻」或「推荐订阅源」';
+          '• 在「探测」页面输入合约地址或代币 Symbol 进行全链检索\n'
+          '• 询问「Solana」、「Base」、「BSC」或「Robinhood」生态情况\n'
+          '• 问我「今日要闻」或「每日播报」';
     }
 
     final lines = matched.map((a) =>
         '【${a.feedName}】${a.title}${a.summary != null ? '\n  ${a.summary}' : ''}');
-    return '找到 ${matched.length} 篇与「$message」相关的文章：\n\n${lines.join('\n\n')}';
+    return '找到 ${matched.length} 篇与「$message」相关的链上情报：\n\n${lines.join('\n\n')}';
   }
 
   String _localHighlights(List<Article> articles) {
     if (articles.isEmpty) {
-      return '当前还没有加载文章，请先在「信息流」下拉刷新加载内容，我就能为你整理要闻了。';
+      return '当前还没有加载文章，请先在「情报」页面下拉刷新，我就能为你整理链上要闻了。';
     }
     final sorted = List<Article>.from(articles)
       ..sort((a, b) {
@@ -203,7 +200,7 @@ class AiService {
         return tb.compareTo(ta);
       });
     final top = sorted.take(5).toList();
-    final buf = StringBuffer('📰 **今日新闻亮点**\n\n');
+    final buf = StringBuffer('⚡ **今日链上核心要闻**\n\n');
     for (var i = 0; i < top.length; i++) {
       final a = top[i];
       buf.writeln('${i + 1}. **【${a.feedName}】** ${a.title}');
@@ -212,65 +209,7 @@ class AiService {
       }
       buf.writeln();
     }
-    buf.write('---\n需要我详细解读某条新闻吗？或问我「总结趋势」获取今日洞察。');
-    return buf.toString();
-  }
-
-  String _localInsight(List<Article> articles) {
-    if (articles.length < 3) {
-      return '文章不足，无法生成洞察。请先在信息流加载更多内容。';
-    }
-    final bySource = <String, List<Article>>{};
-    for (final a in articles) {
-      bySource.putIfAbsent(a.feedName, () => []).add(a);
-    }
-    final activeSources = bySource.entries
-        .where((e) => e.value.isNotEmpty)
-        .map((e) => '• **${e.key}**（${e.value.length} 篇）')
-        .join('\n');
-
-    final sorted = List<Article>.from(articles)
-      ..sort((a, b) {
-        final ta = a.publishedAt ?? DateTime(2000);
-        final tb = b.publishedAt ?? DateTime(2000);
-        return tb.compareTo(ta);
-      });
-    final latest = sorted.take(3).map((a) =>
-        '• **${a.feedName}**：${a.title}').join('\n');
-
-    final categories = <String, int>{};
-    for (final a in articles) {
-      categories[a.feedName] = (categories[a.feedName] ?? 0) + 1;
-    }
-    final sortedCats = categories.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-    final topCat = sortedCats.isNotEmpty ? sortedCats.first.key : '科技';
-
-    return '📊 **今日内容洞察**\n\n'
-        '**活跃来源**\n$activeSources\n\n'
-        '**最新动态**\n$latest\n\n'
-        '**热度分析**\n'
-        '• 今日最活跃来源：**$topCat**\n'
-        '• 共收录 ${articles.length} 篇文章\n'
-        '• 覆盖 ${bySource.length} 个来源\n\n'
-        '---\n前往「信息流」查看更多内容，或问我具体话题。';
-  }
-
-  String _localRecommendSources() {
-    final groups = <String, List<String>>{};
-    for (final s in RssSources.all) {
-      groups.putIfAbsent(s.category.label, () => [])
-          .add('${s.name}（${s.description}）');
-    }
-    final buf = StringBuffer('这里有一些优质订阅源推荐：\n\n');
-    groups.forEach((cat, list) {
-      buf.writeln('【$cat】');
-      for (final l in list) {
-        buf.writeln('· $l');
-      }
-      buf.writeln();
-    });
-    buf.write('前往「信息流 → 订阅管理」即可添加这些源。');
+    buf.write('---\n提示：点击新闻卡片上的代币徽章，可直达代币探测与安全审计。');
     return buf.toString();
   }
 
@@ -297,8 +236,8 @@ class AiService {
         'messages': [
           {
             'role': 'system',
-            'content': '你是 InfoFlow 的 AI 助手，帮用户总结和回答关于订阅内容的问题。'
-                '以下是用户最近订阅的文章，回答时可参考：\n$context'
+            'content': '你是 InfoFlow 生产级链上智能投研助手，专注于 Robinhood、BSC、Base、Solana 四大区块链生态及全链加密情报分析。为你提供准确、专业、去伪存真的链上数据解读、代币合约安全评估与Alpha洞察。'
+                '以下是系统最新捕获的链上情报，回答时可参考：\n$context'
           },
           {'role': 'user', 'content': userMessage},
         ],

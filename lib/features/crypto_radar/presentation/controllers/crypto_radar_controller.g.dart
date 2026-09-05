@@ -41,7 +41,7 @@ final class CryptoRadarProvider
   }
 }
 
-String _$cryptoRadarHash() => r'd20b214d79c39ad6d3b1f20890fb74d683bf3cd3';
+String _$cryptoRadarHash() => r'a79e4ca0d80694ff9fcdb0cb3d3aabea28ae2cd4';
 
 abstract class _$CryptoRadar extends $Notifier<CryptoRadarState> {
   CryptoRadarState build();

@@ -7,8 +7,23 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:info_flow/core/logging/logger.dart';
 import 'package:info_flow/core/storage/kv_storage.dart';
 import 'package:info_flow/features/feed/data/rss_sources.dart';
+import 'package:info_flow/features/subscription/data/opml_parser.dart';
 
 part 'subscription_store.g.dart';
+
+/// OPML 导入结果统计。
+class OpmlImportResult {
+  final int added;
+  final int alreadySubscribed;
+  final int duplicate;
+  final int invalid;
+  OpmlImportResult({
+    required this.added,
+    required this.alreadySubscribed,
+    required this.duplicate,
+    required this.invalid,
+  });
+}
 
 class CustomSourceData {
   final String id;
@@ -23,14 +38,14 @@ class CustomSourceData {
     required this.name,
     required this.feedUrl,
     this.siteUrl = '',
-    this.categoryName = 'tech',
+    this.categoryName = 'news',
     this.description = '',
   });
 
   RssSource toRssSource() {
     final cat = FeedCategory.values.firstWhere(
       (c) => c.name == categoryName,
-      orElse: () => FeedCategory.tech,
+      orElse: () => FeedCategory.news,
     );
     return RssSource(
       id: id,
@@ -58,7 +73,7 @@ class CustomSourceData {
         name: json['name'] as String,
         feedUrl: json['feedUrl'] as String,
         siteUrl: json['siteUrl'] as String? ?? '',
-        categoryName: json['categoryName'] as String? ?? 'tech',
+        categoryName: json['categoryName'] as String? ?? 'news',
         description: json['description'] as String? ?? '',
       );
 }
@@ -158,5 +173,107 @@ class SubscriptionStore extends _$SubscriptionStore {
     final next = Set<String>.from(state)..remove(id);
     state = next;
     await _prefs.setStringList(_kSubscribed, next.toList());
+  }
+
+  /// 批量导入 OPML 订阅：命中内置源则直接订阅，否则创建自定义源并订阅。
+  /// 按 feedUrl 去重，返回统计信息。
+  Future<OpmlImportResult> importOpml(List<OpmlSubscription> items) async {
+    var added = 0;
+    var alreadySubscribed = 0;
+    var duplicate = 0;
+    var invalid = 0;
+    final knownUrls = <String>{
+      for (final s in RssSources.all) s.feedUrl,
+      for (final s in _customSources.values) s.feedUrl,
+    };
+    final next = Set<String>.from(state);
+
+    for (final item in items) {
+      final url = item.feedUrl.trim();
+      if (url.isEmpty || !url.startsWith('http')) {
+        invalid++;
+        continue;
+      }
+      if (knownUrls.contains(url)) {
+        // 已在源库中：尝试订阅
+        final builtIn = RssSources.all
+            .where((s) => s.feedUrl == url)
+            .firstOrNull;
+        final id = builtIn?.id ??
+            _customSources.values
+                .where((s) => s.feedUrl == url)
+                .firstOrNull
+                ?.id;
+        if (id == null) {
+          duplicate++;
+          continue;
+        }
+        if (next.contains(id)) {
+          alreadySubscribed++;
+        } else {
+          next.add(id);
+          alreadySubscribed++;
+        }
+        continue;
+      }
+      // 新源：创建自定义源
+      final name = item.name.isNotEmpty ? item.name : _deriveName(url);
+      final id = 'custom_${name.hashCode}_$url'.hashCode.toString();
+      if (_customSources.containsKey(id)) {
+        duplicate++;
+        continue;
+      }
+      _customSources[id] = CustomSourceData(
+        id: id,
+        name: name,
+        feedUrl: url,
+        siteUrl: item.siteUrl,
+        categoryName: _matchCategory(item.category),
+      );
+      knownUrls.add(url);
+      next.add(id);
+      added++;
+    }
+
+    state = next;
+    await _prefs.setStringList(_kSubscribed, next.toList());
+    await _prefs.setString(
+        _kCustomSources,
+        jsonEncode(
+            _customSources.map((k, v) => MapEntry(k, v.toJson()))));
+    return OpmlImportResult(
+      added: added,
+      alreadySubscribed: alreadySubscribed,
+      duplicate: duplicate,
+      invalid: invalid,
+    );
+  }
+
+  /// 导出已订阅源为 OPML 字符串（含内置源与自定义源）。
+  String exportOpml() {
+    final subs = subscribedSources
+        .map(
+          (s) => OpmlSubscription(
+            name: s.name,
+            feedUrl: s.feedUrl,
+            siteUrl: s.siteUrl,
+            category: s.category.label,
+          ),
+        )
+        .toList();
+    return OpmlBuilder.build(title: 'InfoFlow 订阅', subscriptions: subs);
+  }
+
+  String _deriveName(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri != null && uri.host.isNotEmpty) return uri.host;
+    return url;
+  }
+
+  String _matchCategory(String label) {
+    for (final cat in FeedCategory.values) {
+      if (cat.label == label || cat.name == label) return cat.name;
+    }
+    return 'news';
   }
 }

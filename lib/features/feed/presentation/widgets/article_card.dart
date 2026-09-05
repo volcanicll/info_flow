@@ -125,21 +125,24 @@ class ArticleTickers extends StatelessWidget {
 }
 
 /// 缩略图：无圆角膨胀，细发丝线描边（杂志图片处理）。
+/// 传入 [heroTag] 时启用 Hero 转场（列表 → 阅读器封面），tag 需全局唯一。
 class ArticleThumb extends StatelessWidget {
   final String url;
   final double width;
   final double height;
+  final String? heroTag;
   const ArticleThumb({
     super.key,
     required this.url,
     this.width = 96,
     this.height = 96,
+    this.heroTag,
   });
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    return ClipRRect(
+    final thumb = ClipRRect(
       borderRadius: BorderRadius.circular(2),
       child: CachedNetworkImage(
         imageUrl: url,
@@ -157,6 +160,8 @@ class ArticleThumb extends StatelessWidget {
         ),
       ),
     );
+    if (heroTag == null || heroTag!.isEmpty) return thumb;
+    return Hero(tag: heroTag!, child: thumb);
   }
 }
 

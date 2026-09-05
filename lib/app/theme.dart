@@ -297,6 +297,13 @@ class AppTheme {
   static Color love(Brightness b) => b == Brightness.dark ? _loveDark : _loveLight;
   static Color up(Brightness b) => b == Brightness.dark ? _upDark : _upLight;
   static Color down(Brightness b) => b == Brightness.dark ? _downDark : _downLight;
+
+  /// 雷达信号色（紫，区别于涨跌色）。
+  static Color radar(Brightness b) =>
+      b == Brightness.dark ? const Color(0xFFB98AE8) : const Color(0xFF8E44AD);
+
+  /// 强信号警示色（红）。
+  static Color alert(Brightness b) => down(b);
   static Color warn(Brightness b) => b == Brightness.dark ? _warnDark : _warnLight;
   static Color tint(Brightness b) => b == Brightness.dark ? _tintDark : _tintLight;
   static Color surface2(Brightness b) =>
@@ -409,5 +416,7 @@ class AppColors extends ThemeExtension<AppColors> {
 
 /// 便捷取色：`context.colors.accent`。
 extension AppColorsContext on BuildContext {
-  AppColors get colors => Theme.of(this).extension<AppColors>()!;
+  AppColors get colors =>
+      Theme.of(this).extension<AppColors>() ??
+      AppTheme._appColors(Theme.of(this).brightness);
 }

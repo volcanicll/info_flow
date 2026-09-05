@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -32,8 +33,10 @@ class ArticleActions extends ConsumerWidget {
               : null,
           isActive: isLiked,
           activeColor: c.love,
-          onTap: () =>
-              ref.read(libraryStoreProvider.notifier).toggleLike(article.id),
+          onTap: () {
+            HapticFeedback.selectionClick();
+            ref.read(libraryStoreProvider.notifier).toggleLike(article.id);
+          },
         ),
         const SizedBox(width: 18),
         _ActBtn(
@@ -56,8 +59,10 @@ class ArticleActions extends ConsumerWidget {
           activeIcon: Icons.bookmark_rounded,
           isActive: isBookmarked,
           activeColor: c.accent,
-          onTap: () =>
-              ref.read(libraryStoreProvider.notifier).toggleBookmark(article),
+          onTap: () {
+            HapticFeedback.lightImpact();
+            ref.read(libraryStoreProvider.notifier).toggleBookmark(article);
+          },
         ),
       ],
     );

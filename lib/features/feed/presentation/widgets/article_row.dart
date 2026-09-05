@@ -88,7 +88,10 @@ class ArticleRow extends ConsumerWidget {
                   ),
                   if (hasCover) ...[
                     const SizedBox(width: 14),
-                    ArticleThumb(url: article.coverImageUrl!),
+                    ArticleThumb(
+                      url: article.coverImageUrl!,
+                      heroTag: article.id,
+                    ),
                   ],
                 ],
               ),

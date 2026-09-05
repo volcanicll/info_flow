@@ -29,6 +29,8 @@ dependencies:
 
   # 本地存储
   shared_preferences: ^2.5.3
+  # 本地通知（信号/异动主动触达）
+  flutter_local_notifications: ^19.0.0
 
   # 工具
   intl: ^0.20.2
@@ -45,6 +47,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  test: ^1.25.0
   flutter_lints: ^6.0.0
   build_runner: ^2.4.14
   riverpod_generator: ^4.0.0

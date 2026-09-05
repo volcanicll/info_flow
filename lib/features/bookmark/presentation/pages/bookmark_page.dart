@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -126,6 +127,70 @@ class _SectionTabs extends StatelessWidget {
 
 enum BookmarkFilter { all, readLater }
 
+/// 可左滑移除的剪报行：整行向左滑出，移除收藏（全部标签）
+/// 或取消稍后阅读（稍后读标签），带触觉反馈。
+class _DismissibleRow extends ConsumerWidget {
+  final Article article;
+  final BookmarkFilter filter;
+  final VoidCallback onTap;
+
+  const _DismissibleRow({
+    required this.article,
+    required this.filter,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
+    final theme = Theme.of(context);
+    final isReadLater = article.isReadLater;
+
+    return Dismissible(
+      key: ValueKey('clip_${article.id}_$filter'),
+      direction: DismissDirection.endToStart,
+      dismissThresholds: const {DismissDirection.endToStart: 0.32},
+      onDismissed: (_) {
+        HapticFeedback.mediumImpact();
+        final notifier = ref.read(libraryStoreProvider.notifier);
+        if (filter == BookmarkFilter.all) {
+          notifier.toggleBookmark(article);
+        } else {
+          notifier.toggleReadLater(article);
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(filter == BookmarkFilter.all ? '已移除收藏' : '已移出稍后阅读'),
+            duration: const Duration(milliseconds: 1600),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      },
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 26),
+        color: c.surface2,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isReadLater ? Icons.access_time_rounded : Icons.delete_outline_rounded,
+              size: 18,
+              color: c.inkTertiary,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              filter == BookmarkFilter.all ? '移除收藏' : '移出稍后读',
+              style: theme.textTheme.labelMedium?.copyWith(color: c.inkTertiary),
+            ),
+          ],
+        ),
+      ),
+      child: ArticleRow(article: article, onTap: onTap),
+    );
+  }
+}
+
 class _ClippingList extends ConsumerWidget {
   final BookmarkFilter filter;
   const _ClippingList({required this.filter});
@@ -175,8 +240,9 @@ class _ClippingList extends ConsumerWidget {
       children.add(_DateHeader(label: label, count: list.length));
       for (var i = 0; i < list.length; i++) {
         if (i > 0) children.add(const Hairline());
-        children.add(ArticleRow(
+        children.add(_DismissibleRow(
           article: list[i],
+          filter: filter,
           onTap: () => context.push('/reader/${list[i].id}'),
         ));
       }

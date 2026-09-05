@@ -56,20 +56,24 @@ class ReaderNativeView extends StatelessWidget {
           _MetaLine(article: article, paper: paper),
           HairlineDivider(spacing: 20, color: c.hairline),
           if (article.coverImageUrl != null) ...[
-            ClipRRect(
-              borderRadius: BorderRadius.circular(2),
-              child: Image.network(
-                article.coverImageUrl!,
-                width: double.infinity,
-                height: 210,
-                fit: BoxFit.cover,
-                frameBuilder: (ctx, child, frame, wasSync) => AnimatedOpacity(
-                  opacity: frame == null ? 0 : 1,
-                  duration: const Duration(milliseconds: 300),
-                  child: child,
+            Hero(
+              tag: article.id,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(2),
+                child: Image.network(
+                  article.coverImageUrl!,
+                  width: double.infinity,
+                  height: 210,
+                  fit: BoxFit.cover,
+                  frameBuilder: (ctx, child, frame, wasSync) =>
+                      AnimatedOpacity(
+                    opacity: frame == null ? 0 : 1,
+                    duration: const Duration(milliseconds: 300),
+                    child: child,
+                  ),
+                  errorBuilder: (_, _, _) =>
+                      Container(height: 210, color: c.surface2),
                 ),
-                errorBuilder: (_, _, _) =>
-                    Container(height: 210, color: c.surface2),
               ),
             ),
             const SizedBox(height: 24),

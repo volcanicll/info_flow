@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../shared/widgets/hairline.dart';
@@ -68,7 +69,10 @@ class SourceCard extends StatelessWidget {
             const Hairline(),
             const SizedBox(height: 8),
             GestureDetector(
-              onTap: onToggle,
+              onTap: () {
+                HapticFeedback.selectionClick();
+                onToggle();
+              },
               behavior: HitTestBehavior.opaque,
               child: Row(
                 mainAxisSize: MainAxisSize.min,

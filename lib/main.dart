@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app/theme.dart';
 import 'app/router.dart';
+import 'core/notifications/notification_service.dart';
 import 'core/storage/kv_storage.dart';
 
 void main() async {
@@ -12,6 +13,9 @@ void main() async {
 
   // 预加载 SharedPreferences，通过 override 注入，全部 store 同步读取初始值
   final prefs = await SharedPreferences.getInstance();
+
+  // 初始化本地通知（信号/异动主动触达），失败不阻塞启动
+  await NotificationService.instance.init();
 
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,

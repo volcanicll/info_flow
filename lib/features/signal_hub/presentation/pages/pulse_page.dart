@@ -8,30 +8,57 @@ import '../../../../shared/widgets/hairline.dart';
 import '../../../feed/presentation/widgets/article_row.dart';
 import '../../domain/entities/ticker_quote.dart';
 import '../../../market/presentation/widgets/fear_greed_strip.dart';
+import '../../../onchain_radar/presentation/controllers/onchain_radar_controller.dart';
+import '../../../token_screener/domain/models/onchain_token.dart';
 import '../controllers/pulse_controller.dart';
 import '../widgets/ticker_badge.dart';
 
-/// 脉搏首页（财经报纸风）：按发布时间倒序的资讯流，每条文章下方追加命中的
-/// [TickerBadge] 行情条，条目间以发丝线分隔。
+/// 链上多链雷达首页：四链聚合 (Solana, Base, BSC, Robinhood) + 实时异动 + Web3 标的情报流。
 class PulsePage extends ConsumerWidget {
   const PulsePage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(pulseControllerProvider);
+    final radarState = ref.watch(onChainRadarProvider);
     final theme = Theme.of(context);
 
     return Scaffold(
       body: SafeArea(
         bottom: false,
         child: RefreshIndicator(
-          onRefresh: () => ref.read(pulseControllerProvider.notifier).refresh(),
+          onRefresh: () async {
+            await ref.read(pulseControllerProvider.notifier).refresh();
+            await ref
+                .read(onChainRadarProvider.notifier)
+                .load(filter: radarState.chainFilter, isRefresh: true);
+          },
           child: CustomScrollView(
-            // 空态时仍可下拉触发刷新（参照 feed_page.dart 的做法）
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
-              SliverToBoxAdapter(child: _Masthead(theme: theme)),
+              SliverToBoxAdapter(
+                child: _Masthead(
+                  theme: theme,
+                  selectedChain: radarState.chainFilter,
+                  onSelectChain: (chain) {
+                    ref.read(onChainRadarProvider.notifier).selectChain(chain);
+                  },
+                ),
+              ),
               const SliverToBoxAdapter(child: FearGreedStrip()),
+              // 热门代币横向滚动条 (DexScreener 实时)
+              if (radarState.snapshot.trending.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: _TrendingStrip(tokens: radarState.snapshot.trending),
+                ),
+              // 巨鲸聪明钱异动
+              if (radarState.snapshot.whaleSignals.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: _WhaleAlertBlock(
+                    signals: radarState.snapshot.whaleSignals.take(3).toList(),
+                  ),
+                ),
+              // 情报文章列表
               if (state.articles.isEmpty)
                 SliverFillRemaining(
                   hasScrollBody: false,
@@ -64,7 +91,8 @@ class PulsePage extends ConsumerWidget {
                                   return TickerBadge(
                                     ref: t,
                                     quote: q is TickerQuote ? q : null,
-                                    onTap: () => context.push('/crypto-radar'),
+                                    onTap: () =>
+                                        context.push('/coin/${t.symbol}'),
                                   );
                                 }).toList(),
                               ),
@@ -74,7 +102,7 @@ class PulsePage extends ConsumerWidget {
                     );
                   },
                 ),
-              const SliverPadding(padding: EdgeInsets.only(bottom: 24)),
+              const SliverPadding(padding: EdgeInsets.only(bottom: 32)),
             ],
           ),
         ),
@@ -83,19 +111,26 @@ class PulsePage extends ConsumerWidget {
   }
 }
 
-/// 报头：全大写 kicker + 衬线大标题 + 右侧检索入口，下缀重发丝线。
 class _Masthead extends StatelessWidget {
   final ThemeData theme;
-  const _Masthead({required this.theme});
+  final ChainType? selectedChain;
+  final void Function(ChainType?) onSelectChain;
+
+  const _Masthead({
+    required this.theme,
+    required this.selectedChain,
+    required this.onSelectChain,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final brightness = theme.brightness;
+    final c = context.colors;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 12, 10),
+          padding: const EdgeInsets.fromLTRB(20, 12, 12, 6),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -104,63 +139,322 @@ class _Masthead extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'PULSE · 实时脉搏',
+                      'ON-CHAIN RADAR · 链上雷达',
                       style: theme.textTheme.labelMedium?.copyWith(
-                        color: AppTheme.down(brightness),
+                        color: c.accent,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 2),
-                    Text('脉搏', style: theme.textTheme.displayMedium),
+                    Text('多链雷达', style: theme.textTheme.displayMedium),
                   ],
                 ),
               ),
               IconButton(
                 onPressed: () => context.push('/search'),
                 icon: const Icon(Icons.search_rounded, size: 22),
-                tooltip: '检索',
+                tooltip: '检索代币与情报',
               ),
             ],
           ),
         ),
+        // 链筛选胶囊
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _Pill(
+                  label: '全部生态',
+                  active: selectedChain == null,
+                  color: c.ink,
+                  onTap: () => onSelectChain(null),
+                ),
+                const SizedBox(width: 8),
+                _Pill(
+                  label: 'Solana',
+                  active: selectedChain == ChainType.solana,
+                  color: const Color(0xFF14F195),
+                  onTap: () => onSelectChain(ChainType.solana),
+                ),
+                const SizedBox(width: 8),
+                _Pill(
+                  label: 'Base',
+                  active: selectedChain == ChainType.base,
+                  color: const Color(0xFF0052FF),
+                  onTap: () => onSelectChain(ChainType.base),
+                ),
+                const SizedBox(width: 8),
+                _Pill(
+                  label: 'BSC',
+                  active: selectedChain == ChainType.bsc,
+                  color: const Color(0xFFF3BA2F),
+                  onTap: () => onSelectChain(ChainType.bsc),
+                ),
+                const SizedBox(width: 8),
+                _Pill(
+                  label: 'Robinhood',
+                  active: selectedChain == ChainType.robinhood,
+                  color: const Color(0xFF00C805),
+                  onTap: () => onSelectChain(ChainType.robinhood),
+                ),
+              ],
+            ),
+          ),
+        ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Hairline(color: AppTheme.hairStrong(brightness)),
+          child: Hairline(color: c.hairlineStrong),
         ),
-        const SizedBox(height: 4),
       ],
     );
   }
 }
 
-/// 空态：报纸留白式文案，包含「稍后」以引导重访。
+class _Pill extends StatelessWidget {
+  final String label;
+  final bool active;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _Pill({
+    required this.label,
+    required this.active,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+        decoration: BoxDecoration(
+          color: active ? color.withValues(alpha: 0.15) : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: active ? color : Colors.grey.withValues(alpha: 0.3),
+            width: active ? 1.4 : 1.0,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11.5,
+            fontWeight: active ? FontWeight.w800 : FontWeight.w500,
+            color: active ? color : Colors.grey.shade600,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TrendingStrip extends StatelessWidget {
+  final List<OnChainToken> tokens;
+  const _TrendingStrip({required this.tokens});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 6),
+          child: Row(
+            children: [
+              const Icon(Icons.local_fire_department_rounded,
+                  size: 15, color: Colors.deepOrange),
+              const SizedBox(width: 4),
+              Text(
+                'DEX 热门池子 · 实时',
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.deepOrange.shade700,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 64,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            itemCount: tokens.take(8).length,
+            separatorBuilder: (_, _) => const SizedBox(width: 8),
+            itemBuilder: (context, i) {
+              final t = tokens[i];
+              final isUp = t.priceChange24h >= 0;
+              return GestureDetector(
+                onTap: () {
+                  context.push(
+                    '/coin/${t.symbol}?address=${t.address}&chain=${t.chain.id}',
+                  );
+                },
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).brightness == Brightness.light
+                        ? Colors.grey.shade50
+                        : Colors.white10,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: context.colors.hairlineStrong,
+                      width: 0.6,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            t.symbol,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '${isUp ? '+' : ''}${t.priceChange24h.toStringAsFixed(1)}%',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: isUp ? context.colors.up : context.colors.down,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Vol \$${(t.volume24h / 1e3).toStringAsFixed(0)}K',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: context.colors.inkTertiary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+}
+
+class _WhaleAlertBlock extends StatelessWidget {
+  final List<dynamic> signals;
+  const _WhaleAlertBlock({required this.signals});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final c = context.colors;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 10),
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF8B5CF6).withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: const Color(0xFF8B5CF6).withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.radar_rounded,
+                    size: 15, color: Color(0xFF8B5CF6)),
+                const SizedBox(width: 6),
+                Text(
+                  '巨鲸与聪明钱雷达',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: const Color(0xFF8B5CF6),
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            for (final s in signals)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  children: [
+                    Text(
+                      '[${s.chain}]',
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
+                        color: c.inkTertiary,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${s.tokenSymbol}',
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '${s.action} \$${(s.amountUsd / 1e3).toStringAsFixed(0)}K',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: s.action.contains('买入') ? c.up : c.down,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _EmptyPulse extends StatelessWidget {
   final ThemeData theme;
   const _EmptyPulse({required this.theme});
 
   @override
   Widget build(BuildContext context) {
-    final brightness = theme.brightness;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(40),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.graphic_eq_rounded,
-                size: 44, color: AppTheme.hairStrong(brightness)),
+            const Icon(Icons.graphic_eq_rounded, size: 44, color: Colors.grey),
             const SizedBox(height: 16),
-            Text('暂无脉搏', style: theme.textTheme.titleLarge),
+            Text('暂无链上脉搏', style: theme.textTheme.titleLarge),
             const SizedBox(height: 8),
             Text(
-              '下拉刷新，或稍后再来查看最新资讯',
+              '下拉刷新获取最新链上情报，或稍后再来查看最新动态',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 20),
-            FilledButton.icon(
-              onPressed: () => context.push('/subscription'),
-              icon: const Icon(Icons.add_rounded, size: 18),
-              label: const Text('添加订阅源'),
             ),
           ],
         ),

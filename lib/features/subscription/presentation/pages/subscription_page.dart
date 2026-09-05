@@ -8,6 +8,7 @@ import '../../../../shared/widgets/icon_btn.dart';
 import '../../../../shared/widgets/section_header.dart';
 import '../../../feed/data/rss_sources.dart';
 import '../widgets/source_card.dart';
+import '../widgets/opml_sheets.dart';
 import '../widgets/subscription_sheets.dart';
 
 /// 订阅管理（刊物架）：分栏目陈列订阅源，细边框卡片 + 衬线刊名。
@@ -89,9 +90,12 @@ class SubscriptionPage extends ConsumerWidget {
                     const SizedBox(width: 20),
                     _QuickAction(
                       label: '导入 OPML',
-                      onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('OPML 导入功能开发中')),
-                      ),
+                      onTap: () => showOpmlImportSheet(context, ref),
+                    ),
+                    const SizedBox(width: 20),
+                    _QuickAction(
+                      label: '导出 OPML',
+                      onTap: () => showOpmlExportSheet(context, ref),
                     ),
                   ],
                 ),
