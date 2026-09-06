@@ -1,4 +1,4 @@
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 import 'package:info_flow/features/crypto_radar/data/models/trade_signal.dart';
 import 'package:info_flow/features/signal_hub/data/signal_link_engine.dart';
