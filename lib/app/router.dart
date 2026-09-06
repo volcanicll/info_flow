@@ -134,12 +134,6 @@ GoRouter goRouter(Ref ref) {
             _fadeSlideTransition(state, const SmartMoneyPage()),
       ),
       GoRoute(
-        path: '/token-screener',
-        name: 'tokenScreener',
-        pageBuilder: (context, state) =>
-            _fadeSlideTransition(state, const TokenScreenerPage()),
-      ),
-      GoRoute(
         path: '/bookmark',
         name: 'bookmark',
         pageBuilder: (context, state) =>

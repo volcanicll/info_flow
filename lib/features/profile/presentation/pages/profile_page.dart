@@ -67,7 +67,7 @@ class ProfilePage extends ConsumerWidget {
                 ProfileRow(
                   title: '代币探测与安全审计',
                   subtitle: '全链合约检索与貔貅检测',
-                  onTap: () => context.push('/token-screener'),
+                  onTap: () => context.go('/screener'),
                 ),
                 ProfileRow(
                   title: '加密与异动雷达',
