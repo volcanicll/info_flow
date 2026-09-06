@@ -142,7 +142,7 @@ class CryptoRadar extends _$CryptoRadar {
     await ref.read(notificationServiceProvider).showSignalAlert(
           title: '雷达捕获 ${fresh.length} 个新信号',
           body: top,
-          payload: 'crypto-radar',
+          payload: '/crypto-radar',
         );
   }
 
@@ -200,7 +200,7 @@ class CryptoRadar extends _$CryptoRadar {
     await ref.read(notificationServiceProvider).showSignalAlert(
           title: '自选持仓异动 ${fresh.length} 项',
           body: top,
-          payload: 'crypto-radar',
+          payload: '/crypto-radar',
         );
   }
 

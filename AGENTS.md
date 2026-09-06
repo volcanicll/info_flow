@@ -69,6 +69,9 @@ hairline/hairlineStrong(发丝线)、accent(编辑红=唯一强调色)、up/down
 `SmartMoneyAlerts`（60s tape 增量）与 `BreakoutAlerts`（10min 热榜扫描）共用
 `SignalNotifyPref.markSeen` 指纹去重（上限 300 条），受 `signalNotifyPrefProvider`
 总开关约束；**首轮扫描只建基线不推送**。新告警源照此模式加。
+通知 `payload` 契约：只能传「`/` 开头的应用内路由」或「网页 URL」——URL 由
+`main.dart` 点击回调交系统浏览器，路由经 `notificationRoute` 归一后 `push`；
+勿传其他格式（否则点击通知会落进 404 页）。
 
 ## 已知坑（本仓库实测）
 

@@ -17,8 +17,9 @@ class NotificationService {
   final _plugin = FlutterLocalNotificationsPlugin();
   bool _initialized = false;
 
-  /// 通知点击回调：由应用入口设置，将 payload（路由路径）交给 GoRouter 跳转。
-  static void Function(String route)? onNotificationTap;
+  /// 通知点击回调：由应用入口设置，按 payload 契约分发——
+  /// 网页 URL 交系统浏览器，应用内路由交 GoRouter 跳转。
+  static void Function(String payload)? onNotificationTap;
 
   /// 应用启动时调用；重复调用安全。
   Future<void> init() async {
@@ -95,6 +96,27 @@ class NotificationService {
       payload: payload,
     );
   }
+}
+
+/// 通知 payload 契约：告警方只能传「/ 开头的应用内路由」或「网页 URL」，
+/// 消费端（main.dart 点击回调）按此分发。以下两个纯函数即契约的实现。
+
+/// 返回 payload 中的网页链接（http/https，scheme 大小写不敏感）；
+/// 非网页内容返回 null。
+Uri? notificationExternalUrl(String payload) {
+  final trimmed = payload.trim();
+  if (trimmed.isEmpty) return null;
+  final uri = Uri.tryParse(trimmed);
+  if (uri == null) return null;
+  return (uri.scheme == 'http' || uri.scheme == 'https') ? uri : null;
+}
+
+/// 将 payload 归一为应用内路由：补齐缺失的前导斜杠（容忍雷达告警
+/// 历史 payload 无斜杠的情况）；空白内容返回 null。
+String? notificationRoute(String payload) {
+  final trimmed = payload.trim();
+  if (trimmed.isEmpty) return null;
+  return trimmed.startsWith('/') ? trimmed : '/$trimmed';
 }
 
 /// 信号通知开关（默认开启，持久化到 SharedPreferences）。

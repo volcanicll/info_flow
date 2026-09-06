@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
@@ -5,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'app/theme.dart';
 import 'app/router.dart';
@@ -67,10 +69,28 @@ class _InfoFlowAppState extends ConsumerState<InfoFlowApp> {
     ref.read(smartMoneyAlertsProvider);
     ref.read(breakoutAlertsProvider);
 
-    // 点击通知栏时，将 payload 路由路径交给 GoRouter 跳转
-    NotificationService.onNotificationTap = (route) {
-      ref.read(goRouterProvider).push(route);
+    // 点击通知栏时按 payload 契约分发：网页链接交系统浏览器，
+    // 应用内路由（归一为 / 开头）交 GoRouter push
+    NotificationService.onNotificationTap = (payload) {
+      final url = notificationExternalUrl(payload);
+      if (url != null) {
+        unawaited(_openExternalUrl(url));
+        return;
+      }
+      final route = notificationRoute(payload);
+      if (route != null) {
+        ref.read(goRouterProvider).push(route);
+      }
     };
+  }
+
+  /// 系统浏览器打开网页链接；失败只记日志，不影响前台。
+  Future<void> _openExternalUrl(Uri url) async {
+    try {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      debugPrint('[Notification] open url failed: $e');
+    }
   }
 
   @override
