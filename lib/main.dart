@@ -51,6 +51,11 @@ class _InfoFlowAppState extends ConsumerState<InfoFlowApp> {
     // 聪明钱 60s 增量拉 tape；破圈雷达 10min 扫大众热榜
     ref.read(smartMoneyAlertsProvider);
     ref.read(breakoutAlertsProvider);
+
+    // 点击通知栏时，将 payload 路由路径交给 GoRouter 跳转
+    NotificationService.onNotificationTap = (route) {
+      ref.read(goRouterProvider).push(route);
+    };
   }
 
   @override

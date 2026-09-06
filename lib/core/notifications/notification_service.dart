@@ -17,6 +17,9 @@ class NotificationService {
   final _plugin = FlutterLocalNotificationsPlugin();
   bool _initialized = false;
 
+  /// 通知点击回调：由应用入口设置，将 payload（路由路径）交给 GoRouter 跳转。
+  static void Function(String route)? onNotificationTap;
+
   /// 应用启动时调用；重复调用安全。
   Future<void> init() async {
     if (_initialized) return;
@@ -29,7 +32,11 @@ class NotificationService {
     await _plugin.initialize(
       const InitializationSettings(android: android, iOS: darwin),
       onDidReceiveNotificationResponse: (response) {
-        debugPrint('[Notification] tapped: ${response.payload}');
+        final payload = response.payload;
+        debugPrint('[Notification] tapped: $payload');
+        if (payload != null && payload.isNotEmpty) {
+          onNotificationTap?.call(payload);
+        }
       },
     );
     // Android 13+ 需要运行时权限；12 及以下自动授予。
