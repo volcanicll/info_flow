@@ -46,6 +46,8 @@ class AppTheme {
   static const _downDark = Color(0xFFE07A6E);
   static const _warnLight = Color(0xFFB7791F);
   static const _warnDark = Color(0xFFD6A84A);
+  static const _radarLight = Color(0xFF8E44AD); // 雷达紫
+  static const _radarDark = Color(0xFFB98AE8);
 
   static ThemeData get lightTheme => _build(Brightness.light);
   static ThemeData get darkTheme => _build(Brightness.dark);
@@ -290,6 +292,7 @@ class AppTheme {
       down: isDark ? _downDark : _downLight,
       warn: isDark ? _warnDark : _warnLight,
       love: isDark ? _loveDark : _loveLight,
+      radar: isDark ? _radarDark : _radarLight,
     );
   }
 
@@ -335,6 +338,7 @@ class AppColors extends ThemeExtension<AppColors> {
   final Color down;
   final Color warn;
   final Color love;
+  final Color radar;
 
   const AppColors({
     required this.paper,
@@ -351,6 +355,7 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.down,
     required this.warn,
     required this.love,
+    required this.radar,
   });
 
   /// 涨跌语义色：正涨、负跌、零平。
@@ -373,6 +378,7 @@ class AppColors extends ThemeExtension<AppColors> {
     Color? down,
     Color? warn,
     Color? love,
+    Color? radar,
   }) {
     return AppColors(
       paper: paper ?? this.paper,
@@ -389,6 +395,7 @@ class AppColors extends ThemeExtension<AppColors> {
       down: down ?? this.down,
       warn: warn ?? this.warn,
       love: love ?? this.love,
+      radar: radar ?? this.radar,
     );
   }
 
@@ -410,6 +417,7 @@ class AppColors extends ThemeExtension<AppColors> {
       down: Color.lerp(down, other.down, t)!,
       warn: Color.lerp(warn, other.warn, t)!,
       love: Color.lerp(love, other.love, t)!,
+      radar: Color.lerp(radar, other.radar, t)!,
     );
   }
 }

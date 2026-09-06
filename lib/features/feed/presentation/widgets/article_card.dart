@@ -130,9 +130,7 @@ class ArticleTickers extends ConsumerWidget {
         if (smartHit)
           Text('◆ 聪明钱',
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? const Color(0xFFB98AE8)
-                        : const Color(0xFF8E44AD),
+                    color: context.colors.radar,
                     fontWeight: FontWeight.w700,
                   )),
       ],
