@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../shared/widgets/hairline.dart';
 import '../../../../shared/widgets/icon_btn.dart';
+import '../../../feed/data/newsnow_repository.dart';
 import '../../data/models/rht_models.dart';
 import '../../data/rht_tape_stream.dart';
 import '../../data/smart_money_signals.dart';
@@ -32,10 +34,11 @@ class SmartMoneyTerminalPage extends ConsumerWidget {
       body: SafeArea(
         bottom: false,
         child: RefreshIndicator(
-          onRefresh: () async {
-            await ref.read(smartMoneyProvider.notifier).refresh();
-            ref.invalidate(smartMoneyResonanceProvider);
-          },
+      onRefresh: () async {
+        await ref.read(smartMoneyProvider.notifier).refresh();
+        ref.invalidate(smartMoneyResonanceProvider);
+        ref.invalidate(breakoutRadarProvider);
+      },
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.only(bottom: 32),
@@ -71,7 +74,9 @@ class SmartMoneyTerminalPage extends ConsumerWidget {
                 onAction: () => context.push('/smart-money'),
               ),
               _TopTradersTeaser(state: state),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
+              const _BreakoutSection(),
+              const SizedBox(height: 8),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: _EnterFullTerminal(onTap: () => context.push('/smart-money')),
@@ -374,6 +379,92 @@ class _TopTradersTeaser extends StatelessWidget {
         for (final (i, t) in state.traders.take(3).indexed)
           TraderRow(trader: t, rank: i + 1),
       ],
+    );
+  }
+}
+
+/// 破圈信号：微博/知乎/头条热榜命中 Web3 关键词的条目。
+/// 空态保持安静（仅占位一行），命中时展示 平台 + 标题 + 命中词，
+/// 点击经系统浏览器打开原帖。
+class _BreakoutSection extends ConsumerWidget {
+  const _BreakoutSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
+    final async = ref.watch(breakoutRadarProvider);
+    return Container(
+      decoration: BoxDecoration(border: Border(top: BorderSide(color: c.hairline))),
+      child: Column(
+        children: [
+          _SectionHeader(kicker: 'BREAKOUT RADAR · 破圈信号'),
+          async.when(
+            loading: () => const _TeaserPlaceholder(message: '扫描微博 / 知乎 / 头条热榜…'),
+            error: (_, _) => const _TeaserPlaceholder(message: '破圈雷达暂不可用'),
+            data: (hits) => hits.isEmpty
+                ? const _TeaserPlaceholder(message: '大众热榜暂无 Web3 关键词命中')
+                : Column(
+                    children: [
+                      for (final hit in hits) _BreakoutRow(hit: hit),
+                    ],
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BreakoutRow extends StatelessWidget {
+  final BreakoutHit hit;
+
+  const _BreakoutRow({required this.hit});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final c = context.colors;
+
+    return InkWell(
+      onTap: () {
+        final url = hit.article.url;
+        if (url.isNotEmpty) {
+          launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+        }
+      },
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 9, 20, 9),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                border: Border.all(color: c.hairlineStrong, width: 0.8),
+                borderRadius: BorderRadius.circular(3),
+              ),
+              child: Text(hit.platform,
+                  style: theme.textTheme.labelSmall
+                      ?.copyWith(color: c.inkSecondary, fontSize: 10)),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                hit.article.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.labelMedium
+                    ?.copyWith(color: c.ink, height: 1.35),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(hit.keyword,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: c.accent,
+                  fontWeight: FontWeight.w700,
+                )),
+          ],
+        ),
+      ),
     );
   }
 }

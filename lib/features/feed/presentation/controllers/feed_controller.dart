@@ -2,6 +2,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'package:info_flow/core/state/subscription_store.dart';
 import 'package:info_flow/features/signal_hub/data/ticker_resolver.dart';
+import 'package:info_flow/features/feed/data/newsnow_repository.dart';
 import 'package:info_flow/features/feed/data/rss_repository.dart';
 import 'package:info_flow/features/feed/data/rss_sources.dart';
 import 'package:info_flow/features/feed/domain/entities/article.dart';
@@ -41,6 +42,18 @@ class FeedController extends _$FeedController {
   }
 
   Future<List<Article>> _loadArticles() async {
+    // 热榜 = NewsNow 实时快讯流（财联社/华尔街见闻/金十/FastBull），
+    // 一次性载入，无分页；条目经同一 ticker 词典标注徽章。
+    if (feedType == FeedType.hot) {
+      final flashes = await ref.read(newsNowRepositoryProvider).fetchFlashes();
+      if (flashes.isEmpty) {
+        throw Exception('快讯源均加载失败，请检查网络连接');
+      }
+      _all = TickerResolver().resolveList(flashes);
+      _hasMore = false;
+      return _paginate(_all, 1);
+    }
+
     final repo = ref.read(rssRepositoryProvider);
     _sourceQueue = _sourcesForType(feedType);
     _sourceCursor = 0;
@@ -118,14 +131,8 @@ class FeedController extends _$FeedController {
             .whereType<RssSource>()
             .toList();
       case FeedType.hot:
-        return [
-          RssSources.byId('hackernews'),
-          RssSources.byId('36kr'),
-          RssSources.byId('techcrunch'),
-          RssSources.byId('verge'),
-          RssSources.byId('github'),
-          RssSources.byId('solidot'),
-        ].whereType<RssSource>().toList();
+        // 热榜走 NewsNow 快讯流（见 _loadArticles），不走 RSS 源队列
+        return const [];
     }
   }
 
