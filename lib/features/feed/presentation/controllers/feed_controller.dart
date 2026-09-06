@@ -194,26 +194,4 @@ class FeedController extends _$FeedController {
       _isLoadingMore = false;
     }
   }
-
-  Future<void> toggleLike(String articleId) async {
-    final articles = state.value ?? [];
-    final index = articles.indexWhere((a) => a.id == articleId);
-    if (index == -1) return;
-
-    final article = articles[index];
-    final updated = article.copyWith(isLiked: !article.isLiked);
-    articles[index] = updated;
-    state = AsyncData(List.from(articles));
-  }
-
-  Future<void> toggleBookmark(String articleId) async {
-    final articles = state.value ?? [];
-    final index = articles.indexWhere((a) => a.id == articleId);
-    if (index == -1) return;
-
-    final article = articles[index];
-    final updated = article.copyWith(isBookmarked: !article.isBookmarked);
-    articles[index] = updated;
-    state = AsyncData(List.from(articles));
-  }
 }
