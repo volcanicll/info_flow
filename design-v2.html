@@ -1,0 +1,1615 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>InfoFlow Terminal · 纸上终端 交互原型</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700;800;900&family=Roboto+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   InfoFlow Terminal · 纸上终端
+   衬线标题承载编辑判断，等宽数字承载市场事实，
+   发丝线代替卡片阴影，编辑红是唯一强调色，紫色只留给雷达信号。
+   颜色逐值取自 lib/app/theme.dart，保证与 Flutter 端同源。
+   ============================================================ */
+:root{
+  --r-1:2px; --r-2:4px; --r-3:8px; --pill:999px;
+  --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px; --sp-6:24px;
+  --ease:cubic-bezier(0.16,1,0.3,1);
+  --serif:'Noto Serif SC','Songti SC',serif;
+  --mono:'Roboto Mono',ui-monospace,'SF Mono',monospace;
+  --sans:-apple-system,BlinkMacSystemFont,'PingFang SC','Helvetica Neue','Microsoft YaHei',sans-serif;
+}
+:root[data-theme="light"]{
+  --paper:#FAF9F5; --surface:#FFFEFB; --surface2:#F1EEE6; --tint:#EEE9DD;
+  --ink:#1A1917; --t2:#57534E; --t3:#8A857D;
+  --hair:#E5E2DA; --hairS:#D4CFC3;
+  --accent:#C0392B; --up:#1E7F5C; --down:#B03A2E; --warn:#B7791F; --radar:#8E44AD;
+  --up-t:rgba(30,127,92,.09); --down-t:rgba(176,58,46,.09);
+  --warn-t:rgba(183,121,31,.12); --radar-t:rgba(142,68,173,.10);
+  --scrim:rgba(26,25,23,.46);
+}
+:root[data-theme="dark"]{
+  --paper:#191817; --surface:#201F1D; --surface2:#2A2825; --tint:#35302A;
+  --ink:#EDE9E0; --t2:#B0AAA0; --t3:#7C766C;
+  --hair:#34322E; --hairS:#454239;
+  --accent:#E27060; --up:#4DAF87; --down:#E07A6E; --warn:#D6A84A; --radar:#B98AE8;
+  --up-t:rgba(77,175,135,.14); --down-t:rgba(224,122,110,.14);
+  --warn-t:rgba(214,168,74,.15); --radar-t:rgba(185,138,232,.14);
+  --scrim:rgba(0,0,0,.6);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  font-family:var(--sans);background:var(--paper);color:var(--ink);
+  display:flex;align-items:center;justify-content:center;gap:52px;flex-wrap:wrap;
+  padding:32px 20px;touch-action:manipulation;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  transition:background .35s var(--ease),color .35s var(--ease);
+}
+button{font-family:inherit;color:inherit;touch-action:manipulation}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.serif{font-family:var(--serif)}
+.up{color:var(--up)} .down{color:var(--down)} .warn{color:var(--warn)}
+.up-t{background:var(--up-t)} .down-t{background:var(--down-t)}
+
+/* ============ STAGE / DEVICE ============ */
+.stage{display:flex;align-items:center;justify-content:center;gap:52px;flex-wrap:wrap}
+.device{
+  position:relative;width:390px;height:844px;flex:none;background:var(--paper);
+  border-radius:46px;overflow:hidden;overflow:clip;transition:background .35s var(--ease);
+  box-shadow:0 2px 4px rgba(0,0,0,.14),0 44px 90px -34px rgba(20,18,14,.55),inset 0 0 0 1.5px rgba(0,0,0,.09);
+}
+:root[data-theme="dark"] .device{box-shadow:0 2px 4px rgba(0,0,0,.5),0 44px 90px -34px rgba(0,0,0,.9),inset 0 0 0 1.5px rgba(255,255,255,.07)}
+.device::before{content:"";position:absolute;top:11px;left:50%;transform:translateX(-50%);
+  width:118px;height:32px;background:#000;border-radius:20px;z-index:60}
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;overflow:clip}
+.statusbar{height:50px;flex:none;display:flex;align-items:flex-end;justify-content:space-between;
+  padding:0 28px 7px;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;z-index:50}
+.statusbar .icons{display:flex;gap:6px;align-items:center}
+.statusbar svg{width:17px;height:17px}
+
+.viewport{flex:1;overflow-y:auto;overflow-x:hidden;position:relative;scrollbar-width:none;overscroll-behavior:contain}
+.viewport::-webkit-scrollbar{display:none}
+
+/* ============ MASTHEAD 报头 ============ */
+.kicker{font-size:10.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--t3)}
+.kicker.accent{color:var(--accent)}
+.page{display:none;padding-bottom:28px;animation:enter .4s var(--ease)}
+.page.active{display:block}
+@keyframes enter{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+.mast{position:sticky;top:0;z-index:30;padding:8px 20px 10px;
+  background:color-mix(in oklch,var(--paper) 90%,transparent);
+  backdrop-filter:saturate(1.3) blur(10px)}
+.mast .row{display:flex;align-items:center;gap:10px}
+.mast h1{font-family:var(--serif);font-size:27px;font-weight:800;letter-spacing:-.014em;line-height:1.2;color:var(--ink)}
+.mast .grow{flex:1}
+.mast .kicker{margin-bottom:3px}
+.icon-btn{width:40px;height:40px;border:none;background:transparent;border-radius:var(--pill);
+  display:grid;place-items:center;color:var(--ink);cursor:pointer;flex:none;
+  transition:transform .18s var(--ease),background .2s}
+.icon-btn svg{width:22px;height:22px}
+.icon-btn:active{transform:scale(.9)}
+@media(hover:hover){.icon-btn:hover{background:var(--surface2)}}
+
+/* ============ HERO 24H 净盈亏 ============ */
+.hero{padding:14px 20px 16px}
+.hero .lbl{font-size:10.5px;font-weight:700;letter-spacing:.14em;color:var(--t3);text-transform:uppercase}
+.hero .num{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:40px;font-weight:700;
+  letter-spacing:-.02em;line-height:1.15;margin-top:2px;transition:color .4s}
+.hero-stats{display:flex;align-items:flex-start;gap:18px;margin-top:8px;flex-wrap:wrap}
+.hstat .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:700}
+.hstat .k{font-size:10.5px;color:var(--t3);margin-top:1px}
+.hero-spark{margin-top:10px;width:100%;height:38px;display:block}
+.hero-spark .line{fill:none;stroke-width:1.6}
+.hero-spark .base{stroke:var(--hair);stroke-width:1}
+
+/* ============ SECTION 栏目 ============ */
+.sec{border-top:1px solid var(--hairS)}
+.sec-h{display:flex;align-items:baseline;gap:10px;padding:16px 20px 8px}
+.sec-h .kicker{color:var(--t2);letter-spacing:.15em}
+.sec-h .grow{flex:1}
+.sec-h .act{display:inline-flex;align-items:center;gap:2px;background:none;border:none;cursor:pointer;
+  padding:4px 2px;font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--accent)}
+.sec-h .act svg{width:13px;height:13px}
+.sec-h .act:active{transform:scale(.94)}
+.live-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border:1px solid var(--hairS);
+  border-radius:var(--r-2);font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.12em;color:var(--down)}
+.live-chip .dot{width:6px;height:6px;border-radius:50%;background:var(--down);animation:pulse 1.6s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ============ TAPE 实盘 ============ */
+.tape{padding-bottom:4px}
+.tape-row{display:grid;grid-template-columns:62px 1fr auto;align-items:baseline;gap:10px;
+  padding:9px 20px;cursor:pointer;transition:transform .16s var(--ease),background-color .9s var(--ease)}
+.tape-row:active{transform:scale(.985)}
+@media(hover:hover){.tape-row:hover{background:var(--surface2)}}
+.tape-row .t{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;color:var(--t3)}
+.tape-row .who{display:flex;align-items:baseline;gap:7px;min-width:0}
+.tape-row .h{font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--t2);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tape-row .side{font-size:10px;font-weight:800;padding:1px 5px;border-radius:var(--r-1);flex:none}
+.tape-row .side.b{color:var(--up);background:var(--up-t)}
+.tape-row .side.s{color:var(--down);background:var(--down-t)}
+.tape-row .sym{font-size:12px;font-weight:800;color:var(--ink);flex:none}
+.tape-row .amt{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12.5px;font-weight:700;text-align:right}
+.tape-row .px{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:10.5px;color:var(--t3);text-align:right}
+.tape-row.fresh{animation:tapeIn .6s var(--ease)}
+.tape-row.fresh{background:var(--tint)}
+@keyframes tapeIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
+.tape-note{padding:6px 20px 12px;font-size:10.5px;color:var(--t3);letter-spacing:.04em}
+
+/* ============ RESONANCE 三源共振 ============ */
+.res-card{margin:0 20px 8px;padding:12px 13px;border:1px solid var(--hair);border-radius:var(--r-2);
+  background:var(--surface);cursor:pointer;transition:transform .16s var(--ease),border-color .2s}
+.res-card:active{transform:scale(.985)}
+@media(hover:hover){.res-card:hover{border-color:var(--hairS)}}
+.res-top{display:flex;align-items:center;gap:7px}
+.res-sym{font-size:14px;font-weight:800;letter-spacing:.02em}
+.res-name{font-size:11px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.res-score{margin-left:auto;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;
+  font-weight:700;color:var(--radar);background:var(--radar-t);padding:2px 7px;border-radius:var(--r-2)}
+.res-src{display:flex;gap:12px;margin-top:9px}
+.res-src .src{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;color:var(--t2)}
+.res-src .src i{width:6px;height:6px;border-radius:50%;background:var(--hairS);flex:none}
+.res-src .src.on i{background:var(--radar)}
+.res-src .src.on{color:var(--ink)}
+.res-meta{margin-top:7px;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:10.5px;color:var(--t3)}
+
+/* ============ COPY FLOW 抱团 ============ */
+.flow-card{margin:0 20px 6px;padding:13px;border:1px solid var(--hair);border-radius:var(--r-2);background:var(--surface)}
+.flow-head{display:flex;align-items:center;gap:8px}
+.flow-head .lead1{font-family:var(--mono);font-size:12.5px;font-weight:700}
+.flow-head .verb{font-size:10.5px;color:var(--down);font-weight:800;background:var(--down-t);padding:1px 6px;border-radius:var(--r-1)}
+.flow-head .sym{font-family:var(--mono);font-size:12.5px;font-weight:700;color:var(--accent)}
+.flow-chain{display:flex;align-items:center;gap:6px;margin-top:10px;overflow:hidden}
+.flow-chain .node{font-family:var(--mono);font-size:10.5px;font-weight:600;color:var(--t2);
+  background:var(--surface2);padding:3px 8px;border-radius:var(--r-1);white-space:nowrap}
+.flow-chain .arr{color:var(--t3);font-size:10px;flex:none}
+.flow-chain .more{font-family:var(--mono);font-size:10.5px;color:var(--t3);white-space:nowrap}
+.flow-meta{margin-top:9px;font-size:11px;color:var(--t2)}
+.flow-meta b{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--ink)}
+
+/* ============ TRADERS 盈亏榜 ============ */
+.trader-row{display:flex;align-items:center;gap:12px;padding:10px 20px;cursor:pointer;
+  transition:transform .16s var(--ease),background .2s}
+.trader-row:active{transform:scale(.985)}
+@media(hover:hover){.trader-row:hover{background:var(--surface2)}}
+.trader-row .rk{font-family:var(--serif);font-size:19px;font-weight:900;width:22px;text-align:center;color:var(--t3)}
+.trader-row:nth-child(1) .rk{color:var(--accent)}
+.trader-row .who{flex:1;min-width:0}
+.trader-row .h{font-family:var(--mono);font-size:13px;font-weight:700}
+.trader-row .m{font-size:10.5px;color:var(--t3);margin-top:1px;font-variant-numeric:tabular-nums}
+.trader-row .pnl{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:14px;font-weight:700}
+.enter-btn{display:flex;align-items:center;justify-content:center;gap:7px;width:calc(100% - 40px);
+  margin:16px 20px 0;padding:13px;border:1px solid var(--hairS);border-radius:var(--r-2);
+  background:none;font-size:13px;font-weight:700;letter-spacing:.04em;cursor:pointer;
+  transition:transform .16s var(--ease),border-color .2s}
+.enter-btn:active{transform:scale(.98)}
+.enter-btn svg{width:15px;height:15px;color:var(--accent)}
+@media(hover:hover){.enter-btn:hover{border-color:var(--t3)}}
+
+/* ============ INTEL 情报 ============ */
+.seg-tabs{display:flex;gap:24px;padding:2px 20px 9px}
+.seg-tab{position:relative;background:none;border:none;cursor:pointer;padding:2px 0 7px;
+  font-size:15.5px;font-weight:600;color:var(--t3);transition:color .2s}
+.seg-tab.active{color:var(--ink);font-weight:700}
+.seg-tab::after{content:"";position:absolute;left:0;bottom:0;width:18px;height:2px;background:var(--accent);
+  transform:scaleX(0);transform-origin:left;transition:transform .22s var(--ease)}
+.seg-tab.active::after{transform:scaleX(1)}
+.unread{display:flex;align-items:center;padding:0 20px 8px;font-size:11.5px;color:var(--t3)}
+.unread .mark{margin-left:auto;background:none;border:none;cursor:pointer;padding:4px 0;
+  font-size:11.5px;font-weight:700;letter-spacing:.04em;color:var(--accent)}
+.headline{margin:4px 20px 14px;cursor:pointer}
+.headline .src{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.headline .src .n{font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--accent);text-transform:uppercase}
+.headline .src .tm{font-size:11px;color:var(--t3);font-variant-numeric:tabular-nums}
+.headline h2{font-family:var(--serif);font-size:22.5px;font-weight:800;line-height:1.34;letter-spacing:-.012em;color:var(--ink)}
+.headline .dek{margin-top:7px;font-size:13px;line-height:1.55;color:var(--t2);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.headline .rule{margin-top:11px;border:none;border-top:1px solid var(--hairS)}
+.a-row{padding:13px 20px;cursor:pointer;transition:transform .16s var(--ease),background .2s;animation:enter .45s var(--ease) both}
+.a-row:active{transform:scale(.985)}
+@media(hover:hover){.a-row:hover{background:var(--surface2)}}
+.a-row .hr{border:none;border-top:1px solid var(--hair);margin:13px -20px 0}
+.a-row.read .a-title{color:var(--t3)}
+.a-src{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.a-src .n{font-size:10.5px;font-weight:700;letter-spacing:.1em;color:var(--t2);text-transform:uppercase}
+.a-src .tm{font-size:10.5px;color:var(--t3);font-variant-numeric:tabular-nums}
+.a-src .hot{margin-left:auto;display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:800;color:var(--down)}
+.a-src .hot svg{width:11px;height:11px}
+.a-title{font-size:15.5px;font-weight:700;line-height:1.42;letter-spacing:-.005em;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tickers{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}
+.tk{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-variant-numeric:tabular-nums;
+  font-size:11px;font-weight:700;padding:3px 8px;border-radius:var(--r-2);border:none;cursor:pointer;
+  background:var(--surface2);color:var(--t2);transition:transform .15s var(--ease)}
+.tk:active{transform:scale(.93)}
+.tk b{font-weight:700}
+.tk.q{background:var(--up-t);color:var(--up)}
+.tk.d{background:var(--down-t);color:var(--down)}
+.hot-list .rk-n{font-family:var(--serif);font-size:17px;font-weight:900;color:var(--accent);width:26px;flex:none;text-align:center}
+.hot-list .a-row{display:flex;gap:10px}
+.hot-list .a-row .body{flex:1;min-width:0}
+.feed-hint{margin:6px 20px 0;padding:16px;border:1px dashed var(--hairS);border-radius:var(--r-2);
+  text-align:center;font-size:12px;color:var(--t3);line-height:1.6}
+
+/* ============ SCREENER 探测 ============ */
+.search-bar{display:flex;align-items:center;gap:9px;margin:2px 20px 10px;padding:10px 13px;
+  border:1px solid var(--hairS);border-radius:var(--r-3);background:var(--surface)}
+.search-bar svg{width:17px;height:17px;color:var(--t3);flex:none}
+.search-bar input{flex:1;border:none;background:none;font-family:var(--mono);font-size:13px;color:var(--ink);outline:none}
+.search-bar input::placeholder{color:var(--t3)}
+.chain-pills{display:flex;gap:8px;padding:0 20px 12px;overflow-x:auto;scrollbar-width:none}
+.chain-pills::-webkit-scrollbar{display:none}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border-radius:var(--pill);
+  border:1px solid var(--hairS);background:none;cursor:pointer;font-size:12px;font-weight:600;color:var(--t2);
+  transition:transform .16s var(--ease),border-color .2s,background .2s}
+.pill:active{transform:scale(.94)}
+.pill i{width:7px;height:7px;border-radius:50%;flex:none}
+.pill.on{border-width:1.5px;font-weight:800}
+.tk-list{display:none;padding:2px 20px 12px}
+.tk-list.on{display:block}
+.coin-card{margin-bottom:9px;padding:13px;border:1px solid var(--hair);border-radius:var(--r-3);
+  background:var(--surface);cursor:pointer;transition:transform .16s var(--ease),border-color .2s;
+  animation:enter .4s var(--ease) both}
+.coin-card:active{transform:scale(.985)}
+@media(hover:hover){.coin-card:hover{border-color:var(--hairS)}}
+.coin-top{display:flex;align-items:center;gap:7px}
+.chain-tag{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;
+  padding:2px 5px;border-radius:var(--r-1);flex:none}
+.coin-sym{font-size:14.5px;font-weight:800;letter-spacing:.01em}
+.coin-name{font-size:11px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.coin-price{margin-left:auto;text-align:right}
+.coin-price .p{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:700}
+.coin-price .c{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;font-weight:700}
+.coin-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:11px}
+.coin-stats .st .k{font-size:9px;font-weight:600;letter-spacing:.06em;color:var(--t3);text-transform:uppercase}
+.coin-stats .st .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;font-weight:600;margin-top:2px}
+.safety-row{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
+.safety-chip{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;
+  padding:2.5px 7px;border-radius:var(--r-1)}
+.safety-chip svg{width:11px;height:11px}
+.safety-chip.ok{background:var(--up-t);color:var(--up)}
+.safety-chip.bad{background:var(--down-t);color:var(--down)}
+.smart-strip{display:flex;align-items:center;gap:8px;margin-top:10px;padding:6px 9px;border-radius:var(--r-1)}
+.smart-strip .lb{font-size:9.5px;font-weight:800;letter-spacing:.1em;flex:none}
+.smart-strip .tx{flex:1;font-size:10.5px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-variant-numeric:tabular-nums}
+.smart-strip .net{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11px;font-weight:700;flex:none}
+
+/* ============ COPILOT 投研 ============ */
+.chat-scroll{padding:10px 20px 14px}
+.chat-hint{text-align:center;font-size:11px;color:var(--t3);padding:8px 0 16px;letter-spacing:.04em}
+.msg{display:flex;margin-bottom:14px;animation:enter .4s var(--ease) both}
+.msg.user{justify-content:flex-end}
+.bubble{max-width:82%;padding:11px 14px;font-size:13.5px;line-height:1.62}
+.msg.ai .bubble{background:var(--surface);border:1px solid var(--hair);border-radius:var(--r-3);border-bottom-left-radius:var(--r-1)}
+.msg.user .bubble{background:var(--ink);color:var(--paper);border-radius:var(--r-3);border-bottom-right-radius:var(--r-1)}
+.bubble p{margin:0 0 8px}
+.bubble p:last-child{margin:0}
+.bubble .pt{display:flex;gap:7px;margin-bottom:7px}
+.bubble .pt i{font-family:var(--mono);font-style:normal;font-size:11px;font-weight:700;color:var(--accent);flex:none;padding-top:1px}
+.bubble b{font-family:var(--mono);font-size:.92em}
+.ai-tks{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.quick-row{display:flex;gap:8px;padding:0 20px 12px;overflow-x:auto;scrollbar-width:none}
+.quick-row::-webkit-scrollbar{display:none}
+.quick{flex:none;font-size:12.5px;font-weight:600;color:var(--accent);background:none;
+  border:1px solid var(--hairS);padding:8px 14px;border-radius:var(--pill);cursor:pointer;
+  transition:transform .16s var(--ease),border-color .2s,background .2s}
+.quick:active{transform:scale(.94)}
+@media(hover:hover){.quick:hover{border-color:var(--accent)}}
+.chat-input{display:flex;gap:9px;padding:10px 16px 14px;border-top:1px solid var(--hair);align-items:center}
+.chat-input input{flex:1;border:none;border-bottom:1.5px solid var(--hairS);background:none;
+  padding:9px 2px;font-size:14px;font-family:var(--sans);color:var(--ink);outline:none;transition:border-color .2s}
+.chat-input input:focus{border-color:var(--ink)}
+.chat-input input::placeholder{color:var(--t3)}
+.chat-send{width:42px;height:42px;flex:none;border:none;border-radius:var(--r-3);background:var(--ink);
+  color:var(--paper);display:grid;place-items:center;cursor:pointer;transition:transform .16s var(--ease)}
+.chat-send:active{transform:scale(.9)}
+.chat-send svg{width:19px;height:19px}
+.typing{display:inline-flex;gap:4px;padding:4px 2px}
+.typing i{width:6px;height:6px;border-radius:50%;background:var(--t3);animation:blink 1.2s infinite}
+.typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,60%,100%{opacity:.3}30%{opacity:1}}
+
+/* ============ PROFILE 终端设置 ============ */
+.prof-card{margin:0 20px 12px;border:1px solid var(--hair);border-radius:var(--r-3);background:var(--surface);overflow:hidden}
+.prof-user{display:flex;align-items:center;gap:14px;padding:16px;cursor:pointer;transition:transform .18s var(--ease)}
+.prof-user:active{transform:scale(.99)}
+.prof-mark{width:52px;height:52px;flex:none;border-radius:var(--r-3);background:var(--tint);
+  display:grid;place-items:center;font-family:var(--serif);font-size:22px;font-weight:900;color:var(--accent)}
+.prof-user .n{font-family:var(--serif);font-size:17px;font-weight:800}
+.prof-user .d{font-size:12px;color:var(--t2);margin-top:3px;font-variant-numeric:tabular-nums}
+.chev{color:var(--t3);flex:none;display:grid}
+.chev svg{width:18px;height:18px}
+.prof-stats{display:flex;padding:15px 8px}
+.prof-stats .st{flex:1;text-align:center}
+.prof-stats .st + .st{border-left:1px solid var(--hair)}
+.prof-stats .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:20px;font-weight:700}
+.prof-stats .k{font-size:10.5px;color:var(--t3);margin-top:2px}
+.set-item{display:flex;align-items:center;gap:13px;padding:13px 15px;cursor:pointer;transition:background .18s}
+@media(hover:hover){.set-item:hover{background:var(--surface2)}}
+.set-item + .set-item{border-top:1px solid var(--hair)}
+.set-item .t{flex:1;font-size:14px;font-weight:600}
+.set-item .t .sub{font-size:11px;color:var(--t3);margin-top:2px;font-weight:400;font-variant-numeric:tabular-nums}
+.set-item .trail{font-size:12.5px;color:var(--t2);font-variant-numeric:tabular-nums}
+.seg3{display:inline-flex;background:var(--surface2);border-radius:var(--r-2);padding:2px}
+.seg3 button{border:none;background:none;font-size:11.5px;font-weight:600;color:var(--t3);
+  padding:4.5px 11px;border-radius:var(--r-1);cursor:pointer;transition:color .2s}
+.seg3 button.on{background:var(--surface);color:var(--ink);font-weight:700;
+  box-shadow:inset 0 0 0 1px var(--hairS)}
+:root[data-theme="dark"] .seg3 button.on{background:var(--tint)}
+.switch{position:relative;width:42px;height:24px;border-radius:var(--pill);border:1px solid var(--hairS);
+  background:var(--surface2);cursor:pointer;flex:none;transition:background .25s,border-color .25s}
+.switch::after{content:"";position:absolute;top:2.5px;left:3px;width:17px;height:17px;border-radius:50%;
+  background:var(--t3);transition:transform .25s var(--ease),background .25s}
+.switch.on{background:var(--ink);border-color:var(--ink)}
+.switch.on::after{transform:translateX(17px);background:var(--paper)}
+.grp-label{padding:14px 22px 6px}
+
+/* ============ TABBAR ============ */
+.tabbar{flex:none;display:flex;border-top:1px solid var(--hairS);background:var(--paper);z-index:40;
+  padding:8px 8px calc(13px + env(safe-area-inset-bottom))}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:5px 0 2px;
+  background:none;border:none;cursor:pointer;color:var(--t3);transition:color .2s}
+.tab svg{width:22px;height:22px}
+.tab span{font-size:10px;font-weight:600;letter-spacing:.05em}
+.tab::after{content:"";width:16px;height:2px;background:var(--accent);margin-top:1px;
+  transform:scaleX(0);transition:transform .22s var(--ease)}
+.tab.active{color:var(--ink)}
+.tab.active span{font-weight:800}
+.tab.active::after{transform:scaleX(1)}
+.tab:active svg{transform:scale(.9)}
+
+/* ============ OVERLAY 浮层 ============ */
+.overlay{position:absolute;inset:0;z-index:70;background:var(--paper);display:none;flex-direction:column;
+  overflow:hidden;overflow:clip;
+  opacity:0;transform:translateY(10px);transition:opacity .28s var(--ease),transform .32s var(--ease)}
+.overlay.open{display:flex;opacity:1;transform:none}
+.ov-appbar{display:flex;align-items:center;gap:4px;padding:6px 10px 10px;flex:none}
+.ov-title{font-size:15.5px;font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ov-body{flex:1;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none}
+.ov-body::-webkit-scrollbar{display:none}
+
+/* reader */
+.rd-meta{padding:4px 20px 14px;border-bottom:1px solid var(--hairS)}
+.rd-meta h1{font-family:var(--serif);font-size:22px;font-weight:800;line-height:1.38;letter-spacing:-.012em}
+.rd-meta .info{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11px;color:var(--t3);font-variant-numeric:tabular-nums}
+.rd-meta .info svg{width:12px;height:12px}
+.rd-body{padding:18px 20px 90px}
+.rd-body p{font-size:14.5px;line-height:1.8;color:var(--ink);margin-bottom:14px;text-wrap:pretty}
+.rd-body p.lead{color:var(--t2)}
+.rd-body p.drop::first-letter{font-family:var(--serif);font-size:44px;font-weight:900;color:var(--accent);
+  float:left;line-height:.9;padding:3px 8px 0 0}
+.rd-body .rd-tks{margin:2px 0 16px}
+.fab{position:absolute;right:16px;bottom:22px;display:inline-flex;align-items:center;gap:7px;
+  background:var(--ink);color:var(--paper);border:none;padding:12px 17px;border-radius:var(--r-3);
+  font-size:13px;font-weight:700;letter-spacing:.03em;cursor:pointer;transition:transform .18s var(--ease);z-index:5}
+.fab:active{transform:scale(.94)}
+.fab svg{width:16px;height:16px}
+.sheet-mask{position:absolute;inset:0;z-index:80;background:var(--scrim);display:none;opacity:0;transition:opacity .3s}
+.sheet-mask.open{display:block;opacity:1}
+/* 底部面板隔离层：带 transform 的绝对定位子元素不能直接挂在 flex 容器下，
+   否则部分 Chromium 构建会把它计入流内高度，把整个屏幕顶出设备框 */
+.sheet-layer{position:absolute;inset:0;z-index:80;pointer-events:none;overflow:hidden;overflow:clip}
+.sheet-layer .sheet-mask,.sheet-layer .sheet{pointer-events:auto}
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:81;background:var(--surface);
+  border-top:1px solid var(--hairS);border-radius:14px 14px 0 0;
+  padding:10px 20px calc(24px + env(safe-area-inset-bottom));
+  transform:translateY(100%);transition:transform .38s var(--ease);max-height:78%;overflow:auto;overscroll-behavior:contain}
+.sheet.open{transform:none}
+.sheet-grip{width:38px;height:4px;border-radius:2px;background:var(--hairS);margin:0 auto 14px}
+.sheet h2{font-family:var(--serif);font-size:19px;font-weight:800;display:flex;align-items:center;gap:8px}
+.sheet h2 svg{width:17px;height:17px;color:var(--accent)}
+.sum-box{margin-top:13px;border-left:none;background:var(--surface2);border-radius:var(--r-2);
+  padding:14px;font-size:13.5px;line-height:1.7;color:var(--ink)}
+.sum-note{margin-top:10px;font-size:11px;color:var(--t3);line-height:1.6}
+
+/* coin detail */
+.cd-head{padding:2px 20px 14px;border-bottom:1px solid var(--hairS)}
+.cd-price-row{display:flex;align-items:baseline;gap:10px}
+.cd-price{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:32px;font-weight:700;letter-spacing:-.02em}
+.cd-chg{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:14px;font-weight:700;
+  padding:3px 8px;border-radius:var(--r-2)}
+.cd-chg.q{background:var(--up-t)} .cd-chg.d{background:var(--down-t)}
+.cd-sub{margin-top:7px;font-size:11.5px;color:var(--t3);font-variant-numeric:tabular-nums}
+.cd-spark{width:100%;height:52px;margin-top:8px}
+.cd-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.cd-stats .st{background:var(--surface2);border-radius:var(--r-2);padding:9px 10px}
+.cd-stats .k{font-size:9.5px;font-weight:600;letter-spacing:.06em;color:var(--t3);text-transform:uppercase}
+.cd-stats .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12.5px;font-weight:700;margin-top:2px}
+.cd-ca{display:flex;align-items:center;gap:8px;margin:14px 20px 0;padding:9px 12px;
+  border:1px solid var(--hair);border-radius:var(--r-2);background:var(--surface)}
+.cd-ca .addr{flex:1;font-family:var(--mono);font-size:11px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cd-ca .cp{display:inline-flex;align-items:center;gap:4px;border:none;background:none;cursor:pointer;
+  font-family:var(--mono);font-size:11px;font-weight:700;color:var(--accent);padding:4px 2px}
+.cd-ca .cp svg{width:13px;height:13px}
+.audit-h{display:flex;align-items:baseline;gap:9px;padding:16px 20px 9px}
+.audit-h .sc{margin-left:auto;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:15px;font-weight:700}
+.audit-row{display:flex;align-items:center;gap:10px;padding:10px 20px}
+.audit-row + .audit-row{border-top:1px solid var(--hair)}
+.audit-row .k{font-size:12.5px;color:var(--t2)}
+.audit-row .v{margin-left:auto;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12.5px;font-weight:700}
+.audit-row .st-ic{width:16px;height:16px;flex:none}
+.audit-bar{height:3px;background:var(--surface2);border-radius:2px;margin:2px 20px 18px;overflow:hidden}
+.audit-bar i{display:block;height:100%;border-radius:2px}
+.cd-actions{display:flex;gap:9px;padding:0 20px 26px}
+.btn{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:12px;
+  border-radius:var(--r-2);font-size:13px;font-weight:700;letter-spacing:.03em;cursor:pointer;
+  border:1px solid var(--hairS);background:none;color:var(--ink);transition:transform .16s var(--ease)}
+.btn:active{transform:scale(.97)}
+.btn svg{width:15px;height:15px}
+.btn.primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+
+/* radar */
+.radar-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:2px 20px 14px}
+.radar-grid .cell{background:var(--surface);border:1px solid var(--hair);border-radius:var(--r-2);
+  padding:11px 6px;text-align:center}
+.radar-grid .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:19px;font-weight:700}
+.radar-grid .k{font-size:9.5px;color:var(--t3);margin-top:2px}
+.sig-card{display:flex;align-items:center;gap:11px;margin:0 20px 8px;padding:11px 12px;
+  background:var(--surface);border:1px solid var(--hair);border-radius:var(--r-2)}
+.sig-badge{width:44px;height:44px;border-radius:var(--r-2);flex:none;display:grid;place-items:center;
+  font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;font-weight:700}
+.sig-badge.w{background:var(--warn-t);color:var(--warn)}
+.sig-badge.u{background:var(--up-t);color:var(--up)}
+.sig-badge.r{background:var(--radar-t);color:var(--radar)}
+.sig-main{flex:1;min-width:0}
+.sig-top{display:flex;align-items:baseline;gap:7px}
+.sig-coin{font-size:13.5px;font-weight:800}
+.sig-dir{font-size:10.5px;color:var(--t3)}
+.sig-score{margin-left:auto;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:700}
+.sig-strat{font-size:11px;color:var(--t3);margin-top:2px;font-variant-numeric:tabular-nums}
+.sig-tags{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap}
+.sig-tag{font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:var(--r-1);background:var(--surface2);color:var(--t2)}
+.sig-tag.u{background:var(--up-t);color:var(--up)}
+.sig-tag.w{background:var(--warn-t);color:var(--warn)}
+.heat-row{display:flex;align-items:center;gap:10px;margin:0 20px 6px;padding:9px 12px;
+  background:var(--surface);border:1px solid var(--hair);border-radius:var(--r-2)}
+.heat-badge{width:32px;height:32px;border-radius:var(--r-1);flex:none;display:grid;place-items:center;
+  font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--down);background:var(--down-t)}
+.heat-name{flex:1;min-width:0}
+.heat-name .n{font-size:12.5px;font-weight:700}
+.heat-name .h{font-size:10px;color:var(--t3);margin-top:1px;font-variant-numeric:tabular-nums}
+.heat-chg{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:700}
+
+/* search */
+.ov-search{display:flex;align-items:center;gap:9px;flex:1;margin:0 12px;padding:10px 13px;
+  border:1px solid var(--hairS);border-radius:var(--r-3);background:var(--surface)}
+.ov-search svg{width:17px;height:17px;color:var(--t3)}
+.ov-search input{flex:1;border:none;background:none;font-size:14px;color:var(--ink);outline:none;font-family:var(--sans)}
+.hot-tags{padding:0 20px 14px}
+.hot-tag{display:inline-flex;align-items:center;gap:6px;margin:0 8px 9px 0;padding:8px 13px;
+  background:var(--surface);border:1px solid var(--hair);border-radius:var(--pill);
+  font-size:12.5px;font-weight:600;color:var(--ink);cursor:pointer;transition:transform .16s var(--ease)}
+.hot-tag:active{transform:scale(.94)}
+.hot-tag .rk{font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--accent)}
+
+/* notif sheet items */
+.ntf{display:flex;gap:11px;padding:13px 2px}
+.ntf + .ntf{border-top:1px solid var(--hair)}
+.ntf .ic{width:34px;height:34px;flex:none;border-radius:var(--r-2);display:grid;place-items:center}
+.ntf .ic svg{width:16px;height:16px}
+.ntf .t{font-size:13.5px;font-weight:700;line-height:1.45}
+.ntf .d{font-size:11.5px;color:var(--t3);margin-top:3px;font-variant-numeric:tabular-nums}
+
+/* ============ SIDE PANEL ============ */
+.side{width:300px;flex:none}
+.side h1{font-family:var(--serif);font-size:23px;font-weight:900;letter-spacing:-.01em;margin-bottom:4px}
+.side .sub{font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:18px}
+.theme-pick{display:flex;gap:8px;margin-bottom:16px}
+.theme-pick button{flex:1;padding:10px;border-radius:var(--r-2);border:1px solid var(--hairS);
+  background:var(--surface);font-size:12.5px;font-weight:700;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:6px;transition:transform .16s var(--ease)}
+.theme-pick button:active{transform:scale(.96)}
+.theme-pick button.on{border-color:var(--accent);color:var(--accent)}
+.theme-pick svg{width:15px;height:15px}
+.side .legend{font-size:12px;color:var(--t2);line-height:1.7;background:var(--surface);
+  border:1px solid var(--hair);border-radius:var(--r-3);padding:15px}
+.side .legend b{color:var(--ink)}
+.side .legend p{margin-bottom:9px}
+.side .legend p:last-child{margin-bottom:0}
+@media(max-width:880px){.side{display:none}}
+@media(max-width:439px){
+  body{align-items:flex-start;padding:14px 8px}
+  .device{width:calc(100vw - 16px)}
+}
+
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
+}
+</style>
+</head>
+<body>
+
+<!-- ===== SVG SPRITE ===== -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<defs>
+<symbol id="i-candle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3v4M7 15v4"/><rect x="4.5" y="7" width="5" height="8" rx="1"/><path d="M17 5v3M17 14v5"/><rect x="14.5" y="8" width="5" height="6" rx="1"/></symbol>
+<symbol id="i-news" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h13v14H6a2 2 0 0 1-2-2z"/><path d="M17 8h3v9a2 2 0 0 1-2 2"/><path d="M7.5 9h6M7.5 12.5h6M7.5 16h3.5"/></symbol>
+<symbol id="i-scan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20.8 20.8 16.2 16.2"/><path d="M11 7.5a3.5 3.5 0 0 1 3.5 3.5"/></symbol>
+<symbol id="i-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M18.5 15l.6 1.6 1.6.6-1.6.6-.6 1.6-.6-1.6-1.6-.6 1.6-.6z"/></symbol>
+<symbol id="i-person" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></symbol>
+<symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1 1 12 0c0 5 2 6 2 6H4s2-1 2-6"/><path d="M10.5 20a1.8 1.8 0 0 0 3 0"/></symbol>
+<symbol id="i-back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></symbol>
+<symbol id="i-chev-r" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></symbol>
+<symbol id="i-arrow-r" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></symbol>
+<symbol id="i-radar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12L2.8 7.6"/><circle cx="12" cy="12" r="9"/><path d="M12 12a4 4 0 1 0 4 4"/><circle cx="16" cy="16" r="1.2" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+<symbol id="i-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 15l6-6"/><path d="M11 6l1-1a4 4 0 0 1 6 6l-1 1"/><path d="M13 18l-1 1a4 4 0 0 1-6-6l1-1"/></symbol>
+<symbol id="i-share" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v14"/></symbol>
+<symbol id="i-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h9a3 3 0 0 1 3 3v13H9a3 3 0 0 0-3 3"/><path d="M6 4a3 3 0 0 0-3 3v13a3 3 0 0 1 3-3"/></symbol>
+<symbol id="i-more" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></symbol>
+<symbol id="i-bolt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></symbol>
+<symbol id="i-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/></symbol>
+<symbol id="i-fire" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 .5 1 1.5 1.5 2 1 .5-2-1-4 1-7z"/></symbol>
+<symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 7.6-7 9-4-1.4-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4 10-10"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+<symbol id="i-warn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4L2.5 20h19z"/><path d="M12 10.5v3.5M12 17.4h.01"/></symbol>
+<symbol id="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></symbol>
+<symbol id="i-ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5h5v5"/><path d="M19 5l-8 8"/><path d="M19 13.5V19H5V5h5.5"/></symbol>
+<symbol id="i-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.7l5.9-.9z"/></symbol>
+<symbol id="i-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l16-8-6 16-2.5-6z"/><path d="M11 14l9-10"/></symbol>
+<symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></symbol>
+<symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14a8 8 0 1 1-9.7-9.7 6.5 6.5 0 0 0 9.7 9.7z"/></symbol>
+<symbol id="i-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"/></symbol>
+<symbol id="i-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></symbol>
+<symbol id="i-wallet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 10h18"/><circle cx="17" cy="15" r="1.3" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-help" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .8-1 1.7M12 17h.01"/></symbol>
+<symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+<symbol id="i-rss" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19a1 1 0 1 0 2 0 1 1 0 0 0-2 0"/><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 5a15 15 0 0 1 15 15"/></symbol>
+<symbol id="i-wifi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M2 9a16 16 0 0 1 20 0M5 12.5a11 11 0 0 1 14 0M8.5 16a6 6 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1" fill="currentColor"/></symbol>
+<symbol id="i-battery" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="8" width="18" height="9" rx="2.5"/><rect x="4" y="10" width="13" height="5" rx="1" fill="currentColor"/><path d="M22 11v3"/></symbol>
+</defs>
+</svg>
+
+<div class="stage">
+<!-- ============ DEVICE ============ -->
+<div class="device" id="device">
+<div class="screen">
+  <div class="statusbar">
+    <span>9:41</span>
+    <span class="icons"><svg><use href="#i-wifi"/></svg><svg><use href="#i-battery"/></svg></span>
+  </div>
+  <div class="viewport" id="viewport">
+
+  <!-- ============================================================
+       TAB 1 · 终端 SMART MONEY TERMINAL
+       ============================================================ -->
+  <section class="page active" id="page-terminal">
+    <header class="mast">
+      <div class="kicker accent">Smart Money · Robinhood Chain</div>
+      <div class="row">
+        <h1>聪明钱终端</h1>
+        <div class="grow"></div>
+        <span class="live-chip"><span class="dot"></span>LIVE</span>
+        <button class="icon-btn" onclick="openOverlay('radar')" aria-label="庄家雷达"><svg><use href="#i-radar"/></svg></button>
+      </div>
+    </header>
+
+    <div class="hero">
+      <div class="lbl">24H 净盈亏</div>
+      <div class="num up" id="hero-pnl">+$2,471,832</div>
+      <svg class="hero-spark" viewBox="0 0 350 38" preserveAspectRatio="none" aria-hidden="true">
+        <line class="base" x1="0" y1="37" x2="350" y2="37"/>
+        <polyline class="line" stroke="var(--up)" points="0,30 22,32 44,27 66,29 88,22 110,24 132,18 154,21 176,15 198,17 220,12 242,16 264,10 286,13 308,7 330,9 350,4"/>
+      </svg>
+      <div class="hero-stats">
+        <div class="hstat"><div class="v">64%</div><div class="k">胜率</div></div>
+        <div class="hstat"><div class="v">1,284 笔</div><div class="k">成交</div></div>
+        <div class="hstat"><div class="v">47 位</div><div class="k">大户在线</div></div>
+        <div class="hstat"><div class="v up">+$318.2K</div><div class="k">最大赢家 @mev-maxi</div></div>
+      </div>
+    </div>
+
+    <section class="sec">
+      <div class="sec-h">
+        <span class="kicker">Live Tape · 实盘</span>
+        <span class="grow"></span>
+        <button class="act" onclick="toast('完整终端页在 App 内呈现')">全部<svg><use href="#i-chev-r"/></svg></button>
+      </div>
+      <div class="tape" id="tape"></div>
+      <div class="tape-note">被追踪钱包的实时成交 · 点击行进入完整终端</div>
+    </section>
+
+    <section class="sec">
+      <div class="sec-h"><span class="kicker">Smart Resonance · 三源共振</span><span class="grow"></span></div>
+      <div class="res-card" onclick="toast('共振详情在 App 内展开')">
+        <div class="res-top"><span class="res-sym">NEURO</span><span class="res-name">Neural Meme · pump.fun</span><span class="res-score mono">82</span></div>
+        <div class="res-src">
+          <span class="src on"><i></i>新币启动</span>
+          <span class="src on"><i></i>巨鲸首买</span>
+          <span class="src on"><i></i>流动性激增</span>
+        </div>
+        <div class="res-meta">三源同时命中 · 首买 @0xKoda $84.2K · LP 2 小时 +340%</div>
+      </div>
+      <div class="res-card" onclick="toast('共振详情在 App 内展开')">
+        <div class="res-top"><span class="res-sym">BAGWORK</span><span class="res-name">Bagwork Labs · four.meme</span><span class="res-score mono">76</span></div>
+        <div class="res-src">
+          <span class="src on"><i></i>新币启动</span>
+          <span class="src on"><i></i>巨鲸首买</span>
+          <span class="src"><i></i>流动性激增</span>
+        </div>
+        <div class="res-meta">双源命中 · 首买 @cathie.sol $41.8K · 创建于 38 分钟前</div>
+      </div>
+    </section>
+
+    <section class="sec">
+      <div class="sec-h"><span class="kicker">Copy Flow · 抱团跟单</span><span class="grow"></span></div>
+      <div class="flow-card">
+        <div class="flow-head">
+          <span class="lead1">@0xKoda</span><span class="verb">首买</span><span class="sym">$NEURO</span>
+          <span class="mono" style="margin-left:auto;font-size:12px;font-weight:700">$84.2K</span>
+        </div>
+        <div class="flow-chain">
+          <span class="node">@mev-maxi</span><span class="arr">→</span>
+          <span class="node">@sniper_x</span><span class="arr">→</span>
+          <span class="node">@alphahunter</span><span class="arr">→</span>
+          <span class="more">+9 位跟进</span>
+        </div>
+        <div class="flow-meta">12 位大户 20 分钟内抱团跟进，合计净流入 <b>+$286.4K</b></div>
+      </div>
+    </section>
+
+    <section class="sec">
+      <div class="sec-h">
+        <span class="kicker">Top Traders · 24H 盈亏榜</span>
+        <span class="grow"></span>
+        <button class="act" onclick="toast('完整榜单在 App 内呈现')">榜单<svg><use href="#i-chev-r"/></svg></button>
+      </div>
+      <div class="trader-row" onclick="toast('交易员主页在 App 内呈现')">
+        <span class="rk">1</span>
+        <span class="who"><span class="h mono">@mev-maxi</span><span class="m" style="display:block">胜率 71% · 214 笔</span></span>
+        <span class="pnl up">+$318.2K</span>
+      </div>
+      <div class="trader-row" onclick="toast('交易员主页在 App 内呈现')">
+        <span class="rk">2</span>
+        <span class="who"><span class="h mono">@cathie.sol</span><span class="m" style="display:block">胜率 66% · 188 笔</span></span>
+        <span class="pnl up">+$241.7K</span>
+      </div>
+      <div class="trader-row" onclick="toast('交易员主页在 App 内呈现')">
+        <span class="rk">3</span>
+        <span class="who"><span class="h mono">@0xNulla</span><span class="m" style="display:block">胜率 62% · 96 笔</span></span>
+        <span class="pnl up">+$196.4K</span>
+      </div>
+      <button class="enter-btn" onclick="toast('完整终端：榜单 / 跟单 / 平仓 / 关注')">
+        进入完整终端 · 榜单 / 跟单 / 平仓 / 关注<svg><use href="#i-arrow-r"/></svg>
+      </button>
+    </section>
+  </section>
+
+  <!-- ============================================================
+       TAB 2 · 情报 INTEL
+       ============================================================ -->
+  <section class="page" id="page-intel">
+    <header class="mast">
+      <div class="row">
+        <span class="kicker accent" style="letter-spacing:.28em">InfoFlow</span>
+        <span class="grow"></span>
+        <button class="icon-btn" onclick="openNotif()" aria-label="通知中心"><svg><use href="#i-bell"/></svg></button>
+        <button class="icon-btn" onclick="openOverlay('search')" aria-label="搜索"><svg><use href="#i-search"/></svg></button>
+      </div>
+      <h1 style="margin-top:2px">今日要闻</h1>
+      <div class="seg-tabs" style="margin-top:8px">
+        <button class="seg-tab active" onclick="seg(this,'seg-rec')">推荐</button>
+        <button class="seg-tab" onclick="seg(this,'seg-follow')">关注</button>
+        <button class="seg-tab" onclick="seg(this,'seg-hot')">热榜</button>
+      </div>
+    </header>
+
+    <div class="seg-pane" id="seg-rec">
+      <div class="unread" id="unread-bar"><span>12 篇未读</span><button class="mark" onclick="markAllRead()">全部标记已读</button></div>
+      <article class="headline" onclick="openReader('a1')">
+        <div class="src"><span class="n">Blockworks</span><span class="tm">38 分钟前</span></div>
+        <h2>Ronin 之后的 Robinhood：Chain 主网启动，首批 30 个生态项目与两亿美元流动性激励</h2>
+        <div class="dek">券商背景的公链正式上线，首批项目覆盖 DEX、借贷与 MEME 启动平台；激励计划按周释放，首季总额度 5,000 万美元。</div>
+        <div class="tickers"><button class="tk q" onclick="openCoin('RHT',event)"><b>$RHT</b> +4.4%</button></div>
+        <hr class="rule">
+      </article>
+
+      <article class="a-row" onclick="openReader('a2')">
+        <div class="a-src"><span class="n">Decrypt</span><span class="tm">2 小时前</span></div>
+        <div class="a-title">Firedancer v2 登陆 Solana 测试网：单验证节点跑出每秒 120 万笔的实测纪录</div>
+        <div class="tickers"><button class="tk q" onclick="openCoin('SOL',event)"><b>$SOL</b> +4.2%</button></div>
+        <hr class="hr">
+      </article>
+
+      <article class="a-row" onclick="openReader('a3')">
+        <div class="a-src"><span class="n">CoinDesk</span><span class="tm">3 小时前</span></div>
+        <div class="a-title">Aerodrome 锁仓量突破 18.4 亿美元，稳坐 Base 链流动性中枢</div>
+        <div class="tickers"><button class="tk q" onclick="openCoin('AERO',event)"><b>$AERO</b> +7.8%</button></div>
+        <hr class="hr">
+      </article>
+
+      <article class="a-row" onclick="openReader('a4')">
+        <div class="a-src"><span class="n">Foresight News</span><span class="tm">5 小时前</span></div>
+        <div class="a-title">four.meme 单日发行破 1.2 万个新币，BSC 链 Meme 热度回到 5 月水平</div>
+        <div class="tickers"><button class="tk d" onclick="openCoin('BNB',event)"><b>$BNB</b> -1.1%</button></div>
+        <hr class="hr">
+      </article>
+
+      <article class="a-row read" onclick="openReader('a5')">
+        <div class="a-src"><span class="n">PANews</span><span class="tm">7 小时前</span><span class="hot"><svg><use href="#i-warn"/></svg>风险</span></div>
+        <div class="a-title">GoPlus 周报：上周新增貔貅合约 3,412 个，BSC 链占比 62%</div>
+        <hr class="hr">
+      </article>
+
+      <article class="a-row" onclick="openReader('a6')">
+        <div class="a-src"><span class="n">链上监测</span><span class="tm">9 小时前</span></div>
+        <div class="a-title">巨鲸动向：同一地址 72 小时内累计增持 1,200 亿枚 PEPE，成本约 386 万美元</div>
+        <div class="tickers"><button class="tk q" onclick="openCoin('PEPE',event)"><b>$PEPE</b> +12.6%</button></div>
+      </article>
+    </div>
+
+    <div class="seg-pane" id="seg-follow" hidden>
+      <article class="a-row" onclick="openReader('a1')">
+        <div class="a-src"><span class="n">Blockworks</span><span class="tm">38 分钟前</span></div>
+        <div class="a-title">Ronin 之后的 Robinhood：Chain 主网启动，首批 30 个生态项目与两亿美元流动性激励</div>
+        <div class="tickers"><button class="tk q" onclick="openCoin('RHT',event)"><b>$RHT</b> +4.4%</button></div>
+        <hr class="hr">
+      </article>
+      <article class="a-row" onclick="openReader('a3')">
+        <div class="a-src"><span class="n">CoinDesk</span><span class="tm">3 小时前</span></div>
+        <div class="a-title">Aerodrome 锁仓量突破 18.4 亿美元，稳坐 Base 链流动性中枢</div>
+        <div class="tickers"><button class="tk q" onclick="openCoin('AERO',event)"><b>$AERO</b> +7.8%</button></div>
+      </article>
+      <div class="feed-hint">已订阅 23 个情报源，其中 2 个今日暂无更新<br>在「我的 · 情报源管理」中补充关注</div>
+    </div>
+
+    <div class="seg-pane" id="seg-hot" hidden>
+      <div class="hot-list">
+        <article class="a-row" onclick="openReader('a2')"><span class="rk-n">1</span>
+          <span class="body">
+            <div class="a-src"><span class="n">Decrypt</span><span class="tm">热度 94</span></div>
+            <div class="a-title">Firedancer v2 登陆 Solana 测试网：单验证节点跑出每秒 120 万笔的实测纪录</div>
+            <div class="tickers"><button class="tk q" onclick="openCoin('SOL',event)"><b>$SOL</b> +4.2%</button></div>
+          </span><hr class="hr" style="margin-top:13px">
+        </article>
+        <article class="a-row" onclick="openReader('a6')"><span class="rk-n">2</span>
+          <span class="body">
+            <div class="a-src"><span class="n">链上监测</span><span class="tm">热度 88</span></div>
+            <div class="a-title">巨鲸动向：同一地址 72 小时内累计增持 1,200 亿枚 PEPE</div>
+            <div class="tickers"><button class="tk q" onclick="openCoin('PEPE',event)"><b>$PEPE</b> +12.6%</button></div>
+          </span><hr class="hr" style="margin-top:13px">
+        </article>
+        <article class="a-row" onclick="openReader('a4')"><span class="rk-n">3</span>
+          <span class="body">
+            <div class="a-src"><span class="n">Foresight News</span><span class="tm">热度 81</span></div>
+            <div class="a-title">four.meme 单日发行破 1.2 万个新币，BSC 链 Meme 热度回到 5 月水平</div>
+            <div class="tickers"><button class="tk d" onclick="openCoin('BNB',event)"><b>$BNB</b> -1.1%</button></div>
+          </span>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       TAB 3 · 探测 SCREENER
+       ============================================================ -->
+  <section class="page" id="page-screener">
+    <header class="mast">
+      <div class="kicker accent">Screener · 链上代币探测</div>
+      <div class="row">
+        <h1>代币探测与安全</h1>
+        <div class="grow"></div>
+        <button class="icon-btn" onclick="refreshScreener(this)" aria-label="刷新"><svg><use href="#i-refresh"/></svg></button>
+      </div>
+    </header>
+
+    <div class="search-bar">
+      <svg><use href="#i-search"/></svg>
+      <input id="sc-input" placeholder="输入合约地址 (CA) 或 Symbol" aria-label="搜索代币">
+    </div>
+
+    <div class="chain-pills" role="tablist" aria-label="链生态筛选">
+      <button class="pill on" data-chain="solana" style="border-color:#14F195;color:var(--ink)" onclick="setChain(this)"><i style="background:#14F195"></i>Solana</button>
+      <button class="pill" data-chain="base" onclick="setChain(this)"><i style="background:#0052FF"></i>Base</button>
+      <button class="pill" data-chain="bsc" onclick="setChain(this)"><i style="background:#F3BA2F"></i>BSC</button>
+      <button class="pill" data-chain="robinhood" onclick="setChain(this)"><i style="background:#00C805"></i>Robinhood</button>
+    </div>
+
+    <div class="tk-list on" data-chain="solana" id="list-solana"></div>
+    <div class="tk-list" data-chain="base" id="list-base"></div>
+    <div class="tk-list" data-chain="bsc" id="list-bsc"></div>
+    <div class="tk-list" data-chain="robinhood" id="list-robinhood"></div>
+  </section>
+
+  <!-- ============================================================
+       TAB 4 · 投研 COPILOT
+       ============================================================ -->
+  <section class="page" id="page-copilot">
+    <header class="mast">
+      <div class="kicker accent">Copilot · 投研大脑</div>
+      <div class="row">
+        <h1>投研大脑</h1>
+        <div class="grow"></div>
+        <button class="icon-btn" aria-label="模型设置"><svg><use href="#i-spark"/></svg></button>
+      </div>
+    </header>
+
+    <div class="chat-scroll" id="chat-scroll">
+      <div class="chat-hint">结合 DexScreener 行情与 GoPlus 审计 · 今日抓取 142 篇</div>
+      <div class="msg user"><div class="bubble">Solana 生态今天有什么值得关注的信号？</div></div>
+      <div class="msg ai">
+        <div class="bubble">
+          <div class="pt"><i>01</i><span><b>$SOL</b> 现价 $238.14（+4.2%），Firedancer v2 实测 TPS 纪录带动资金回流，24h 成交 $1.8B。</span></div>
+          <div class="pt"><i>02</i><span>pump.fun 新币 <b>$NEURO</b> 触发三源共振（启动 + 巨鲸首买 + 流动性激增），共振评分 82。</span></div>
+          <div class="pt"><i>03</i><span>风险面：Solana 链上周新增貔貅合约占比降至 14%，安全水位优于 BSC。</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="quick-row">
+      <button class="quick" onclick="quickAsk(this,'今日链上 Alpha')">今日链上 Alpha</button>
+      <button class="quick" onclick="quickAsk(this,'诊断合约风险')">诊断合约风险</button>
+      <button class="quick" onclick="quickAsk(this,'巨鲸动向速览')">巨鲸动向速览</button>
+      <button class="quick" onclick="quickAsk(this,'Base 生态周报')">Base 生态周报</button>
+    </div>
+    <div class="chat-input">
+      <input id="chat-input" placeholder="向投研大脑提问…" aria-label="提问输入框">
+      <button class="chat-send" onclick="sendChat()" aria-label="发送"><svg><use href="#i-send"/></svg></button>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       TAB 5 · 我的 TERMINAL SETTINGS
+       ============================================================ -->
+  <section class="page" id="page-profile">
+    <header class="mast">
+      <div class="kicker accent">Terminal Settings</div>
+      <div class="row"><h1>终端设置</h1></div>
+    </header>
+
+    <div class="prof-card">
+      <div class="prof-user" onclick="toast('账户资料在 App 内编辑')">
+        <div class="prof-mark">链</div>
+        <div style="flex:1;min-width:0">
+          <div class="n">链上研究员</div>
+          <div class="d mono">@trader_rh · 已订阅 23 个情报源</div>
+        </div>
+        <span class="chev"><svg><use href="#i-chev-r"/></svg></span>
+      </div>
+      <div class="prof-stats" style="border-top:1px solid var(--hair)">
+        <div class="st"><div class="v">142</div><div class="k">已读情报</div></div>
+        <div class="st"><div class="v">18</div><div class="k">自选池</div></div>
+        <div class="st"><div class="v">7</div><div class="k">强信号</div></div>
+      </div>
+    </div>
+
+    <div class="grp-label kicker">外观</div>
+    <div class="prof-card">
+      <div class="set-item" style="cursor:default">
+        <span class="t">主题模式</span>
+        <div class="seg3" id="theme-seg">
+          <button class="on" onclick="thmMode(this,'auto')">跟随</button>
+          <button onclick="thmMode(this,'light')">浅色</button>
+          <button onclick="thmMode(this,'dark')">深色</button>
+        </div>
+      </div>
+      <div class="set-item" onclick="toast('字号档位在 App 内可调')">
+        <span class="t">正文字号<span class="sub" style="display:block">阅读器与情报流</span></span>
+        <span class="trail">中 · 16pt</span>
+      </div>
+    </div>
+
+    <div class="grp-label kicker">监控与提醒</div>
+    <div class="prof-card">
+      <div class="set-item" onclick="toast('自选池列表在 App 内呈现')">
+        <span class="t">自选池监控<span class="sub" style="display:block">跨链关注 18 个池子</span></span>
+        <span class="chev"><svg><use href="#i-chev-r"/></svg></span>
+      </div>
+      <div class="set-item" onclick="toggleSwitch(this)">
+        <span class="t">强信号推送<span class="sub" style="display:block">费率极端 · 巨鲸首买 · 共振命中</span></span>
+        <span class="switch on" role="switch" aria-checked="true"></span>
+      </div>
+      <div class="set-item" onclick="toast('阈值在 App 内可调')">
+        <span class="t">异动提醒阈值</span>
+        <span class="trail mono">≥ $100K</span>
+      </div>
+    </div>
+
+    <div class="grp-label kicker">数据源</div>
+    <div class="prof-card">
+      <div class="set-item" onclick="toast('情报源管理在 App 内呈现')">
+        <span class="t">情报源管理<span class="sub" style="display:block">Blockworks · Decrypt · Foresight 等 23 个</span></span>
+        <span class="chev"><svg><use href="#i-chev-r"/></svg></span>
+      </div>
+      <div class="set-item" onclick="toast('GoPlus API 已连接')">
+        <span class="t">GoPlus 安全审计</span>
+        <span class="trail up">已连接</span>
+      </div>
+      <div class="set-item" onclick="toast('DexScreener 行情已连接')">
+        <span class="t">DexScreener 行情</span>
+        <span class="trail up">已连接</span>
+      </div>
+    </div>
+
+    <div class="grp-label kicker">关于</div>
+    <div class="prof-card">
+      <div class="set-item" style="cursor:default">
+        <span class="t">InfoFlow Terminal</span>
+        <span class="trail mono">v2.1.0</span>
+      </div>
+      <div class="set-item" onclick="toast('帮助中心在 App 内呈现')">
+        <span class="t">帮助与反馈</span>
+        <span class="chev"><svg><use href="#i-chev-r"/></svg></span>
+      </div>
+    </div>
+  </section>
+
+  </div><!-- /viewport -->
+
+  <!-- ===== TABBAR ===== -->
+  <nav class="tabbar" aria-label="主导航">
+    <button class="tab active" onclick="goTab('page-terminal',this)"><svg><use href="#i-candle"/></svg><span>终端</span></button>
+    <button class="tab" onclick="goTab('page-intel',this)"><svg><use href="#i-news"/></svg><span>情报</span></button>
+    <button class="tab" onclick="goTab('page-screener',this)"><svg><use href="#i-scan"/></svg><span>探测</span></button>
+    <button class="tab" onclick="goTab('page-copilot',this)"><svg><use href="#i-spark"/></svg><span>投研</span></button>
+    <button class="tab" onclick="goTab('page-profile',this)"><svg><use href="#i-person"/></svg><span>我的</span></button>
+  </nav>
+
+  <!-- ===== NOTIFICATION SHEET ===== -->
+  <div class="sheet-layer">
+    <div class="sheet-mask" id="notif-sheet-mask" onclick="closeSheetById('notif-sheet')"></div>
+    <div class="sheet" id="notif-sheet" role="dialog" aria-label="通知中心">
+    <div class="sheet-grip"></div>
+    <h2><svg><use href="#i-bell"/></svg>通知中心</h2>
+    <div style="margin-top:10px">
+      <div class="ntf">
+        <span class="ic" style="background:var(--radar-t);color:var(--radar)"><svg><use href="#i-target"/></svg></span>
+        <span style="flex:1"><span class="t" style="display:block">三源共振命中：NEURO（评分 82）</span>
+        <span class="d">新币启动 + 巨鲸首买 + 流动性激增 · 22 分钟前</span></span>
+      </div>
+      <div class="ntf">
+        <span class="ic" style="background:var(--warn-t);color:var(--warn)"><svg><use href="#i-bolt"/></svg></span>
+        <span style="flex:1"><span class="t" style="display:block">费率极端：HYPE 资金费率 +0.082%</span>
+        <span class="d">多头拥挤 · OI 24h +24% · 1 小时前</span></span>
+      </div>
+      <div class="ntf">
+        <span class="ic" style="background:var(--up-t);color:var(--up)"><svg><use href="#i-wallet"/></svg></span>
+        <span style="flex:1"><span class="t" style="display:block">巨鲸首买：FEATHER $31.6K</span>
+        <span class="d">@sniper_x · Robinhood 链 · 2 小时前</span></span>
+      </div>
+    </div>
+    <div class="sum-note">强信号提醒按「我的 · 强信号推送」中的阈值触发</div>
+    </div>
+  </div>
+
+  <!-- ===== READER OVERLAY ===== -->
+  <div class="overlay" id="ov-reader">
+    <div class="ov-appbar">
+      <button class="icon-btn" onclick="closeOverlay('reader')" aria-label="返回"><svg><use href="#i-back"/></svg></button>
+      <div class="ov-title" id="rd-src">Blockworks</div>
+      <button class="icon-btn" aria-label="收藏"><svg><use href="#i-book"/></svg></button>
+      <button class="icon-btn" aria-label="分享"><svg><use href="#i-share"/></svg></button>
+      <button class="icon-btn" aria-label="更多"><svg><use href="#i-more"/></svg></button>
+    </div>
+    <div class="ov-body">
+      <div class="rd-meta">
+        <h1 id="rd-title"></h1>
+        <div class="info">
+          <svg><use href="#i-clock"/></svg><span id="rd-time">38 分钟前</span>
+          <svg style="margin-left:6px"><use href="#i-link"/></svg><span id="rd-domain">blockworks.co</span>
+        </div>
+      </div>
+      <div class="rd-body" id="rd-body"></div>
+    </div>
+    <button class="fab" onclick="openSheet()"><svg><use href="#i-spark"/></svg>AI 摘要</button>
+    <div class="sheet-layer">
+      <div class="sheet-mask" id="sheet-mask" onclick="closeSheet()"></div>
+      <div class="sheet" id="sheet" role="dialog" aria-label="AI 摘要">
+      <div class="sheet-grip"></div>
+      <h2><svg><use href="#i-spark"/></svg>AI 智能摘要</h2>
+      <div class="sum-box" id="rd-sum"></div>
+      <div class="sum-note">· 摘要由本地规则引擎从情报正文提炼，配置 LLM API key 后可获得更深的投研级摘要</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== COIN DETAIL OVERLAY ===== -->
+  <div class="overlay" id="ov-coin">
+    <div class="ov-appbar">
+      <button class="icon-btn" onclick="closeOverlay('coin')" aria-label="返回"><svg><use href="#i-back"/></svg></button>
+      <div class="ov-title" id="cd-title">SOL · Solana</div>
+      <button class="icon-btn" id="cd-star" onclick="toast('已加入自选池')" aria-label="加入自选"><svg><use href="#i-star"/></svg></button>
+    </div>
+    <div class="ov-body">
+      <div class="cd-head">
+        <div class="cd-price-row">
+          <span class="cd-price" id="cd-price">$238.14</span>
+          <span class="cd-chg q" id="cd-chg">+4.2%</span>
+        </div>
+        <div class="cd-sub" id="cd-sub">DexScreener 实时报价 · 更新于刚刚</div>
+        <svg class="cd-spark" id="cd-spark" viewBox="0 0 350 52" preserveAspectRatio="none" aria-hidden="true"></svg>
+        <div class="cd-stats">
+          <div class="st"><div class="k">流动性</div><div class="v" id="cd-liq">$412.6M</div></div>
+          <div class="st"><div class="k">24h 成交</div><div class="v" id="cd-vol">$1.8B</div></div>
+          <div class="st"><div class="k">DEX</div><div class="v" id="cd-dex">Raydium</div></div>
+        </div>
+      </div>
+
+      <div class="cd-ca">
+        <svg style="width:14px;height:14px;color:var(--t3);flex:none"><use href="#i-wallet"/></svg>
+        <span class="addr" id="cd-ca">So11…1112</span>
+        <button class="cp" onclick="copyCA(this)"><svg><use href="#i-copy"/></svg><span id="cp-label">复制 CA</span></button>
+      </div>
+
+      <div class="audit-h">
+        <span class="kicker" style="color:var(--t2)">GoPlus 安全体检</span>
+        <span class="sc" id="cd-score">94<span style="font-size:11px;color:var(--t3)"> /100</span></span>
+      </div>
+      <div class="audit-bar"><i id="cd-score-bar" style="width:94%"></i></div>
+      <div id="cd-audit"></div>
+
+      <div class="cd-actions">
+        <button class="btn" onclick="toast('浏览器直达在 App 内打开')"><svg><use href="#i-ext"/></svg>浏览器直达</button>
+        <button class="btn primary" onclick="toast('信号详情在 App 内展开')"><svg><use href="#i-bolt"/></svg>信号与持仓</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== RADAR OVERLAY ===== -->
+  <div class="overlay" id="ov-radar">
+    <div class="ov-appbar">
+      <button class="icon-btn" onclick="closeOverlay('radar')" aria-label="返回"><svg><use href="#i-back"/></svg></button>
+      <div class="ov-title"><span class="live-chip" style="margin-right:6px"><span class="dot"></span>扫描中</span>庄家雷达</div>
+      <button class="icon-btn" aria-label="刷新"><svg><use href="#i-refresh"/></svg></button>
+    </div>
+    <div class="ov-body">
+      <div class="radar-grid">
+        <div class="cell"><div class="v warn">2</div><div class="k">追多信号</div></div>
+        <div class="cell"><div class="v" style="color:var(--radar)">3</div><div class="k">埋伏信号</div></div>
+        <div class="cell"><div class="v up">5</div><div class="k">综合信号</div></div>
+        <div class="cell"><div class="v down">12</div><div class="k">热度榜</div></div>
+      </div>
+
+      <div class="sec-h" style="padding-top:4px"><span class="kicker">追多 · 费率极端</span><span class="grow"></span><span class="kicker" style="letter-spacing:.05em">2 个</span></div>
+      <div class="sig-card">
+        <div class="sig-badge w">HYPE</div>
+        <div class="sig-main">
+          <div class="sig-top"><span class="sig-coin">HYPE</span><span class="sig-dir">做多</span><span class="sig-score warn">68</span></div>
+          <div class="sig-strat">资金费率 +0.082% · 多头拥挤</div>
+          <div class="sig-tags"><span class="sig-tag u">OI +24%</span><span class="sig-tag w">费率极端</span></div>
+        </div>
+      </div>
+      <div class="sig-card">
+        <div class="sig-badge w">TRUMP</div>
+        <div class="sig-main">
+          <div class="sig-top"><span class="sig-coin">TRUMP</span><span class="sig-dir">做多</span><span class="sig-score warn">61</span></div>
+          <div class="sig-strat">资金费率连续 8 小时为正</div>
+          <div class="sig-tags"><span class="sig-tag u">OI +12%</span></div>
+        </div>
+      </div>
+
+      <div class="sec-h"><span class="kicker">埋伏 · 低市值 + OI 异常</span><span class="grow"></span><span class="kicker" style="letter-spacing:.05em">3 个</span></div>
+      <div class="sig-card">
+        <div class="sig-badge r">RAY</div>
+        <div class="sig-main">
+          <div class="sig-top"><span class="sig-coin">RAY</span><span class="sig-dir">建仓</span><span class="sig-score" style="color:var(--radar)">72</span></div>
+          <div class="sig-strat">市值 $4.2 亿 · OI / 市值 31%</div>
+          <div class="sig-tags"><span class="sig-tag">低市值</span><span class="sig-tag">OI 异常</span></div>
+        </div>
+      </div>
+      <div class="sig-card">
+        <div class="sig-badge r">JUP</div>
+        <div class="sig-main">
+          <div class="sig-top"><span class="sig-coin">JUP</span><span class="sig-dir">观察</span><span class="sig-score" style="color:var(--radar)">66</span></div>
+          <div class="sig-strat">市值 $8.1 亿 · 疑似静默吸筹</div>
+          <div class="sig-tags"><span class="sig-tag">OI 温和</span></div>
+        </div>
+      </div>
+
+      <div class="sec-h"><span class="kicker">热度榜 · 24H</span><span class="grow"></span><span class="kicker" style="letter-spacing:.05em">12 个</span></div>
+      <div class="heat-row"><div class="heat-badge">PEPE</div><div class="heat-name"><div class="n">PEPE</div><div class="h">热度 94 · 24h 成交 $8.4 亿</div></div><div class="heat-chg up">+12.6%</div></div>
+      <div class="heat-row"><div class="heat-badge">BONK</div><div class="heat-name"><div class="n">BONK</div><div class="h">热度 88 · 24h 成交 $3.1 亿</div></div><div class="heat-chg up">+6.4%</div></div>
+      <div class="heat-row"><div class="heat-badge">WIF</div><div class="heat-name"><div class="n">WIF</div><div class="h">热度 81 · 24h 成交 $5.7 亿</div></div><div class="heat-chg up">+11.2%</div></div>
+      <div class="heat-row"><div class="heat-badge">FET</div><div class="heat-name"><div class="n">FET</div><div class="h">热度 76 · 24h 成交 $2.2 亿</div></div><div class="heat-chg down">-3.1%</div></div>
+      <div style="height:14px"></div>
+    </div>
+  </div>
+
+  <!-- ===== SEARCH OVERLAY ===== -->
+  <div class="overlay" id="ov-search">
+    <div class="ov-appbar">
+      <button class="icon-btn" onclick="closeOverlay('search')" aria-label="返回"><svg><use href="#i-back"/></svg></button>
+      <div class="ov-search"><svg><use href="#i-search"/></svg><input id="ov-search-input" placeholder="搜索情报、代币与自选池" aria-label="搜索"></div>
+    </div>
+    <div class="ov-body">
+      <div class="sec-h" style="padding-top:12px"><span class="kicker">热门搜索</span></div>
+      <div class="hot-tags">
+        <button class="hot-tag" onclick="openCoin('SOL')"><span class="rk">1</span>Firedancer</button>
+        <button class="hot-tag" onclick="openCoin('PEPE')"><span class="rk">2</span>巨鲸增持 PEPE</button>
+        <button class="hot-tag" onclick="openCoin('AERO')"><span class="rk">3</span>Aerodrome</button>
+        <button class="hot-tag"><span class="rk">4</span>貔貅合约周报</button>
+        <button class="hot-tag"><span class="rk">5</span>four.meme</button>
+      </div>
+      <div class="sec-h"><span class="kicker">最近浏览</span></div>
+      <article class="a-row" onclick="openReader('a5')">
+        <div class="a-src"><span class="n">PANews</span><span class="tm">昨天</span></div>
+        <div class="a-title">GoPlus 周报：上周新增貔貅合约 3,412 个，BSC 链占比 62%</div>
+      </article>
+      <article class="a-row" onclick="openReader('a3')">
+        <div class="a-src"><span class="n">CoinDesk</span><span class="tm">3 小时前</span></div>
+        <div class="a-title">Aerodrome 锁仓量突破 18.4 亿美元，稳坐 Base 链流动性中枢</div>
+        <div class="tickers"><button class="tk q" onclick="openCoin('AERO',event)"><b>$AERO</b> +7.8%</button></div>
+      </article>
+    </div>
+  </div>
+
+</div><!-- /screen -->
+</div><!-- /device -->
+
+<!-- ============ SIDE PANEL ============ -->
+<aside class="side">
+  <h1>InfoFlow Terminal<br>纸上终端</h1>
+  <p class="sub">链上情报终端的重设计方向：把「编辑部杂志」与「实时行情终端」钉在同一张纸上。衬线标题承载编辑判断，等宽数字承载市场事实，发丝线代替卡片阴影，编辑红是唯一强调色，紫色只留给雷达信号。</p>
+  <div class="theme-pick">
+    <button class="on" onclick="setTheme('light',this)"><svg><use href="#i-sun"/></svg>浅色 · 纸</button>
+    <button onclick="setTheme('dark',this)"><svg><use href="#i-moon"/></svg>深色 · 墨</button>
+  </div>
+  <div class="legend">
+    <p><b>信息架构</b><br>底栏五分支与 Flutter 路由一一对应：终端 / 情报 / 探测 / 投研 / 我的。庄家雷达从终端右上角进入。</p>
+    <p><b>信号中枢</b><br>情报流里的 $徽章 绑定 DexScreener 实时报价，点按直达代币安全体检（GoPlus）。</p>
+    <p><b>可交互</b><br>LIVE 实盘自动滚动新成交；链筛选、栏目切换、主题切换、AI 摘要面板、复制 CA 均可点按体验。</p>
+  </div>
+</aside>
+</div><!-- /stage -->
+
+<!-- toast -->
+<div id="toast" role="status" style="position:absolute;left:50%;bottom:110px;transform:translateX(-50%) translateY(8px);
+  background:var(--ink);color:var(--paper);font-size:12px;font-weight:600;padding:9px 16px;border-radius:var(--pill);
+  opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:99;max-width:320px;text-align:center"></div>
+
+<script>
+/* =================== 数据 =================== */
+const CHAINS = {
+  solana:{tag:'SOL',color:'#14F195',dark:'#0B8A5F'},
+  base:{tag:'BASE',color:'#0052FF',dark:'#5B8CFF'},
+  bsc:{tag:'BSC',color:'#F3BA2F',dark:'#C79A1F'},
+  robinhood:{tag:'RH',color:'#00C805',dark:'#00A304'},
+};
+
+const TOKENS = {
+  SOL:{name:'Solana',chain:'solana',price:'$238.14',chg:4.2,liq:'$412.6M',vol:'$1.8B',dex:'Raydium',bs:'9.2K/8.1K',
+    ca:'So11111111111111111111111111111111111111112',score:94,
+    audit:[['貔貅模拟','未检出','ok'],['Mint 权限','已放弃','ok'],['冻结权限','未开启','ok'],['Top10 持仓','18.6%','ok']]},
+  RHT:{name:'Robinhood Chain Gas',chain:'robinhood',price:'$0.42',chg:4.4,liq:'$8.6M',vol:'$24.1M',dex:'RhSwap',bs:'3.1K/2.4K',
+    ca:'0xRHT0000000000000000000000000000000000042',score:87,
+    audit:[['貔貅模拟','未检出','ok'],['买入税率','0%','ok'],['卖出税率','0%','ok'],['LP 状态','锁定 92 天','ok'],['Top10 持仓','26.4%','ok']]},
+  AERO:{name:'Aerodrome',chain:'base',price:'$1.28',chg:7.8,liq:'$46.1M',vol:'$58.9M',dex:'Aerodrome',bs:'4.8K/3.9K',
+    ca:'0x940181a94A35A9863945fD33b8D931Ae07B7A2bc',score:95,
+    audit:[['貔貅模拟','未检出','ok'],['买入税率','0%','ok'],['卖出税率','0%','ok'],['所有权','已放弃','ok'],['Top10 持仓','21.2%','ok']]},
+  PEPE:{name:'Pepe',chain:'bsc',price:'$0.0000112',chg:12.6,liq:'$28.3M',vol:'$96.7M',dex:'PancakeSwap',bs:'11.4K/9.7K',
+    ca:'0x25d887Ce7a35172C62FeBFD67a1856F20FaEbB91',score:84,
+    audit:[['貔貅模拟','未检出','ok'],['买入税率','0%','ok'],['卖出税率','1%','warn'],['所有权','已放弃','ok'],['Top10 持仓','31.8%','warn']]},
+  BNB:{name:'BNB',chain:'bsc',price:'$642.30',chg:-1.1,liq:'$1.2B',vol:'$2.4B',dex:'PancakeSwap',bs:'6.2K/5.8K',
+    ca:'0xB8c77482e45F1F44dE1745F52C74426C631bDD52',score:98,
+    audit:[['貔貅模拟','未检出','ok'],['所有权','已放弃','ok'],['Top10 持仓','9.4%','ok']]},
+  BONK:{name:'Bonk',chain:'solana',price:'$0.00002124',chg:6.4,liq:'$14.2M',vol:'$86.3M',dex:'Raydium',bs:'8.2K/6.9K',
+    ca:'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',score:92,
+    audit:[['貔貅模拟','未检出','ok'],['Mint 权限','已放弃','ok'],['冻结权限','未开启','ok'],['Top10 持仓','22.4%','ok']]},
+  WIF:{name:'dogwifhat',chain:'solana',price:'$2.14',chg:11.2,liq:'$28.6M',vol:'$142.7M',dex:'Raydium',bs:'5.4K/4.9K',
+    ca:'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm',score:88,
+    audit:[['貔貅模拟','未检出','ok'],['Mint 权限','已放弃','ok'],['冻结权限','未开启','ok'],['Top10 持仓','27.9%','warn']]},
+  JUP:{name:'Jupiter',chain:'solana',price:'$0.84',chg:-2.3,liq:'$38.4M',vol:'$64.2M',dex:'Orca',bs:'4.1K/4.6K',
+    ca:'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN',score:90,
+    audit:[['貔貅模拟','未检出','ok'],['Mint 权限','已放弃','ok'],['冻结权限','未开启','ok'],['Top10 持仓','24.1%','ok']]},
+  POPCAT:{name:'Popcat',chain:'solana',price:'$0.62',chg:18.7,liq:'$9.8M',vol:'$41.6M',dex:'Raydium',bs:'3.7K/2.9K',
+    ca:'7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr',score:71,
+    audit:[['貔貅模拟','未检出','ok'],['Mint 权限','已放弃','ok'],['冻结权限','未开启','warn'],['Top10 持仓','44.7%','warn']]},
+  DEGEN:{name:'Degen',chain:'base',price:'$0.0071',chg:-4.1,liq:'$6.2M',vol:'$18.4M',dex:'Uniswap',bs:'2.2K/2.6K',
+    ca:'0x4ed4E862860beD51e957d3bf2b38e0Db1dE8A71E',score:82,
+    audit:[['貔貅模拟','未检出','ok'],['买入税率','0%','ok'],['卖出税率','0%','ok'],['Top10 持仓','29.6%','ok']]},
+  BRETT:{name:'Brett',chain:'base',price:'$0.11',chg:3.2,liq:'$12.8M',vol:'$22.9M',dex:'Aerodrome',bs:'3.3K/3.1K',
+    ca:'0x532f27101965dd16442E59d40670FaF5eBB142E4',score:78,
+    audit:[['貔貅模拟','未检出','ok'],['买入税率','1%','warn'],['卖出税率','1%','warn'],['Top10 持仓','33.4%','warn']]},
+  VIRTUAL:{name:'Virtuals Protocol',chain:'base',price:'$1.94',chg:9.6,liq:'$18.9M',vol:'$47.3M',dex:'Virtuals',bs:'4.4K/3.6K',
+    ca:'0x44f588aEe13dE5e5fE2e4ee4B11c8C6c1144C21B',score:89,
+    audit:[['貔貅模拟','未检出','ok'],['买入税率','0%','ok'],['卖出税率','0%','ok'],['Top10 持仓','25.8%','ok']]},
+  CAKE:{name:'PancakeSwap',chain:'bsc',price:'$2.41',chg:-1.2,liq:'$88.4M',vol:'$76.2M',dex:'PancakeSwap',bs:'5.1K/4.7K',
+    ca:'0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82',score:93,
+    audit:[['貔貅模拟','未检出','ok'],['买入税率','0%','ok'],['卖出税率','0%','ok'],['Top10 持仓','19.8%','ok']]},
+  FLOKI:{name:'Floki',chain:'bsc',price:'$0.000088',chg:2.8,liq:'$16.7M',vol:'$29.4M',dex:'PancakeSwap',bs:'3.9K/3.4K',
+    ca:'0xFB5B838b6cfEEdC2873aB27866079AC55363D37E',score:85,
+    audit:[['貔貅模拟','未检出','ok'],['买入税率','3%','warn'],['卖出税率','3%','warn'],['Top10 持仓','28.2%','ok']]},
+  MOONX:{name:'MoonX',chain:'bsc',price:'$0.000031',chg:142.6,liq:'$0.9M',vol:'$12.6M',dex:'four.meme',bs:'1.4K/2.8K',
+    ca:'0xMOONX00000000000000000000000000000000031',score:31,
+    audit:[['貔貅模拟','高危特征','bad'],['买入税率','8%','bad'],['卖出税率','12%','bad'],['所有权','未放弃','bad'],['LP 状态','未锁定','bad'],['Top10 持仓','48.2%','bad']]},
+  FEATHER:{name:'Feather',chain:'robinhood',price:'$0.018',chg:22.4,liq:'$2.1M',vol:'$8.4M',dex:'RhSwap',bs:'2.6K/1.9K',
+    ca:'0xFEATHER0000000000000000000000000000000018',score:74,
+    audit:[['貔貅模拟','未检出','ok'],['买入税率','0%','ok'],['卖出税率','2%','warn'],['Top10 持仓','38.6%','warn']]},
+  NEST:{name:'Nest Finance',chain:'robinhood',price:'$1.72',chg:-0.8,liq:'$4.8M',vol:'$6.9M',dex:'RhSwap',bs:'1.8K/2.1K',
+    ca:'0xNEST000000000000000000000000000000000172',score:83,
+    audit:[['貔貅模拟','未检出','ok'],['买入税率','0%','ok'],['卖出税率','0%','ok'],['Top10 持仓','30.1%','ok']]},
+};
+
+const SCREENER_LISTS = {
+  solana:['BONK','WIF','JUP','POPCAT'],
+  base:['AERO','VIRTUAL','BRETT','DEGEN'],
+  bsc:['CAKE','FLOKI','PEPE','MOONX'],
+  robinhood:['RHT','FEATHER','NEST'],
+};
+
+const SMART_STRIPS = {
+  BONK:{n:5,dir:1,fb:'@0xKoda',net:'+$412.3K'},
+  WIF:{n:3,dir:1,fb:'@mev-maxi',net:'+$186.9K'},
+  POPCAT:{n:2,dir:1,fb:'@sniper_x',net:'+$74.2K'},
+  BRETT:{n:2,dir:1,fb:'@alphahunter',net:'+$38.7K'},
+  MOONX:{n:2,dir:0,fb:null,net:'-$51.3K'},
+  FEATHER:{n:4,dir:1,fb:'@cathie.sol',net:'+$122.6K'},
+  AERO:{n:6,dir:1,fb:'@0xNulla',net:'+$528.1K'},
+};
+
+const FILLS = [
+  {t:'14:32:08',h:'@mev-maxi',side:'b',sym:'WIF',usd:'$182.4K',px:'$2.14'},
+  {t:'14:31:55',h:'@cathie.sol',side:'b',sym:'BONK',usd:'$96.2K',px:'$0.0000212'},
+  {t:'14:31:41',h:'@paper_hands',side:'s',sym:'POPCAT',usd:'$58.7K',px:'$0.616'},
+  {t:'14:31:22',h:'@0xKoda',side:'b',sym:'NEURO',usd:'$84.2K',px:'$0.00142'},
+  {t:'14:30:58',h:'@sniper_x',side:'b',sym:'FEATHER',usd:'$31.6K',px:'$0.0181'},
+  {t:'14:30:37',h:'@alphahunter',side:'s',sym:'JUP',usd:'$122.9K',px:'$0.841'},
+  {t:'14:30:12',h:'@whalewatch.eth',side:'b',sym:'AERO',usd:'$210.3K',px:'$1.282'},
+  {t:'14:29:48',h:'@sol.seeker',side:'b',sym:'WIF',usd:'$64.1K',px:'$2.131'},
+  {t:'14:29:31',h:'@0xNulla',side:'s',sym:'BONK',usd:'$47.8K',px:'$0.0000209'},
+  {t:'14:29:02',h:'@degen_dao',side:'b',sym:'PEPE',usd:'$138.6K',px:'$0.0000111'},
+  {t:'14:28:44',h:'@mev-maxi',side:'b',sym:'AERO',usd:'$95.4K',px:'$1.279'},
+  {t:'14:28:19',h:'@cathie.sol',side:'s',sym:'WIF',usd:'$73.5K',px:'$2.118'},
+];
+
+const ARTICLES = {
+  a1:{src:'Blockworks',time:'38 分钟前',domain:'blockworks.co',
+    title:'Ronin 之后的 Robinhood：Chain 主网启动，首批 30 个生态项目与两亿美元流动性激励',
+    sum:'Robinhood Chain 主网正式上线，首批 30 个生态项目覆盖 DEX、借贷与 MEME 启动平台。两亿美元激励按周释放，首季额度 5,000 万美元，gas 代币 $RHT 首日上涨 4.4%。',
+    body:[
+      ['p drop','券商出身的 Robinhood 把自己押注的公链推向了主网。首批上线项目共 30 个，覆盖去中心化交易所、借贷协议与 MEME 启动平台，其中 RhSwap 与 Nest Finance 在启动首小时即承接了超过 900 万美元的交易量。'],
+      ['p','流动性激励计划总额两亿美元，按周释放，首季额度 5,000 万美元，做市商需满足双边挂单深度与时间加权两项门槛。团队同步上线了基于 GoPlus 审计的新币安全标记，貔貅特征合约将被默认隐藏。'],
+      ['p','对交易员而言，短期值得跟踪的是 gas 代币 $RHT 的价格与新池子的质押深度：链上数据显示主网启动后 6 小时内新增流动性池 47 个，其中 12 个由被追踪的聪明钱地址首买。'],
+    ]},
+  a2:{src:'Decrypt',time:'2 小时前',domain:'decrypt.co',
+    title:'Firedancer v2 登陆 Solana 测试网：单验证节点跑出每秒 120 万笔的实测纪录',
+    sum:'Jump Crypto 的 Firedancer v2 在 Solana 测试网单节点实测 120 万 TPS，为现有主网峰值约 40 倍。社区预计分阶段上线，$SOL 现报 $238.14，日内 +4.2%。',
+    body:[
+      ['p drop','Jump Crypto 在测试网完成了 Firedancer v2 的首轮公开压测：单验证节点实测每秒 120 万笔，是当前主网峰值吞吐的约 40 倍，且全程未触发内存回收停顿。'],
+      ['p','与上一代相比，v2 把签名验证与账户读写下沉到独立线程，并在网络层启用了 QUIC 多路径。Anza 团队确认将分三个阶段合并进主网，第一阶段仅作为冗余副本运行，不影响共识。'],
+      ['p','消息公布后，$SOL 日内上涨 4.2% 至 $238.14，永续资金费率维持温和正值，未出现拥挤迹象。'],
+    ]},
+  a3:{src:'CoinDesk',time:'3 小时前',domain:'coindesk.com',
+    title:'Aerodrome 锁仓量突破 18.4 亿美元，稳坐 Base 链流动性中枢',
+    sum:'Aerodrome TVL 达 18.4 亿美元，占 Base 链 DeFi 锁仓的 41%。治理投票上周带来 $AERO 7.8% 涨幅，协议 24h 收入 $412K，创三个月新高。',
+    body:[
+      ['p drop','Base 链头部 DEX Aerodrome 的锁仓量在本周突破 18.4 亿美元，占整条链 DeFi 锁仓的 41%，巩固了它作为流动性中枢的地位。'],
+      ['p','增长主要来自 veAERO 治理投票的周度轮转：上周有 6 个新协议为争夺排放投票支出了合计 84 万美元的贿选费用，直接抬升了协议收入。Aerodrome 24 小时收入 41.2 万美元，为三个月来的高点。'],
+      ['p','$AERO 现报 $1.28，日内 +7.8%。链上监测显示，6 个被追踪的大户地址在过去 24 小时净买入合计 52.8 万美元。'],
+    ]},
+  a4:{src:'Foresight News',time:'5 小时前',domain:'foresightnews.pro',
+    title:'four.meme 单日发行破 1.2 万个新币，BSC 链 Meme 热度回到 5 月水平',
+    sum:'four.meme 单日发行新币 12,047 个，创 5 月以来新高，但存活率仅 3.1%。$BNB 小幅回落 1.1%，链上 gas 消耗环比上升 37%。',
+    body:[
+      ['p drop','BSC 链 MEME 启动平台 four.meme 的单日新币发行量重新站上 1.2 万个，为 5 月 MEME 行情高峰以来的首次。'],
+      ['p','热度的另一面是存活率：过去 30 天发行的新币中，流动性留存超过 7 天的仅占 3.1%。GoPlus 的同步扫描显示，BSC 链新增貔貅合约占全链的 62%，参与新币交易务必先做安全体检。'],
+      ['p','$BNB 现报 $642.30，日内小幅回落 1.1%，但链上 gas 消耗环比上升 37%，链上活跃度先行于币价。'],
+    ]},
+  a5:{src:'PANews',time:'7 小时前',domain:'panewslab.com',
+    title:'GoPlus 周报：上周新增貔貅合约 3,412 个，BSC 链占比 62%',
+    sum:'上周全链新增貔貅合约 3,412 个，BSC 占 62%、Solana 占 14%。典型手法为高卖出税率（中位数 12%）与 LP 撤池，平均存活 9 小时。附完整黑名单与检测规则。',
+    body:[
+      ['p drop','GoPlus Security 发布上周链上安全周报：全链新增貔貅合约 3,412 个，环比上升 18%。按链分布，BSC 占 62%，Solana 占 14%，Base 占 11%。'],
+      ['p','典型手法集中在两种：卖出税率中位数 12%，最高一例达到 49%；以及上线 9 小时内撤除 LP 后失联，平均存活时间约 9 小时。约 21% 的恶意合约会伪装成 GoPlus 已验证的安全标签。'],
+      ['p','InfoFlow 的代币探测已同步这批黑名单，探测结果中出现红色高危标记的合约建议直接回避。'],
+    ]},
+  a6:{src:'链上监测',time:'9 小时前',domain:'infoflow.app',
+    title:'巨鲸动向：同一地址 72 小时内累计增持 1,200 亿枚 PEPE，成本约 386 万美元',
+    sum:'某巨鲸地址 72 小时内分 14 笔买入 1,200 亿枚 PEPE，均价 $0.0000104，成本约 386 万美元。该地址历史胜率 68%，持仓周期中位数 11 天。',
+    body:[
+      ['p drop','一个历史胜率 68% 的巨鲸地址在过去 72 小时内分 14 笔累计买入 1,200 亿枚 PEPE，加权均价 $0.0000104，总成本约 386 万美元。'],
+      ['p','该地址的持仓周期中位数为 11 天，且习惯在买入后第 3 至 5 天加仓第二笔。链上数据显示其资金来自 Binance 热钱包，未做任何混币处理。'],
+      ['p','$PEPE 现报 $0.0000112，72 小时累计上涨 12.6%，24h 成交 9,670 万美元，买盘占比 54%。'],
+    ]},
+};
+
+/* =================== 渲染：实盘 Tape =================== */
+let tapeIdx = 0;
+function tapeRow(f, fresh){
+  const row = document.createElement('div');
+  row.className = 'tape-row' + (fresh ? ' fresh' : '');
+  row.setAttribute('role','button');
+  row.innerHTML = `
+    <span class="t">${f.t}</span>
+    <span class="who"><span class="side ${f.side}">${f.side==='b'?'买':'卖'}</span><span class="h">${f.h}</span><span class="sym">${f.sym}</span></span>
+    <span><span class="amt" style="display:block">${f.usd}</span><span class="px">${f.px}</span></span>`;
+  row.onclick = () => toast('完整终端在 App 内呈现');
+  return row;
+}
+function initTape(){
+  const tape = document.getElementById('tape');
+  for(let i = 0; i < 6; i++){
+    tape.appendChild(tapeRow(FILLS[tapeIdx % FILLS.length], false));
+    tapeIdx++;
+  }
+}
+function pushTape(){
+  const tape = document.getElementById('tape');
+  const f = FILLS[tapeIdx % FILLS.length];
+  const t = new Date();
+  const row = tapeRow({...f, t:[t.getHours(),t.getMinutes(),t.getSeconds()].map(n=>String(n).padStart(2,'0')).join(':')}, true);
+  tape.prepend(row);
+  tapeIdx++;
+  setTimeout(()=>row.classList.remove('fresh'), 1400);
+  while(tape.children.length > 7) tape.lastChild.remove();
+  bumpHero();
+}
+
+/* 主数字轻微跳动，营造终端感 */
+let pnl = 2471832;
+function bumpHero(){
+  pnl += Math.round((Math.random() * 2 - 0.62) * 4200);
+  const el = document.getElementById('hero-pnl');
+  const up = pnl >= 0;
+  el.textContent = (up ? '+$' : '-$') + Math.abs(pnl).toLocaleString('en-US');
+  el.className = 'num ' + (up ? 'up' : 'down');
+}
+
+/* =================== 渲染：Screener =================== */
+function chainTag(chain){
+  const c = CHAINS[chain];
+  const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const col = dark ? c.dark : c.color;
+  return `<span class="chain-tag" style="background:${col}22;color:${col}">${c.tag}</span>`;
+}
+function coinCard(sym){
+  const t = TOKENS[sym];
+  const isUp = t.chg >= 0;
+  const strip = SMART_STRIPS[sym];
+  const stripHtml = strip ? `
+    <div class="smart-strip ${strip.dir ? 'up-t' : 'down-t'}">
+      <span class="lb" style="color:${strip.dir ? 'var(--up)' : 'var(--down)'}">聪明钱</span>
+      <span class="tx">${strip.n} 位大户 24h 净${strip.dir ? '买入' : '卖出'}${strip.fb ? ' · 首买 ' + strip.fb : ''}</span>
+      <span class="net ${strip.dir ? 'up' : 'down'}">${strip.net}</span>
+    </div>` : '';
+  const safe = t.score >= 70;
+  return `
+  <article class="coin-card" onclick="openCoin('${sym}')" aria-label="${sym} 详情">
+    <div class="coin-top">
+      ${chainTag(t.chain)}
+      <span class="coin-sym">${sym}</span>
+      <span class="coin-name">${t.name}</span>
+      <span class="coin-price"><span class="p">${t.price}</span><br><span class="c ${isUp ? 'up' : 'down'}">${isUp ? '+' : ''}${t.chg.toFixed(1)}%</span></span>
+    </div>
+    <div class="coin-stats">
+      <div class="st"><div class="k">DEX</div><div class="v">${t.dex}</div></div>
+      <div class="st"><div class="k">流动性</div><div class="v">${t.liq}</div></div>
+      <div class="st"><div class="k">24h 成交</div><div class="v">${t.vol}</div></div>
+      <div class="st"><div class="k">买/卖</div><div class="v">${t.bs || '52/48'}</div></div>
+    </div>
+    <div class="safety-row">
+      <span class="safety-chip ${safe ? 'ok' : 'bad'}"><svg><use href="#i-shield"/></svg>GoPlus ${t.score}</span>
+      ${t.score < 40 ? '<span class="safety-chip bad"><svg><use href="#i-warn"/></svg>高危 · 貔貅特征</span>' : ''}
+    </div>
+    ${stripHtml}
+  </article>`;
+}
+function renderScreener(){
+  for(const [chain, syms] of Object.entries(SCREENER_LISTS)){
+    document.getElementById('list-' + chain).innerHTML = syms.map(coinCard).join('');
+  }
+}
+function setChain(btn){
+  document.querySelectorAll('.chain-pills .pill').forEach(p => {
+    const on = p === btn;
+    p.classList.toggle('on', on);
+    if(!on){ p.style.borderColor = ''; p.style.borderWidth = ''; p.style.color = ''; }
+  });
+  btn.style.borderWidth = '1.5px';
+  btn.style.color = 'var(--ink)';
+  const chain = btn.dataset.chain;
+  document.querySelectorAll('.tk-list').forEach(l => l.classList.toggle('on', l.dataset.chain === chain));
+}
+function refreshScreener(btn){
+  btn.style.transition = 'transform .5s var(--ease)';
+  btn.style.transform = 'rotate(360deg)';
+  setTimeout(()=>{ btn.style.transition = 'none'; btn.style.transform = 'none'; }, 520);
+  toast('行情已刷新');
+}
+
+/* =================== Coin detail =================== */
+function sparkPoints(seedUp){
+  let y = seedUp ? 44 : 12, pts = [];
+  for(let i = 0; i <= 16; i++){
+    const drift = seedUp ? -1.9 : 1.7;
+    y += drift + (Math.sin(i * 1.7 + (seedUp ? 2 : 5)) * 4);
+    y = Math.max(4, Math.min(48, y));
+    pts.push((i * (350 / 16)).toFixed(0) + ',' + y.toFixed(1));
+  }
+  return pts.join(' ');
+}
+function openCoin(sym, e){
+  if(e){ e.stopPropagation(); }
+  const t = TOKENS[sym] || TOKENS.SOL;
+  const isUp = t.chg >= 0;
+  document.getElementById('cd-title').textContent = sym + ' · ' + t.name;
+  document.getElementById('cd-price').textContent = t.price;
+  const chg = document.getElementById('cd-chg');
+  chg.textContent = (isUp ? '+' : '') + t.chg.toFixed(1) + '%';
+  chg.className = 'cd-chg ' + (isUp ? 'q' : 'd');
+  document.getElementById('cd-liq').textContent = t.liq;
+  document.getElementById('cd-vol').textContent = t.vol;
+  document.getElementById('cd-dex').textContent = t.dex;
+  document.getElementById('cd-ca').textContent = t.ca;
+  document.getElementById('cp-label').textContent = '复制 CA';
+  const score = document.getElementById('cd-score');
+  score.innerHTML = t.score + '<span style="font-size:11px;color:var(--t3)"> /100</span>';
+  score.style.color = t.score >= 70 ? 'var(--up)' : (t.score >= 40 ? 'var(--warn)' : 'var(--down)');
+  const bar = document.getElementById('cd-score-bar');
+  bar.style.width = t.score + '%';
+  bar.style.background = t.score >= 70 ? 'var(--up)' : (t.score >= 40 ? 'var(--warn)' : 'var(--down)');
+  const audit = document.getElementById('cd-audit');
+  audit.innerHTML = t.audit.map(([k, v, st]) => {
+    const ic = st === 'ok' ? 'i-check' : (st === 'warn' ? 'i-warn' : 'i-x');
+    const col = st === 'ok' ? 'var(--up)' : (st === 'warn' ? 'var(--warn)' : 'var(--down)');
+    return `<div class="audit-row"><svg class="st-ic" style="color:${col}"><use href="#${ic}"/></svg><span class="k">${k}</span><span class="v" style="color:${col}">${v}</span></div>`;
+  }).join('');
+  document.getElementById('cd-spark').innerHTML =
+    `<polyline points="${sparkPoints(isUp)}" fill="none" stroke="${isUp ? 'var(--up)' : 'var(--down)'}" stroke-width="1.6"/>`;
+  openOverlay('coin');
+}
+function copyCA(btn){
+  const addr = document.getElementById('cd-ca').textContent;
+  if(navigator.clipboard){ navigator.clipboard.writeText(addr).catch(()=>{}); }
+  document.getElementById('cp-label').textContent = '已复制';
+  setTimeout(()=>{ document.getElementById('cp-label').textContent = '复制 CA'; }, 1600);
+}
+
+/* =================== Reader =================== */
+function openReader(id){
+  const a = ARTICLES[id];
+  if(!a) return;
+  document.getElementById('rd-title').textContent = a.title;
+  document.getElementById('rd-src').textContent = a.src;
+  document.getElementById('rd-time').textContent = a.time;
+  document.getElementById('rd-domain').textContent = a.domain;
+  document.getElementById('rd-sum').textContent = a.sum;
+  document.getElementById('rd-body').innerHTML = a.body.map(([cls, txt]) => `<p class="${cls}">${txt}</p>`).join('');
+  closeSheet();
+  openOverlay('reader');
+}
+function openSheet(){
+  document.getElementById('sheet').classList.add('open');
+  document.getElementById('sheet-mask').classList.add('open');
+}
+function closeSheet(){
+  document.getElementById('sheet').classList.remove('open');
+  document.getElementById('sheet-mask').classList.remove('open');
+}
+
+/* =================== 通知 =================== */
+function openNotif(){
+  openSheetById('notif-sheet');
+}
+function openSheetById(id){
+  document.getElementById(id).classList.add('open');
+  document.getElementById(id + '-mask').classList.add('open');
+}
+function closeSheetById(id){
+  document.getElementById(id).classList.remove('open');
+  document.getElementById(id + '-mask').classList.remove('open');
+}
+
+/* =================== 导航 =================== */
+const TAB_PAGES = ['page-terminal','page-intel','page-screener','page-copilot','page-profile'];
+function goTab(id, btn){
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.tabbar .tab').forEach(t => t.classList.toggle('active', t === btn));
+  document.getElementById('viewport').scrollTop = 0;
+}
+function seg(el, paneId){
+  el.parentElement.querySelectorAll('.seg-tab').forEach(s => s.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('#page-intel .seg-pane').forEach(p => p.hidden = (p.id !== paneId));
+}
+function markAllRead(){
+  document.getElementById('unread-bar').style.display = 'none';
+  document.querySelectorAll('#seg-rec .a-row').forEach(r => r.classList.add('read'));
+  toast('12 篇已标记为已读');
+}
+
+/* =================== 主题 =================== */
+function setTheme(t, btn){
+  document.documentElement.setAttribute('data-theme', t);
+  document.querySelectorAll('.theme-pick button').forEach(b =>
+    b.classList.toggle('on', btn ? b === btn : (t === 'dark' ? b.textContent.includes('深色') : b.textContent.includes('浅色'))));
+}
+function thmMode(btn, mode){
+  document.querySelectorAll('#theme-seg button').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  if(mode !== 'auto') setTheme(mode, null);
+}
+
+/* =================== 设置开关 =================== */
+function toggleSwitch(item){
+  const sw = item.querySelector('.switch');
+  sw.classList.toggle('on');
+  sw.setAttribute('aria-checked', sw.classList.contains('on'));
+}
+
+/* =================== Copilot =================== */
+const CANNED = {
+  '今日链上 Alpha':'今日 Alpha 集中在两处：其一，$NEURO 三源共振（评分 82），首买者 @0xKoda 过去 30 天胜率 74%；其二，Base 链 $AERO 治理轮转带来收入新高，6 位大户 24h 净买入 52.8 万美元。风险端回避 $MOONX（GoPlus 31 分，貔貅特征）。',
+  '诊断合约风险':'把合约地址发给我即可。当前黑名单里最典型的是 BSC 链 $MOONX：卖出税率 12%、LP 未锁定、所有权未放弃，GoPlus 评分 31，属于典型的貔貅结构。',
+  '巨鲸动向速览':'过去 24 小时值得关注的巨鲸动作：某胜率 68% 的地址累计增持 1,200 亿枚 $PEPE（成本约 386 万美元）；@0xKoda 首买 $NEURO 后 12 位大户 20 分钟内抱团跟进，合计净流入 28.6 万美元。',
+  'Base 生态周报':'Base 本周要点：Aerodrome TVL 突破 18.4 亿美元，占全链 DeFi 的 41%；Virtuals 平台新发 agent 代币 84 个，头部 5 个占 92% 成交；链上稳定币余额环比 +6.2%，安全水位整体优于 BSC。',
+};
+function quickAsk(btn, q){
+  document.getElementById('chat-input').value = q;
+  sendChat();
+}
+function sendChat(){
+  const input = document.getElementById('chat-input');
+  const q = input.value.trim();
+  if(!q) return;
+  input.value = '';
+  const scroll = document.getElementById('chat-scroll');
+  const user = document.createElement('div');
+  user.className = 'msg user';
+  user.innerHTML = `<div class="bubble">${q.replace(/</g,'&lt;')}</div>`;
+  scroll.appendChild(user);
+  const ai = document.createElement('div');
+  ai.className = 'msg ai';
+  ai.innerHTML = `<div class="bubble"><span class="typing"><i></i><i></i><i></i></span></div>`;
+  scroll.appendChild(ai);
+  scroll.scrollIntoView({block:'end'});
+  setTimeout(()=>{
+    ai.querySelector('.bubble').textContent = CANNED[q] || '本地规则引擎暂未覆盖该问题，配置 LLM API key 后可解锁完整投研问答。也可以试试下方的快捷提问。';
+    scroll.scrollIntoView({block:'end'});
+  }, 900);
+}
+
+/* =================== toast =================== */
+let toastTimer;
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.opacity = '1';
+  t.style.transform = 'translateX(-50%) translateY(0)';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{ t.style.opacity = '0'; t.style.transform = 'translateX(-50%) translateY(8px)'; }, 1800);
+}
+
+/* =================== 浮层 =================== */
+function openOverlay(name){
+  document.getElementById('ov-' + name).classList.add('open');
+}
+function closeOverlay(name){
+  document.getElementById('ov-' + name).classList.remove('open');
+}
+
+/* =================== init =================== */
+initTape();
+renderScreener();
+setInterval(pushTape, 4200);
+
+/* URL hash 初始化（便于无头截图与分享状态） */
+(function(){
+  const p = new URLSearchParams(location.hash.replace(/^#/,''));
+  if(p.get('theme')){
+    document.documentElement.setAttribute('data-theme', p.get('theme'));
+    document.querySelectorAll('.theme-pick button').forEach(b =>
+      b.classList.toggle('on', b.textContent.includes(p.get('theme') === 'dark' ? '深色' : '浅色')));
+  }
+  const page = p.get('page');
+  if(page && page !== 'page-terminal'){
+    const btn = document.querySelectorAll('.tabbar .tab')[TAB_PAGES.indexOf(page)];
+    if(btn) goTab(page, btn);
+  }
+  if(p.get('overlay')) openOverlay(p.get('overlay'));
+  if(p.get('coin')) openCoin(p.get('coin'));
+})();
+</script>
+</body>
+</html>
