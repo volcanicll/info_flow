@@ -50,7 +50,7 @@ class BreakoutAlerts extends _$BreakoutAlerts {
       if (hits.isEmpty) return;
 
       final pref = ref.read(signalNotifyPrefProvider.notifier);
-      final fresh = pref.markSeen(breakoutFingerprints(hits));
+      final fresh = pref.markSeen(breakoutFingerprints(hits), category: 'bo');
       if (!_bootstrapped) {
         // 首轮仅建立基线：把当前热榜记为已见，不打扰
         _bootstrapped = true;

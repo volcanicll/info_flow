@@ -76,9 +76,9 @@ class SmartMoneyAlerts extends _$SmartMoneyAlerts {
     }
     if (hits.isEmpty) return;
 
-    // 指纹去重：只提醒本轮新出现的成交
+    // 指纹去重：只提醒本轮新出现的成交（独立分区 'sm'）
     final pref = ref.read(signalNotifyPrefProvider.notifier);
-    final freshPrints = pref.markSeen(fingerprints);
+    final freshPrints = pref.markSeen(fingerprints, category: 'sm');
     if (freshPrints.isEmpty) return;
 
     ref.read(notificationServiceProvider).showSignalAlert(

@@ -133,7 +133,7 @@ class CryptoRadar extends _$CryptoRadar {
         .toList();
     final fresh = ref
         .read(signalNotifyPrefProvider.notifier)
-        .markSeen(fingerprints);
+        .markSeen(fingerprints, category: 'radar');
     if (fresh.isEmpty) return;
 
     final top = all.take(3)
@@ -191,7 +191,7 @@ class CryptoRadar extends _$CryptoRadar {
         .toList();
     final fresh = ref
         .read(signalNotifyPrefProvider.notifier)
-        .markSeen(fingerprints);
+        .markSeen(fingerprints, category: 'radar');
     if (fresh.isEmpty) return;
 
     final top = alerts.take(3)

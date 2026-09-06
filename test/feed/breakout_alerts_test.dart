@@ -80,5 +80,30 @@ void main() {
       expect(pref.markSeen(['bo|知乎|新标题49']), isEmpty);
       expect(pref.markSeen(['bo|微博|早期标题0']), ['bo|微博|早期标题0']);
     });
+
+    test('不同 category 分区独立存储，互不冲刷', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final container = ProviderContainer(overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+      ]);
+      addTearDown(container.dispose);
+      final pref = container.read(signalNotifyPrefProvider.notifier);
+
+      // sm 录入 300 条
+      final smPrints = List.generate(300, (i) => 'sm|$i');
+      pref.markSeen(smPrints, category: 'sm');
+
+      // bo 录入 10 条
+      final boPrints = List.generate(10, (i) => 'bo|平台|$i');
+      pref.markSeen(boPrints, category: 'bo');
+
+      // 验证独立分区 key
+      expect(prefs.getStringList('signal_notify_seen_sm')?.length, 300);
+      expect(prefs.getStringList('signal_notify_seen_bo')?.length, 10);
+
+      // sm 的大批量写入不应挤出 bo 的指纹
+      expect(pref.markSeen(['bo|平台|0'], category: 'bo'), isEmpty);
+    });
   });
 }

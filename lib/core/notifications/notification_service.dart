@@ -114,16 +114,19 @@ class SignalNotifyPref extends Notifier<bool> {
   }
 
   /// 记录一组已通知过的信号指纹，返回其中「新」的信号指纹。
-  /// 指纹 = coin|direction|score，用于跨扫描去重，避免重复打扰。
-  /// 已见指纹上限 300 条（保留最新）：指纹含长标题，不设上限会随
-  /// 使用无限增长（SmartMoneyAlerts 与 BreakoutAlerts 共用本存储）。
-  List<String> markSeen(List<String> fingerprints) {
+  /// 指纹 = coin|direction|score 或 sm|id 或 bo|platform|title，用于跨扫描去重。
+  /// 支持分区分域存储（如 sm / bo / radar），每个分区独立上限 300 条（保留最新），
+  /// 避免单分区高频脉冲冲刷其他业务的指纹。
+  List<String> markSeen(List<String> fingerprints, {String? category}) {
     final prefs = ref.read(sharedPreferencesProvider);
-    final seen = prefs.getStringList(_seenKey) ?? <String>[];
+    final key = category != null && category.isNotEmpty
+        ? '${_seenKey}_$category'
+        : _seenKey;
+    final seen = prefs.getStringList(key) ?? <String>[];
     final fresh = diffFreshSignals(fingerprints, seen);
     if (fresh.isNotEmpty) {
       final merged = [...seen, ...fresh];
-      prefs.setStringList(_seenKey,
+      prefs.setStringList(key,
           merged.length > 300 ? merged.sublist(merged.length - 300) : merged);
     }
     return fresh;
