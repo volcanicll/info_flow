@@ -15,6 +15,7 @@ import 'package:info_flow/features/crypto_radar/presentation/pages/crypto_radar_
 import 'package:info_flow/features/token_screener/presentation/pages/token_screener_page.dart';
 import 'package:info_flow/features/market/presentation/pages/market_overview_page.dart';
 import 'package:info_flow/features/market/presentation/pages/coin_detail_page.dart';
+import 'package:info_flow/shared/widgets/empty_state.dart';
 import 'package:info_flow/shared/widgets/main_shell.dart';
 
 part 'router.g.dart';
@@ -48,6 +49,18 @@ GoRouter goRouter(Ref ref) {
   return GoRouter(
     initialLocation: '/market',
     debugLogDiagnostics: true,
+    errorBuilder: (context, state) => Scaffold(
+      body: SafeArea(
+        child: EmptyState(
+          icon: Icons.explore_off_outlined,
+          title: '404 · 页面未找到',
+          description: '您访问的路径不存在或已被移动：\n${state.uri}',
+          actionLabel: '返回终端首页',
+          actionIcon: Icons.home_rounded,
+          onAction: () => context.go('/market'),
+        ),
+      ),
+    ),
     routes: [
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
