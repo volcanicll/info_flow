@@ -8,7 +8,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 import '../../../../app/theme.dart';
 import '../../../feed/presentation/controllers/article_cache.dart';
 import '../../../../core/state/library_store.dart';
-import '../../../../core/state/reading_stats.dart';
+import '../../data/reading_stats.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../feed/domain/entities/article.dart';
 import '../controllers/reader_controller.dart';

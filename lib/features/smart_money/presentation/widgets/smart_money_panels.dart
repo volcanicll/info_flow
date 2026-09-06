@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../app/theme.dart';
-import '../../../../core/state/smart_money_watch_store.dart';
+import '../../data/smart_money_watch_store.dart';
 import '../../../../shared/widgets/hairline.dart';
 import '../../data/datasources/fomo_api.dart';
 import '../../data/models/rht_position.dart';

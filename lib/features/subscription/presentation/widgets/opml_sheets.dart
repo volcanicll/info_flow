@@ -8,7 +8,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../core/network/api_client.dart';
-import '../../../../core/state/subscription_store.dart';
+import '../../data/subscription_store.dart';
 import '../../data/opml_parser.dart';
 
 /// OPML 导入弹窗：支持粘贴文本或从 URL 拉取，解析后批量订阅。

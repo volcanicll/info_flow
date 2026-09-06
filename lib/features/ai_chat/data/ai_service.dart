@@ -2,7 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
-import '../../../core/state/ai_config.dart';
+import 'ai_config.dart';
 import '../../feed/presentation/controllers/article_cache.dart';
 import '../../../features/feed/domain/entities/article.dart';
 import '../../../features/market/data/fear_greed_repository.dart';

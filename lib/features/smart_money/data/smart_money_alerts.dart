@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/notifications/notification_service.dart';
-import '../../../core/state/smart_money_watch_store.dart';
+import 'smart_money_watch_store.dart';
 import 'models/rht_models.dart';
 import 'smart_money_repository.dart';
 

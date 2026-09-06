@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme.dart';
-import '../../../../core/state/ai_config.dart';
+import '../../data/ai_config.dart';
 import '../../../feed/presentation/controllers/article_cache.dart';
 import '../../../../shared/widgets/hairline.dart';
 import '../../../../shared/widgets/icon_btn.dart';

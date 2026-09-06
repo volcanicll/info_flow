@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme.dart';
-import '../../../../core/state/fomo_api_key_store.dart';
+import '../../data/fomo_api_key_store.dart';
 import '../../../../shared/widgets/hairline.dart';
 import '../../../../shared/widgets/section_header.dart';
 import '../../data/datasources/fomo_api.dart';

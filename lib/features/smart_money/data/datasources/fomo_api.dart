@@ -2,7 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/api_client.dart';
-import '../../../../core/state/fomo_api_key_store.dart';
+import '../fomo_api_key_store.dart';
 import '../models/rht_models.dart';
 
 final fomoApiProvider = Provider<FomoApi>((ref) {

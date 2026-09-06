@@ -3,7 +3,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'package:info_flow/core/network/api_client.dart';
 import 'package:info_flow/core/notifications/notification_service.dart';
-import 'package:info_flow/core/state/crypto_watchlist_store.dart';
+import '../../data/crypto_watchlist_store.dart';
 
 import '../../data/datasources/binance_api.dart';
 import '../../data/models/pool_item.dart';

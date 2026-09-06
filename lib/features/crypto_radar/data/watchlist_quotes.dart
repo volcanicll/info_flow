@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:info_flow/core/network/api_client.dart';
-import 'package:info_flow/core/state/crypto_watchlist_store.dart';
+import 'crypto_watchlist_store.dart';
 
 import 'datasources/binance_api.dart';
 import 'models/watch_quote.dart';

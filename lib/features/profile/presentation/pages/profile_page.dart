@@ -5,7 +5,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../core/notifications/notification_service.dart';
-import '../../../../core/state/fomo_api_key_store.dart';
+import '../../../smart_money/data/fomo_api_key_store.dart';
 import '../../../../core/state/library_store.dart';
 import '../../../../core/storage/kv_storage.dart';
 import '../../../feed/data/rss_sources.dart';

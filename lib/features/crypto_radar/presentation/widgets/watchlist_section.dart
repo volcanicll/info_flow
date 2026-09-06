@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme.dart';
-import '../../../../core/state/crypto_watchlist_store.dart';
+import '../../data/crypto_watchlist_store.dart';
 import '../../../../shared/widgets/hairline.dart';
 import '../../../../shared/widgets/section_header.dart';
 import '../../data/models/oi_alert.dart';

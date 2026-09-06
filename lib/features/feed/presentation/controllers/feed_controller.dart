@@ -1,6 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import 'package:info_flow/core/state/subscription_store.dart';
+import '../../../subscription/data/subscription_store.dart';
 import 'package:info_flow/features/signal_hub/data/ticker_resolver.dart';
 import 'package:info_flow/features/feed/data/newsnow_repository.dart';
 import 'package:info_flow/features/feed/data/rss_repository.dart';
