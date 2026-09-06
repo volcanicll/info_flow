@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/network/api_client.dart';
-import '../../../core/state/article_cache.dart';
+import '../../feed/presentation/controllers/article_cache.dart';
 import '../../crypto_radar/data/datasources/binance_api.dart';
 import '../domain/entities/ticker_quote.dart';
 import '../domain/entities/ticker_ref.dart';

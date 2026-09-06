@@ -1,4 +1,4 @@
-import '../../features/feed/domain/entities/article.dart';
+import '../models/article.dart';
 
 class NewsNormalizer {
 

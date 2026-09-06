@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/state/ai_config.dart';
-import '../../../core/state/article_cache.dart';
+import '../../feed/presentation/controllers/article_cache.dart';
 import '../../../features/feed/domain/entities/article.dart';
 import '../../../features/market/data/fear_greed_repository.dart';
 import '../../../features/market/data/market_repository.dart';

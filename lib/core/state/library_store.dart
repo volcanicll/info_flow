@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:info_flow/core/logging/logger.dart';
 import 'package:info_flow/core/storage/kv_storage.dart';
-import 'package:info_flow/features/feed/domain/entities/article.dart';
+import 'package:info_flow/core/models/article.dart';
 
 part 'library_store.g.dart';
 

@@ -59,7 +59,7 @@ final class SmartMoneyAlertsProvider
   }
 }
 
-String _$smartMoneyAlertsHash() => r'df7d8a42451296f4e0cd60c81e16060631de027a';
+String _$smartMoneyAlertsHash() => r'd63f6519e037b17f3d9124e391edd92c6c9c441a';
 
 /// 聪明钱后台告警：60s 增量轮询 tape（since_id 游标），命中规则即本地推送。
 ///

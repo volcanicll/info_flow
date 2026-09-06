@@ -1,6 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import 'package:info_flow/features/feed/domain/entities/article.dart';
+import 'package:info_flow/core/models/article.dart';
 import 'package:info_flow/features/feed/presentation/controllers/feed_controller.dart';
 
 part 'article_cache.g.dart';

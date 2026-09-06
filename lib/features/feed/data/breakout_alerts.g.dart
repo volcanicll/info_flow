@@ -59,7 +59,7 @@ final class BreakoutAlertsProvider
   }
 }
 
-String _$breakoutAlertsHash() => r'd238430116fff2dc6e9568a0831adae24bd055ab';
+String _$breakoutAlertsHash() => r'c66122751d721f9ab9107b27bce0cf6dbd8ac794';
 
 /// 破圈后台告警：10 分钟轮询一次微博/知乎/头条热榜，命中 Web3
 /// 关键词且未推送过即本地推送。

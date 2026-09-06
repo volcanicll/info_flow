@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:info_flow/core/state/article_cache.dart';
+import 'package:info_flow/features/feed/presentation/controllers/article_cache.dart';
 import 'package:info_flow/core/storage/kv_storage.dart';
 import 'package:info_flow/features/feed/domain/entities/article.dart';
 import 'package:info_flow/features/search/presentation/controllers/search_controller.dart';

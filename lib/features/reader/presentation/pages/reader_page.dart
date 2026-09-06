@@ -6,7 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../../../app/theme.dart';
-import '../../../../core/state/article_cache.dart';
+import '../../../feed/presentation/controllers/article_cache.dart';
 import '../../../../core/state/library_store.dart';
 import '../../../../core/state/reading_stats.dart';
 import '../../../../shared/widgets/empty_state.dart';

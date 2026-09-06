@@ -1,6 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../../../core/state/article_cache.dart';
+import '../../../feed/presentation/controllers/article_cache.dart';
 import '../../../../core/storage/kv_storage.dart';
 import '../../../feed/domain/entities/article.dart';
 
