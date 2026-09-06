@@ -3,9 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme.dart';
+import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/hairline.dart';
 import '../../../../shared/widgets/icon_btn.dart';
-import '../../../smart_money/data/models/rht_token.dart';
+import '../../../../shared/widgets/press_scale.dart';import '../../../smart_money/data/models/rht_token.dart';
 import '../../../smart_money/data/smart_money_signals.dart';
 import '../../../smart_money/presentation/format.dart';
 import '../../domain/models/onchain_token.dart';
@@ -190,34 +191,43 @@ class _TokenScreenerPageState extends ConsumerState<TokenScreenerPage> {
             ),
             // 结果列表
             Expanded(
-              child: state.results.isEmpty && !state.loading
+              child: state.loading && state.results.isEmpty
                   ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.radar_rounded,
-                              size: 40, color: c.hairlineStrong),
-                          const SizedBox(height: 12),
-                          Text('未检索到代币', style: theme.textTheme.titleMedium),
-                          const SizedBox(height: 6),
-                          Text(
-                            '请核对合约地址 (CA) 或尝试直接搜索代币名称',
-                            style: theme.textTheme.bodySmall
-                                ?.copyWith(color: c.inkTertiary),
-                          ),
-                        ],
+                      child: Text(
+                        '正在探测链上代币…',
+                        style: theme.textTheme.bodyMedium
+                            ?.copyWith(color: c.inkTertiary),
                       ),
                     )
-                  : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-                      itemCount: state.results.length,
-                      separatorBuilder: (_, _) =>
-                          const SizedBox(height: 10),
-                      itemBuilder: (context, index) {
-                        final token = state.results[index];
-                        return _TokenCard(token: token);
-                      },
-                    ),
+                  : state.error != null && state.results.isEmpty
+                      ? EmptyState(
+                          icon: Icons.error_outline_rounded,
+                          title: '探测失败',
+                          description: state.error!,
+                          actionLabel: '重试',
+                          actionIcon: Icons.refresh_rounded,
+                          onAction: () => ref
+                              .read(tokenScreenerProvider.notifier)
+                              .loadTrending(
+                                  state.selectedChain ?? ChainType.solana),
+                        )
+                      : state.results.isEmpty
+                          ? const EmptyState(
+                              icon: Icons.radar_rounded,
+                              title: '未检索到代币',
+                              description: '请核对合约地址 (CA) 或尝试直接搜索代币名称',
+                            )
+                          : ListView.separated(
+                              padding:
+                                  const EdgeInsets.fromLTRB(16, 12, 16, 32),
+                              itemCount: state.results.length,
+                              separatorBuilder: (_, _) =>
+                                  const SizedBox(height: 10),
+                              itemBuilder: (context, index) {
+                                final token = state.results[index];
+                                return _TokenCard(token: token);
+                              },
+                            ),
             ),
           ],
         ),
@@ -324,13 +334,12 @@ class _TokenCard extends ConsumerWidget {
     final flowIndex = ref.watch(smartMoneyFlowIndexProvider).value;
     final flow = flowIndex?.byAddress[token.address.toLowerCase()];
 
-    return InkWell(
+    return PressScale(
       onTap: () {
         context.push(
           '/coin/${token.symbol}?address=${token.address}&chain=${token.chain.id}',
         );
       },
-      borderRadius: BorderRadius.circular(4),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
