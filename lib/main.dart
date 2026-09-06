@@ -97,6 +97,13 @@ class _InfoFlowAppState extends ConsumerState<InfoFlowApp> {
         darkTheme: AppTheme.darkTheme,
         themeMode: themeMode,
         routerConfig: router,
+        builder: (context, child) {
+          return MediaQuery.withClampedTextScaling(
+            minScaleFactor: 0.85,
+            maxScaleFactor: 1.3,
+            child: child ?? const SizedBox.shrink(),
+          );
+        },
       ),
     );
   }
