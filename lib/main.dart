@@ -1,3 +1,6 @@
+import 'dart:ui';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
@@ -13,11 +16,25 @@ import 'features/smart_money/data/smart_money_alerts.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // 全局错误边界：捕获 Widget build 异常与异步未处理异常，防止红屏
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    debugPrint('[FlutterError] ${details.exceptionAsString()}');
+  };
+  PlatformDispatcher.instance.onError = (error, stack) {
+    debugPrint('[PlatformError] $error\n$stack');
+    return true;
+  };
+
   // 预加载 SharedPreferences，通过 override 注入，全部 store 同步读取初始值
   final prefs = await SharedPreferences.getInstance();
 
   // 初始化本地通知（信号/异动主动触达），失败不阻塞启动
-  await NotificationService.instance.init();
+  try {
+    await NotificationService.instance.init();
+  } catch (e) {
+    debugPrint('[Notification] init failed: $e');
+  }
 
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
