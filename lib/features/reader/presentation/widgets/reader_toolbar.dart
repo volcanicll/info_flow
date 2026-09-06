@@ -30,17 +30,55 @@ class ReaderIconBtn extends StatelessWidget {
   final Color color;
   final double size;
   final VoidCallback onTap;
+  final String? tooltip;
+  final String? semanticsLabel;
+
   const ReaderIconBtn({
     super.key,
     required this.icon,
     required this.color,
     this.size = 22,
     required this.onTap,
+    this.tooltip,
+    this.semanticsLabel,
   });
+
+  String? _inferLabel(IconData icon) {
+    if (icon == Icons.arrow_back ||
+        icon == Icons.arrow_back_rounded ||
+        icon == Icons.arrow_back_ios ||
+        icon == Icons.arrow_back_ios_new) {
+      return '返回';
+    }
+    if (icon == Icons.ios_share ||
+        icon == Icons.ios_share_rounded ||
+        icon == Icons.share ||
+        icon == Icons.share_rounded) {
+      return '分享';
+    }
+    if (icon == Icons.more_horiz ||
+        icon == Icons.more_horiz_rounded ||
+        icon == Icons.more_vert ||
+        icon == Icons.more_vert_rounded) {
+      return '更多选项';
+    }
+    if (icon == Icons.format_size || icon == Icons.format_size_rounded) {
+      return '排版设置';
+    }
+    if (icon == Icons.bookmark ||
+        icon == Icons.bookmark_rounded ||
+        icon == Icons.bookmark_border ||
+        icon == Icons.bookmark_outline_rounded) {
+      return '收藏';
+    }
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
-    return PressScale(
+    final effectiveLabel = semanticsLabel ?? tooltip ?? _inferLabel(icon);
+
+    Widget button = PressScale(
       pressedScale: 0.85,
       onTap: onTap,
       child: SizedBox(
@@ -49,6 +87,20 @@ class ReaderIconBtn extends StatelessWidget {
         child: Icon(icon, size: size, color: color),
       ),
     );
+
+    if (tooltip != null && tooltip!.isNotEmpty) {
+      button = Tooltip(message: tooltip!, child: button);
+    }
+
+    if (effectiveLabel != null) {
+      button = Semantics(
+        button: true,
+        label: effectiveLabel,
+        child: button,
+      );
+    }
+
+    return button;
   }
 }
 
