@@ -90,10 +90,8 @@ class _TokenScreenerPageState extends ConsumerState<TokenScreenerPage> {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
               child: Container(
                 decoration: BoxDecoration(
-                  color: theme.brightness == Brightness.light
-                      ? Colors.grey.shade100
-                      : Colors.white10,
-                  borderRadius: BorderRadius.circular(8),
+                  color: c.surface2,
+                  borderRadius: BorderRadius.circular(4),
                   border: Border.all(color: c.hairlineStrong, width: 0.8),
                 ),
                 child: TextField(
@@ -253,7 +251,7 @@ class _ChainPill extends StatelessWidget {
           color: active ? color.withValues(alpha: 0.18) : Colors.transparent,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: active ? color : Colors.grey.withValues(alpha: 0.3),
+            color: active ? color : context.colors.hairlineStrong,
             width: active ? 1.5 : 1.0,
           ),
         ),
@@ -274,7 +272,7 @@ class _ChainPill extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: active ? FontWeight.w800 : FontWeight.w500,
-                color: active ? color : Colors.grey.shade600,
+                color: active ? color : context.colors.inkTertiary,
               ),
             ),
           ],
@@ -332,22 +330,13 @@ class _TokenCard extends ConsumerWidget {
           '/coin/${token.symbol}?address=${token.address}&chain=${token.chain.id}',
         );
       },
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(4),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: theme.brightness == Brightness.light
-              ? Colors.white
-              : Colors.grey.shade900,
-          borderRadius: BorderRadius.circular(10),
+          color: c.surface,
+          borderRadius: BorderRadius.circular(4),
           border: Border.all(color: c.hairlineStrong, width: 0.6),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
