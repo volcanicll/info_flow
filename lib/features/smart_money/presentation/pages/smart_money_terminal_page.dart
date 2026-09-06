@@ -6,8 +6,9 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../app/theme.dart';
 import '../../../../shared/widgets/hairline.dart';
 import '../../../../shared/widgets/icon_btn.dart';
-import '../../../feed/data/newsnow_repository.dart';
-import '../../data/models/rht_models.dart';
+import '../../../../shared/widgets/press_scale.dart';
+import '../../../../shared/widgets/section_header.dart';
+import '../../../feed/data/newsnow_repository.dart';import '../../data/models/rht_models.dart';
 import '../../data/rht_tape_stream.dart';
 import '../../data/smart_money_signals.dart';
 import '../controllers/smart_money_controller.dart';
@@ -55,20 +56,20 @@ class SmartMoneyTerminalPage extends ConsumerWidget {
                     .read(smartMoneyProvider.notifier)
                     .setOverviewWindow(w),
               ),
-              _SectionHeader(
+              SectionHeader(
                 kicker: 'LIVE TAPE · 实盘',
                 action: '全部',
                 onAction: () => context.push('/smart-money'),
               ),
               _TapeTeaser(state: state),
               Hairline(color: c.hairline),
-              _SectionHeader(kicker: 'SMART RESONANCE · 三源共振'),
+              const SectionHeader(kicker: 'SMART RESONANCE · 三源共振'),
               _ResonanceTeaser(resonance: resonance),
               Hairline(color: c.hairline),
-              _SectionHeader(kicker: 'COPY FLOW · 抱团跟单'),
+              const SectionHeader(kicker: 'COPY FLOW · 抱团跟单'),
               _FlowTeaser(state: state),
               Hairline(color: c.hairline),
-              _SectionHeader(
+              SectionHeader(
                 kicker: 'TOP TRADERS · 24H 盈亏榜',
                 action: '榜单',
                 onAction: () => context.push('/smart-money'),
@@ -236,54 +237,6 @@ class _HeroStat extends StatelessWidget {
   }
 }
 
-/// 区块头：kicker 小字 + 右侧动作，编辑部栏目语言。
-class _SectionHeader extends StatelessWidget {
-  final String kicker;
-  final String? action;
-  final VoidCallback? onAction;
-
-  const _SectionHeader({required this.kicker, this.action, this.onAction});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final c = context.colors;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(kicker,
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: c.inkSecondary,
-                  letterSpacing: 1.2,
-                  fontWeight: FontWeight.w700,
-                )),
-          ),
-          if (action != null)
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: onAction,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(action!,
-                        style: theme.textTheme.labelSmall
-                            ?.copyWith(color: c.accent)),
-                    Icon(Icons.chevron_right_rounded,
-                        size: 14, color: c.accent),
-                  ],
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
 /// Tape 预览：最近 8 笔，点击行进完整终端。
 class _TapeTeaser extends StatelessWidget {
   final SmartMoneyState state;
@@ -307,8 +260,7 @@ class _TapeTeaser extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Hairline(color: context.colors.hairline),
             ),
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
+          PressScale(
             onTap: () => context.push('/smart-money'),
             child: TapeRow(
               fill: f,
@@ -397,7 +349,7 @@ class _BreakoutSection extends ConsumerWidget {
       decoration: BoxDecoration(border: Border(top: BorderSide(color: c.hairline))),
       child: Column(
         children: [
-          _SectionHeader(kicker: 'BREAKOUT RADAR · 破圈信号'),
+          const SectionHeader(kicker: 'BREAKOUT RADAR · 破圈信号'),
           async.when(
             loading: () => const _TeaserPlaceholder(message: '扫描微博 / 知乎 / 头条热榜…'),
             error: (_, _) => const _TeaserPlaceholder(message: '破圈雷达暂不可用'),

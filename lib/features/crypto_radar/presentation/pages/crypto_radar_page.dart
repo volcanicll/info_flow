@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme.dart';
 import '../../../../shared/widgets/auto_refresh.dart';
 import '../../../../shared/widgets/editorial_card.dart';
+import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/hairline.dart';
 import '../../../../shared/widgets/icon_btn.dart';
 import '../controllers/crypto_radar_controller.dart';
@@ -74,21 +75,23 @@ class CryptoRadarPage extends ConsumerWidget {
     final c = context.colors;
     switch (state.status) {
       case ScanStatus.idle:
-        return RadarMessageView(
+        return EmptyState(
           icon: Icons.radar_rounded,
           title: '雷达待命',
-          subtitle: '点击开始扫描全市场资金信号',
+          description: '点击开始扫描全市场资金信号',
           actionLabel: '开始扫描',
+          actionIcon: Icons.radar_rounded,
           onAction: notifier.startFullScan,
         );
       case ScanStatus.scanning:
         return RadarScanning(message: state.progressMessage);
       case ScanStatus.error:
-        return RadarMessageView(
+        return EmptyState(
           icon: Icons.error_outline_rounded,
           title: '扫描失败',
-          subtitle: state.error ?? '未知错误',
+          description: state.error ?? '未知错误',
           actionLabel: '重试',
+          actionIcon: Icons.refresh_rounded,
           onAction: notifier.startFullScan,
         );
       case ScanStatus.done:
