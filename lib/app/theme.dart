@@ -20,7 +20,7 @@ class AppTheme {
   static const _tintLight = Color(0xFFEEE9DD); // 强调底纹
   static const _inkLight = Color(0xFF1A1917); // 主文墨黑
   static const _t2Light = Color(0xFF57534E); // 次级文（暖灰）
-  static const _t3Light = Color(0xFF8A857D); // 辅助文
+  static const _t3Light = Color(0xFF706B63); // 辅助文（对比度合规 ≥ 4.5:1）
   static const _hairLight = Color(0xFFE5E2DA); // 发丝线
   static const _hairStrongLight = Color(0xFFD4CFC3); // 重发丝线
   static const _accentLight = Color(0xFFC0392B); // 编辑红
@@ -32,7 +32,7 @@ class AppTheme {
   static const _tintDark = Color(0xFF35302A);
   static const _inkDark = Color(0xFFEDE9E0);
   static const _t2Dark = Color(0xFFB0AAA0);
-  static const _t3Dark = Color(0xFF7C766C);
+  static const _t3Dark = Color(0xFF908A7E); // 辅助文（对比度合规 ≥ 4.5:1）
   static const _hairDark = Color(0xFF34322E);
   static const _hairStrongDark = Color(0xFF454239);
   static const _accentDark = Color(0xFFE27060);
