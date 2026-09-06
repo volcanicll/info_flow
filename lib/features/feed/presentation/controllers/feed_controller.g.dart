@@ -50,7 +50,7 @@ final class FeedControllerProvider
   }
 }
 
-String _$feedControllerHash() => r'04ea2fe4fe026f2eb01c77b56966339b246af6ab';
+String _$feedControllerHash() => r'e73eef8f9a4c425ab5c40164f55e06d5401fdf1a';
 
 final class FeedControllerFamily extends $Family
     with

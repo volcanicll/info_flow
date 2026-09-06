@@ -7,6 +7,7 @@ import 'app/theme.dart';
 import 'app/router.dart';
 import 'core/notifications/notification_service.dart';
 import 'core/storage/kv_storage.dart';
+import 'features/feed/data/breakout_alerts.dart';
 import 'features/smart_money/data/smart_money_alerts.dart';
 
 void main() async {
@@ -46,8 +47,10 @@ class _InfoFlowAppState extends ConsumerState<InfoFlowApp> {
   @override
   void initState() {
     super.initState();
-    // 启动聪明钱后台告警轮询（keepAlive，60s 增量拉 tape）
+    // 启动后台告警轮询（keepAlive）：
+    // 聪明钱 60s 增量拉 tape；破圈雷达 10min 扫大众热榜
     ref.read(smartMoneyAlertsProvider);
+    ref.read(breakoutAlertsProvider);
   }
 
   @override
