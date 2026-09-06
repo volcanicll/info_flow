@@ -16,6 +16,34 @@ part 'smart_money_controller.g.dart';
 /// 页面内分段视图。
 enum SmartTab { tape, traders, closed, flow, tokens }
 
+/// 实盘 tape 的资产分流：上游把美股 track（NVDA/MU 等）与链上代币
+/// 混在一条流里（is_stock 标记），UI 侧负责过滤。
+enum TapeAssetFilter { all, tokens, stocks }
+
+/// 大户榜排序维度：字段全部来自 /api/traders，纯客户端排序。
+enum TraderSort {
+  netPnl('总盈亏'),
+  unrealized('浮动盈亏'),
+  winRate('胜率'),
+  volume('成交额'),
+  fills('笔数'),
+  followers('粉丝数');
+
+  final String label;
+  const TraderSort(this.label);
+
+  /// 降序比较器。胜率缺失（未平仓过）沉底。
+  int compare(RhtTrader a, RhtTrader b) => switch (this) {
+        TraderSort.netPnl => b.netPnl.compareTo(a.netPnl),
+        TraderSort.unrealized => b.unrealizedPnl.compareTo(a.unrealizedPnl),
+        TraderSort.winRate =>
+          (b.winRate ?? -1).compareTo(a.winRate ?? -1),
+        TraderSort.volume => b.volume.compareTo(a.volume),
+        TraderSort.fills => b.fills.compareTo(a.fills),
+        TraderSort.followers => b.followers.compareTo(a.followers),
+      };
+}
+
 /// 聪明钱页状态：tape 走 WS 实时流，统计/榜单走 15s 轮询。
 class SmartMoneyState {
   final RhtTapeConn conn;
@@ -29,6 +57,10 @@ class SmartMoneyState {
   final Set<int> freshIds;
 
   final RhtStatus? status;
+
+  /// 总览时间窗（/api/overview 的 window 参数）：上游原生支持
+  /// 1h/24h/7d/30d/all，hero 主数字随窗口切换。
+  final String overviewWindow;
   final RhtOverview? overview;
   final SmartTab tab;
   final bool panelsLoading;
@@ -39,6 +71,12 @@ class SmartMoneyState {
 
   /// 关键字过滤：匹配代币 symbol / 交易员 handle。
   final String filter;
+
+  /// tape 资产分流。
+  final TapeAssetFilter assetFilter;
+
+  /// 大户榜排序维度。
+  final TraderSort traderSort;
 
   /// 大户榜时间窗：'24h' 用 robinhoodtrenches 榜（含胜率/仓位状态），
   /// '7d'/'30d'/'all' 用 fomoapi 跨链榜（fomoLeaders 非空即生效）。
@@ -52,6 +90,7 @@ class SmartMoneyState {
     this.fills = const [],
     this.freshIds = const {},
     this.status,
+    this.overviewWindow = '24h',
     this.overview,
     this.tab = SmartTab.tape,
     this.panelsLoading = false,
@@ -60,6 +99,8 @@ class SmartMoneyState {
     this.flows = const [],
     this.tokenFlows = const [],
     this.filter = '',
+    this.assetFilter = TapeAssetFilter.all,
+    this.traderSort = TraderSort.netPnl,
     this.leaderboardWindow = '24h',
     this.fomoLeaders,
     this.fomoLeadersLoading = false,
@@ -75,6 +116,7 @@ class SmartMoneyState {
     List<RhtFill>? fills,
     Set<int>? freshIds,
     RhtStatus? status,
+    String? overviewWindow,
     RhtOverview? overview,
     SmartTab? tab,
     bool? panelsLoading,
@@ -83,6 +125,8 @@ class SmartMoneyState {
     List<RhtFlowChain>? flows,
     List<RhtTokenFlow>? tokenFlows,
     String? filter,
+    TapeAssetFilter? assetFilter,
+    TraderSort? traderSort,
     String? leaderboardWindow,
     List<FomoLeaderEntry>? fomoLeaders,
     bool clearFomoLeaders = false,
@@ -94,6 +138,7 @@ class SmartMoneyState {
       fills: fills ?? this.fills,
       freshIds: freshIds ?? this.freshIds,
       status: status ?? this.status,
+      overviewWindow: overviewWindow ?? this.overviewWindow,
       overview: overview ?? this.overview,
       tab: tab ?? this.tab,
       panelsLoading: panelsLoading ?? this.panelsLoading,
@@ -102,6 +147,8 @@ class SmartMoneyState {
       flows: flows ?? this.flows,
       tokenFlows: tokenFlows ?? this.tokenFlows,
       filter: filter ?? this.filter,
+      assetFilter: assetFilter ?? this.assetFilter,
+      traderSort: traderSort ?? this.traderSort,
       leaderboardWindow: leaderboardWindow ?? this.leaderboardWindow,
       fomoLeaders: clearFomoLeaders ? null : (fomoLeaders ?? this.fomoLeaders),
       fomoLeadersLoading: fomoLeadersLoading ?? this.fomoLeadersLoading,
@@ -173,7 +220,7 @@ class SmartMoney extends _$SmartMoney {
     try {
       // 终端首页常驻展示大户榜与跟单链，随总览一起刷新（与上游站点节奏一致）
       final results = await Future.wait([
-        _repo.fetchOverview(),
+        _repo.fetchOverview(window: state.overviewWindow),
         _repo.fetchTraders().catchError((_) => <RhtTrader>[]),
         _repo.fetchFlowChains().catchError((_) => <RhtFlowChain>[]),
       ]);
@@ -192,6 +239,19 @@ class SmartMoney extends _$SmartMoney {
       if (ref.mounted && !silent) {
         state = state.copyWith(panelsLoading: false);
       }
+    }
+  }
+
+  /// 切换总览时间窗（1h/24h/7d/30d/all）：立即静默重拉总览，
+  /// 周期轮询此后沿用新窗口。
+  Future<void> setOverviewWindow(String window) async {
+    if (state.overviewWindow == window) return;
+    state = state.copyWith(overviewWindow: window, clearError: true);
+    try {
+      final overview = await _repo.fetchOverview(window: window);
+      if (ref.mounted) state = state.copyWith(overview: overview);
+    } catch (e) {
+      if (ref.mounted) state = state.copyWith(error: mapToAppException(e).message);
     }
   }
 
@@ -261,6 +321,16 @@ class SmartMoney extends _$SmartMoney {
 
   void setFilter(String value) {
     state = state.copyWith(filter: value);
+  }
+
+  /// 切换 tape 资产分流（纯 UI 过滤，不动数据流）。
+  void setAssetFilter(TapeAssetFilter f) {
+    state = state.copyWith(assetFilter: f);
+  }
+
+  /// 切换大户榜排序（纯客户端排序）。
+  void setTraderSort(TraderSort s) {
+    state = state.copyWith(traderSort: s);
   }
 
   void _teardown() {

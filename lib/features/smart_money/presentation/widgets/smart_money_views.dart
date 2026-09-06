@@ -7,6 +7,7 @@ import '../../data/models/rht_models.dart';
 import '../../data/rht_tape_stream.dart';
 import '../controllers/smart_money_controller.dart';
 import '../format.dart';
+import 'smart_money_panels.dart';
 
 /// 连接状态徽标：LIVE / 轮询 / 离线。
 class ConnChip extends StatelessWidget {
@@ -50,11 +51,80 @@ class ConnChip extends StatelessWidget {
   }
 }
 
-/// 24h 总览条：净盈亏为主数字，其余为紧凑格子。
+/// 窗口标签：'24h' -> '24H'，'all' -> '全部'。
+String windowLabel(String window) => switch (window) {
+      '1h' => '1H',
+      '24h' => '24H',
+      '7d' => '7D',
+      '30d' => '30D',
+      'all' => '全部',
+      _ => window.toUpperCase(),
+    };
+
+/// 时间窗切换 chips：编辑部细边框方块，激活态墨框加粗。
+class WindowChipRow extends StatelessWidget {
+  final List<(String, String)> windows;
+  final String active;
+  final ValueChanged<String> onChanged;
+
+  const WindowChipRow({
+    super.key,
+    required this.windows,
+    required this.active,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final c = context.colors;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+      child: Row(
+        children: [
+          for (final (value, label) in windows) ...[
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => onChanged(value),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: value == active ? c.ink : c.hairlineStrong,
+                    width: value == active ? 1 : 0.6,
+                  ),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+                child: Text(label,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: value == active ? c.ink : c.inkTertiary,
+                      fontWeight:
+                          value == active ? FontWeight.w700 : FontWeight.w400,
+                      letterSpacing: 0.5,
+                    )),
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// 总览条：净盈亏为主数字，其余为紧凑格子。标签随时间窗变化。
 class OverviewStrip extends StatelessWidget {
   final RhtOverview? overview;
 
-  const OverviewStrip({super.key, required this.overview});
+  /// 当前时间窗（'24h' 缺省），用于「24H 净盈亏」标签。
+  final String window;
+
+  const OverviewStrip({
+    super.key,
+    required this.overview,
+    this.window = '24h',
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -79,7 +149,7 @@ class OverviewStrip extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text('24H 净盈亏',
+              Text('${windowLabel(window)} 净盈亏',
                   style: theme.textTheme.labelSmall
                       ?.copyWith(color: c.inkTertiary, letterSpacing: 1.2)),
               const Spacer(),
@@ -176,7 +246,7 @@ class SmartTabBar extends StatelessWidget {
   }
 }
 
-/// 实盘 tape：顶部过滤框 + 成交行列表。
+/// 实盘 tape：顶部过滤框 + 资产分流 + 成交行列表。
 class TapeView extends ConsumerWidget {
   final SmartMoneyState state;
 
@@ -187,13 +257,17 @@ class TapeView extends ConsumerWidget {
     final c = context.colors;
     final theme = Theme.of(context);
     final filter = state.filter.trim().toLowerCase();
-    final rows = filter.isEmpty
-        ? state.fills
-        : state.fills
-            .where((f) =>
-                f.symbol.toLowerCase().contains(filter) ||
-                f.handle.toLowerCase().contains(filter))
-            .toList();
+    final rows = state.fills
+        .where((f) => switch (state.assetFilter) {
+              TapeAssetFilter.tokens => !f.isStock,
+              TapeAssetFilter.stocks => f.isStock,
+              TapeAssetFilter.all => true,
+            })
+        .where((f) =>
+            filter.isEmpty ||
+            f.symbol.toLowerCase().contains(filter) ||
+            f.handle.toLowerCase().contains(filter))
+        .toList();
 
     if (state.fills.isEmpty) {
       return Center(
@@ -223,7 +297,7 @@ class TapeView extends ConsumerWidget {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 10, 20, 6),
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
           child: TextField(
             onChanged: (v) =>
                 ref.read(smartMoneyProvider.notifier).setFilter(v),
@@ -236,22 +310,69 @@ class TapeView extends ConsumerWidget {
             ),
           ),
         ),
+        _AssetFilterChips(active: state.assetFilter),
         Expanded(
-          child: ListView.separated(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.only(bottom: 24),
-            itemCount: rows.length,
-            separatorBuilder: (_, _) => Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Hairline(color: c.hairline),
-            ),
-            itemBuilder: (context, i) => TapeRow(
-              fill: rows[i],
-              fresh: state.freshIds.contains(rows[i].id),
-            ),
-          ),
+          child: rows.isEmpty
+              ? PanelPlaceholder(message: '该分流暂无成交')
+              : ListView.separated(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.only(bottom: 24),
+                  itemCount: rows.length,
+                  separatorBuilder: (_, _) => Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Hairline(color: c.hairline),
+                  ),
+                  itemBuilder: (context, i) => TapeRow(
+                    fill: rows[i],
+                    fresh: state.freshIds.contains(rows[i].id),
+                  ),
+                ),
         ),
       ],
+    );
+  }
+}
+
+/// tape 资产分流 chips：全部 / 币 / 股。
+class _AssetFilterChips extends ConsumerWidget {
+  final TapeAssetFilter active;
+
+  const _AssetFilterChips({required this.active});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final c = context.colors;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 2),
+      child: Row(
+        children: [
+          for (final f in TapeAssetFilter.values) ...[
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () =>
+                  ref.read(smartMoneyProvider.notifier).setAssetFilter(f),
+              child: Text(
+                switch (f) {
+                  TapeAssetFilter.all => '全部',
+                  TapeAssetFilter.tokens => '币',
+                  TapeAssetFilter.stocks => '股',
+                },
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: f == active ? c.ink : c.inkTertiary,
+                  fontWeight: f == active ? FontWeight.w700 : FontWeight.w400,
+                  letterSpacing: 1,
+                ),
+              ),
+            ),
+            const SizedBox(width: 18),
+          ],
+          const Spacer(),
+          Text('BUY & SELL · 被追踪钱包',
+              style: theme.textTheme.labelSmall
+                  ?.copyWith(color: c.inkTertiary, fontSize: 9.5)),
+        ],
+      ),
     );
   }
 }
@@ -301,7 +422,16 @@ class TapeRow extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const SizedBox(width: 6),
+                    if (fill.isStock) ...[
+                      const SizedBox(width: 5),
+                      Text('股',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: c.warn,
+                            fontWeight: FontWeight.w700,
+                          )),
+                      const SizedBox(width: 5),
+                    ] else
+                      const SizedBox(width: 6),
                     Flexible(
                       child: Text(
                         fill.symbol,

@@ -9,6 +9,7 @@ import '../../data/datasources/fomo_api.dart';
 import '../../data/models/rht_position.dart';
 import '../../data/models/rht_token.dart';
 import '../../data/models/rht_trader.dart';
+import '../controllers/smart_money_controller.dart';
 import '../format.dart';
 import 'trader_detail_sheet.dart';
 
@@ -67,6 +68,60 @@ class LeaderWindowChips extends StatelessWidget {
           Text(active == '24h' ? 'ROBINHOOD 链' : 'FOMO 全链',
               style: theme.textTheme.labelSmall
                   ?.copyWith(color: c.inkTertiary, fontSize: 10)),
+        ],
+      ),
+    );
+  }
+}
+
+/// 大户榜排序切换：字段与上游站点一致，纯客户端排序。
+class TraderSortChips extends StatelessWidget {
+  final TraderSort active;
+  final ValueChanged<TraderSort> onChanged;
+
+  const TraderSortChips({
+    super.key,
+    required this.active,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final c = context.colors;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 2, 20, 4),
+      child: Row(
+        children: [
+          Text('排序',
+              style: theme.textTheme.labelSmall
+                  ?.copyWith(color: c.inkTertiary, fontSize: 10)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              clipBehavior: Clip.none,
+              child: Row(
+                children: [
+                  for (final s in TraderSort.values) ...[
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => onChanged(s),
+                      child: Text(
+                        s.label,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: s == active ? c.ink : c.inkTertiary,
+                          fontWeight:
+                              s == active ? FontWeight.w700 : FontWeight.w400,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                  ],
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );

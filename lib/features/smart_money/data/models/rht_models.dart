@@ -162,6 +162,10 @@ class RhtFill {
   final double usd;
   final double amount;
   final double? price;
+
+  /// 上游标记的股票成交（Robinhood 美股 track，如 NVDA/MU）；
+  /// 与链上代币成交共用一条 tape，UI 侧负责分流展示。
+  final bool isStock;
   final bool isNewPosition;
   final String handle;
   final String? displayName;
@@ -184,6 +188,7 @@ class RhtFill {
     required this.usd,
     required this.amount,
     required this.price,
+    required this.isStock,
     required this.isNewPosition,
     required this.handle,
     required this.displayName,
@@ -205,6 +210,7 @@ class RhtFill {
         usd: j.d('usd') ?? 0,
         amount: j.d('amount') ?? 0,
         price: j.d('price'),
+        isStock: j.b('is_stock'),
         isNewPosition: (j.i('new_position') ?? 0) == 1,
         handle: j['handle'] as String? ?? '—',
         displayName: j['display_name'] as String?,

@@ -62,6 +62,7 @@ class RssSources {
   static const Color _cPANews = Color(0xFF0EA5E9);
   static const Color _cBankless = Color(0xFFE11D48);
   static const Color _cTheBlock = Color(0xFF000000);
+  static const Color _cSoPilot = Color(0xFF14171A);
 
   static const List<RssSource> all = [
     // ====== Solana 生态 ======
@@ -210,6 +211,15 @@ class RssSources {
       color: _cTheBlock,
       description: '权威链上数据研究与行业情报',
     ),
+    RssSource(
+      id: 'sopilot-hot-tweets',
+      name: 'SoPilot · X 起爆帖',
+      feedUrl: 'https://sopilot.net/rss/hottweets',
+      siteUrl: 'https://sopilot.net/zh/hot-tweets',
+      category: FeedCategory.defi,
+      color: _cSoPilot,
+      description: 'X 上正在起爆的 Web3 帖子（爆速监测，约 30 分钟更新）',
+    ),
   ];
 
   /// 按分类获取
@@ -229,6 +239,7 @@ class RssSources {
     'foresight-news',
     'panews',
     'bankless',
+    'sopilot-hot-tweets',
   ];
 
   /// 根据 id 查找

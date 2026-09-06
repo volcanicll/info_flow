@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/theme.dart';
 import '../../../../shared/widgets/hairline.dart';
 import '../../../../shared/widgets/icon_btn.dart';
+import '../../data/models/rht_trader.dart';
 import '../controllers/smart_money_controller.dart';
 import '../widgets/smart_money_panels.dart';
 import '../widgets/smart_money_views.dart';
@@ -89,7 +90,7 @@ class _SmartMoneyPageState extends ConsumerState<SmartMoneyPage>
                   style: theme.textTheme.labelSmall?.copyWith(color: c.down),
                 ),
               ),
-            OverviewStrip(overview: state.overview),
+            OverviewStrip(overview: state.overview, window: state.overviewWindow),
             SmartTabBar(
               active: state.tab,
               onChanged: notifier.setTab,
@@ -104,6 +105,12 @@ class _SmartMoneyPageState extends ConsumerState<SmartMoneyPage>
         ),
       ),
     );
+  }
+
+  /// 按所选维度降序排序（客户端排序，不重新请求上游）。
+  List<RhtTrader> _sortedTraders(List<RhtTrader> traders, TraderSort sort) {
+    final rows = [...traders]..sort(sort.compare);
+    return rows;
   }
 
   Widget _body(BuildContext context, SmartMoneyState state) {
@@ -123,7 +130,7 @@ class _SmartMoneyPageState extends ConsumerState<SmartMoneyPage>
                         itemBuilder: (context, e, _) => FomoLeaderRow(entry: e),
                       )))
             : PanelList(
-                items: state.traders,
+                items: _sortedTraders(state.traders, state.traderSort),
                 emptyMessage: state.panelsLoading ? '加载中…' : '暂无数据，下拉重试',
                 itemBuilder: (context, t, i) => TraderRow(trader: t, rank: i + 1),
               );
@@ -133,6 +140,11 @@ class _SmartMoneyPageState extends ConsumerState<SmartMoneyPage>
               active: state.leaderboardWindow,
               onChanged: ref.read(smartMoneyProvider.notifier).setLeaderboardWindow,
             ),
+            if (!showFomo)
+              TraderSortChips(
+                active: state.traderSort,
+                onChanged: ref.read(smartMoneyProvider.notifier).setTraderSort,
+              ),
             Expanded(child: list),
           ],
         );

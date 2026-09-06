@@ -118,22 +118,23 @@ class _TraderDetailSheetState extends State<_TraderDetailSheet> {
                             style: theme.textTheme.labelSmall
                                 ?.copyWith(color: c.inkTertiary)),
                       const SizedBox(height: 10),
-                      // 验身份操作行：复制双链地址 + 直达 fomo 主页交叉验证
-                      Row(
+                      // 验身份操作行：复制双链地址 + 直达 fomo 主页与
+                      // Robinhood Chain 区块浏览器交叉验证
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
                         children: [
                           _VerifyAction(
                             icon: Icons.copy_rounded,
                             label: 'EVM',
                             onTap: () => _copy(context, d.address),
                           ),
-                          const SizedBox(width: 8),
                           if (d.solanaAddress != null)
                             _VerifyAction(
                               icon: Icons.copy_rounded,
                               label: 'SOL',
                               onTap: () => _copy(context, d.solanaAddress!),
                             ),
-                          const SizedBox(width: 8),
                           if (d.profileUrl.isNotEmpty)
                             _VerifyAction(
                               icon: Icons.open_in_new_rounded,
@@ -141,6 +142,16 @@ class _TraderDetailSheetState extends State<_TraderDetailSheet> {
                               onTap: () => launchUrl(
                                   Uri.parse(d.profileUrl),
                                   mode: LaunchMode.externalApplication),
+                            ),
+                          if (d.address.isNotEmpty)
+                            _VerifyAction(
+                              icon: Icons.link_rounded,
+                              label: 'Blockscout',
+                              onTap: () => launchUrl(
+                                Uri.parse(
+                                    'https://robinhoodchain.blockscout.com/address/${d.address}'),
+                                mode: LaunchMode.externalApplication,
+                              ),
                             ),
                         ],
                       ),

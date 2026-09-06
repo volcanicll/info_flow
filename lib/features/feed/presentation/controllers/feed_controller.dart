@@ -173,15 +173,16 @@ class FeedController extends _$FeedController {
       }
 
       final end = (current.length + _pageSize).clamp(0, _all.length);
-      final more = _all.sublist(current.length, end);
-
-      if (more.isEmpty) {
+      final visible = _all.take(end).toList();
+      if (visible.length == current.length) {
         _hasMore = false;
         state = AsyncData([...current]);
         return;
       }
-
-      state = AsyncData([...current, ...more]);
+      // 直接取重排后的前 N 条，而不是按旧长度偏移切片：
+      // 新批次里的最新条目（如 SoPilot 起爆帖）按日期插在 _all
+      // 顶部，偏移切片会让它们落在已加载窗口之外永不露面。
+      state = AsyncData(visible);
     } finally {
       _isLoadingMore = false;
     }

@@ -60,7 +60,30 @@ void main() {
       expect(f.usd, 2236.124396);
       expect(f.handle, '31337___');
       expect(f.isNewPosition, isFalse);
+      expect(f.isStock, isFalse);
       expect(f.pairUrl, isNull);
+    });
+
+    test('is_stock=1 标记美股成交（NVDA 等 Robinhood 股票 track）', () {
+      final f = RhtFill.fromJson({
+        'id': 53995,
+        'ts': 1788657998,
+        'tx': '0x3cf2f4',
+        'side': 'buy',
+        'usd': 4.179028646927178,
+        'amount': 0.2167545978696669,
+        'price': 19.28,
+        'new_position': 0,
+        'is_stock': 1,
+        'priced': 'no_cash_leg',
+        'handle': 'dipwheeler',
+        'display_name': 'DipWheeler',
+        'followers': 90200,
+        'symbol': 'NVDA',
+      });
+      expect(f.isStock, isTrue);
+      expect(f.isBuy, isTrue);
+      expect(f.price, 19.28);
     });
 
     test('new_position=1 标记首买，buy 判定正确', () {

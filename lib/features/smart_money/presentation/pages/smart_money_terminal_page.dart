@@ -45,7 +45,13 @@ class SmartMoneyTerminalPage extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Hairline(color: c.hairlineStrong),
               ),
-              _TerminalHero(overview: state.overview),
+              _TerminalHero(
+                overview: state.overview,
+                window: state.overviewWindow,
+                onWindowChanged: (w) => ref
+                    .read(smartMoneyProvider.notifier)
+                    .setOverviewWindow(w),
+              ),
               _SectionHeader(
                 kicker: 'LIVE TAPE · 实盘',
                 action: '全部',
@@ -120,10 +126,17 @@ class _TerminalHeader extends StatelessWidget {
 }
 
 /// 24H 净盈亏主数字：等宽滚动，一眼看到聪明钱今天赚没赚钱。
+/// 时间窗 chips 支持切换 1H/24H/7D/30D/ALL（上游 overview 原生参数）。
 class _TerminalHero extends StatelessWidget {
   final RhtOverview? overview;
+  final String window;
+  final ValueChanged<String> onWindowChanged;
 
-  const _TerminalHero({required this.overview});
+  const _TerminalHero({
+    required this.overview,
+    required this.window,
+    required this.onWindowChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -132,43 +145,60 @@ class _TerminalHero extends StatelessWidget {
     final o = overview;
     final netUp = (o?.netPnl ?? 0) >= 0;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('24H 净盈亏',
-              style: theme.textTheme.labelSmall
-                  ?.copyWith(color: c.inkTertiary, letterSpacing: 1.2)),
-          const SizedBox(height: 4),
-          Text(
-            o == null ? '加载中…' : signedUsd(o.netPnl),
-            style: AppTheme.mono(theme.textTheme.displayLarge!.copyWith(
-              color: o == null ? c.inkTertiary : (netUp ? c.up : c.down),
-              fontWeight: FontWeight.w700,
-              letterSpacing: -0.5,
-            )),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('${windowLabel(window)} 净盈亏',
+                  style: theme.textTheme.labelSmall
+                      ?.copyWith(color: c.inkTertiary, letterSpacing: 1.2)),
+              const SizedBox(height: 4),
+              Text(
+                o == null ? '加载中…' : signedUsd(o.netPnl),
+                style: AppTheme.mono(theme.textTheme.displayLarge!.copyWith(
+                  color: o == null ? c.inkTertiary : (netUp ? c.up : c.down),
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.5,
+                )),
+              ),
+              const SizedBox(height: 8),
+              if (o != null)
+                Row(
+                  children: [
+                    _HeroStat(label: '胜率', value: '${(o.winRate * 100).toStringAsFixed(0)}%'),
+                    _HeroStat(label: '成交', value: '${o.fills} 笔'),
+                    _HeroStat(label: '大户在线', value: '${o.activeTraders} 位'),
+                    if (o.biggestWin != null)
+                      Expanded(
+                        child: Text(
+                          '最大赢家 ${o.biggestWin!.handle} ${signedUsd(o.biggestWin!.usd)}',
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.right,
+                          style: theme.textTheme.labelSmall?.copyWith(color: c.up),
+                        ),
+                      ),
+                  ],
+                ),
+            ],
           ),
-          const SizedBox(height: 8),
-          if (o != null)
-            Row(
-              children: [
-                _HeroStat(label: '胜率', value: '${(o.winRate * 100).toStringAsFixed(0)}%'),
-                _HeroStat(label: '成交', value: '${o.fills} 笔'),
-                _HeroStat(label: '大户在线', value: '${o.activeTraders} 位'),
-                if (o.biggestWin != null)
-                  Expanded(
-                    child: Text(
-                      '最大赢家 ${o.biggestWin!.handle} ${signedUsd(o.biggestWin!.usd)}',
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.right,
-                      style: theme.textTheme.labelSmall?.copyWith(color: c.up),
-                    ),
-                  ),
-              ],
-            ),
-        ],
-      ),
+        ),
+        WindowChipRow(
+          windows: const [
+            ('1h', '1H'),
+            ('24h', '24H'),
+            ('7d', '7D'),
+            ('30d', '30D'),
+            ('all', 'ALL'),
+          ],
+          active: window,
+          onChanged: onWindowChanged,
+        ),
+        const SizedBox(height: 14),
+      ],
     );
   }
 }

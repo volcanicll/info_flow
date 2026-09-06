@@ -159,6 +159,13 @@ void main() {
     expect(find.text('SMART RESONANCE · 三源共振'), findsOneWidget);
     expect(find.text('COPY FLOW · 抱团跟单'), findsOneWidget);
     expect(find.text('TOP TRADERS · 24H 盈亏榜'), findsOneWidget);
+    // 时间窗 chips 使首页内容超出首屏：滚动到入口再断言
+    // （ListView 懒构建，首屏外的入口行不会进入 widget 树）。
+    await tester.scrollUntilVisible(
+      find.text('进入完整终端 · 榜单 / 跟单 / 平仓 / 关注'),
+      160,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('进入完整终端 · 榜单 / 跟单 / 平仓 / 关注'), findsOneWidget);
     print('   ✅ 聪明钱终端首页结构完整!\n');
 

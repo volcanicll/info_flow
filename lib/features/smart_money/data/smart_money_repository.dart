@@ -35,9 +35,9 @@ class SmartMoneyRepository {
     }
   }
 
-  Future<RhtOverview> fetchOverview() async {
+  Future<RhtOverview> fetchOverview({String window = '24h'}) async {
     try {
-      return await _api.overview();
+      return await _api.overview(window: window);
     } catch (e) {
       throw mapToAppException(e);
     }
