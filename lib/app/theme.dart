@@ -320,6 +320,14 @@ class AppTheme {
   static List<BoxShadow> cardShadow(Brightness brightness) => const [];
 }
 
+/// 公链品牌色集中管理：消除跨文件硬编码重复。
+abstract final class ChainColors {
+  static const solana = Color(0xFF14F195);
+  static const base = Color(0xFF0052FF);
+  static const bsc = Color(0xFFF3BA2F);
+  static const robinhood = Color(0xFF00C805);
+}
+
 /// 语义色与结构色扩展。所有页面通过
 /// `Theme.of(context).extension<AppColors>()!` 取色，禁止硬编码。
 @immutable

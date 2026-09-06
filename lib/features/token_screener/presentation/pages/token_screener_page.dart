@@ -133,7 +133,7 @@ class _TokenScreenerPageState extends ConsumerState<TokenScreenerPage> {
                       label: 'Solana',
                       chain: ChainType.solana,
                       active: state.selectedChain == ChainType.solana,
-                      color: const Color(0xFF14F195),
+                      color: ChainColors.solana,
                       onTap: () {
                         _searchController.clear();
                         ref
@@ -146,7 +146,7 @@ class _TokenScreenerPageState extends ConsumerState<TokenScreenerPage> {
                       label: 'Base',
                       chain: ChainType.base,
                       active: state.selectedChain == ChainType.base,
-                      color: const Color(0xFF0052FF),
+                      color: ChainColors.base,
                       onTap: () {
                         _searchController.clear();
                         ref
@@ -159,7 +159,7 @@ class _TokenScreenerPageState extends ConsumerState<TokenScreenerPage> {
                       label: 'BSC',
                       chain: ChainType.bsc,
                       active: state.selectedChain == ChainType.bsc,
-                      color: const Color(0xFFF3BA2F),
+                      color: ChainColors.bsc,
                       onTap: () {
                         _searchController.clear();
                         ref
@@ -172,7 +172,7 @@ class _TokenScreenerPageState extends ConsumerState<TokenScreenerPage> {
                       label: 'Robinhood',
                       chain: ChainType.robinhood,
                       active: state.selectedChain == ChainType.robinhood,
-                      color: const Color(0xFF00C805),
+                      color: ChainColors.robinhood,
                       onTap: () {
                         _searchController.clear();
                         ref
@@ -289,13 +289,13 @@ class _TokenCard extends ConsumerWidget {
   Color _getChainColor(ChainType chain) {
     switch (chain) {
       case ChainType.solana:
-        return const Color(0xFF14F195);
+        return ChainColors.solana;
       case ChainType.base:
-        return const Color(0xFF0052FF);
+        return ChainColors.base;
       case ChainType.bsc:
-        return const Color(0xFFF3BA2F);
+        return ChainColors.bsc;
       case ChainType.robinhood:
-        return const Color(0xFF00C805);
+        return ChainColors.robinhood;
     }
   }
 

@@ -367,13 +367,13 @@ class _CoinDetailPageState extends ConsumerState<CoinDetailPage> {
   Color _getChainColor(ChainType chain) {
     switch (chain) {
       case ChainType.solana:
-        return const Color(0xFF14F195);
+        return ChainColors.solana;
       case ChainType.base:
-        return const Color(0xFF0052FF);
+        return ChainColors.base;
       case ChainType.bsc:
-        return const Color(0xFFF3BA2F);
+        return ChainColors.bsc;
       case ChainType.robinhood:
-        return const Color(0xFF00C805);
+        return ChainColors.robinhood;
     }
   }
 
