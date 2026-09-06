@@ -1,7 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:info_flow/features/feed/data/newsnow_repository.dart';
-import 'package:info_flow/features/signal_hub/domain/entities/ticker_ref.dart';
 
 void main() {
   final repo = NewsNowRepository(Dio());

@@ -384,7 +384,7 @@ class _MockChatController extends ChatController {
       messages: [
         ...state.messages,
         ChatMessage(text: trimmed, isUser: true),
-        ChatMessage(
+        const ChatMessage(
           text: '📊 【链上生态每日播报】\n\n'
               '• Solana: 24h DEX 交易额破 \$3.8B，Raydium 与 Orca 活跃度持续提升\n'
               '• Base: Aerodrome 锁仓量稳定增长，链上日活跃地址数创新高\n'
