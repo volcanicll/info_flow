@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
 import 'ai_config.dart';
+import 'ai_models.dart';
 import '../../feed/presentation/controllers/article_cache.dart';
 import '../../../features/feed/domain/entities/article.dart';
 import '../../../features/market/data/fear_greed_repository.dart';
@@ -243,13 +244,21 @@ class AiService {
     // 聪明钱简报：懒加载 + TTL，拉不到时静默降级为纯资讯上下文
     final smartBrief = await _smartBrief();
 
+    final headers = <String, dynamic>{
+      'Authorization': 'Bearer ${config.apiKey}',
+      'Content-Type': 'application/json',
+    };
+    // OpenCode Go 官方客户端要求：自报 UA + 每会话稳定的 x-opencode-session
+    if (config.provider == AiProviderKind.opencode) {
+      headers['User-Agent'] = 'InfoFlow/2.0';
+      headers['x-opencode-session'] =
+          _ref.read(aiConfigProvider.notifier).opencodeSessionId();
+    }
+
     final resp = await dio.post<Map<String, dynamic>>(
-      '${config.baseUrl}/chat/completions',
+      '${normalizeAiBaseUrl(config.baseUrl)}/chat/completions',
       options: Options(
-        headers: {
-          'Authorization': 'Bearer ${config.apiKey}',
-          'Content-Type': 'application/json',
-        },
+        headers: headers,
         sendTimeout: const Duration(seconds: 15),
         receiveTimeout: const Duration(seconds: 30),
       ),
