@@ -11,7 +11,7 @@
 ![Dart](https://img.shields.io/badge/Dart-3.12+-0175C2?logo=dart&logoColor=white)
 ![Chains](https://img.shields.io/badge/Chains-Robinhood%20%7C%20BSC%20%7C%20Base%20%7C%20Solana-success)
 ![Security](https://img.shields.io/badge/Security-GoPlus%20Audited-blue)
-![Tests](https://img.shields.io/badge/Tests-107%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-162%20passing-brightgreen)
 ![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20iOS%20%7C%20Web-lightgrey)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
@@ -26,6 +26,12 @@
 | 链上情报流 | 代币探测与安全 | 投研大脑 | 终端设置 |
 | :---: | :---: | :---: | :---: |
 | ![链上情报](docs/screenshots/light_intel.png) | ![代币探测](docs/screenshots/light_screener.png) | ![投研](docs/screenshots/light_copilot.png) | ![设置](docs/screenshots/light_profile.png) |
+
+| 价格提醒 · 推送监控 |
+| :---: |
+| ![价格提醒](docs/screenshots/light_price_alerts.png) |
+
+> 🎬 完整演示视频见 [docs/promo_video.mp4](./docs/promo_video.mp4)。
 
 > 设计系统：「纸上终端」——纸感底色、墨色文字、发丝线分隔、衬线标题 + 等宽数字、
 > 编辑红为唯一强调色（紫色只留给雷达信号）。浅色「纸」/ 深色「墨」双主题。
@@ -71,11 +77,26 @@
   Top 10 持仓占比，评分条直读；高危合约红色警示
 - 一键复制 CA、Blockscout / DexScreener 浏览器直达
 
+### 📈 价格提醒（价格监控）
+
+- **四种触发方式**：涨破 / 跌破指定价，自基线涨跌幅 ≥ X% / 跌幅 ≥ X%
+  （基线 = 创建或重新启用时的现价）
+- 后台 60s 批量轮询 Binance 现价核对规则，命中即系统通知，
+  点击通知直达币种详情；触发一次自动停用，一键重新启用
+- 管理页支持规则增删 / 暂停恢复 / 触发状态一览；币详情页铃铛直达，
+  有生效规则时铃铛亮起；规则持久化，重启不重复打扰
+- 行情源为 Binance 现货（官方公共镜像 `data-api.binance.vision`），
+  仅支持已上架币种，创建时即校验
+
 ### 🤖 投研大脑（Copilot）
 
 - 结合 DexScreener 实时行情与 GoPlus 审计数据的本地规则引擎问答
 - 快捷指令：今日链上 Alpha、合约风险诊断、巨鲸动向速览、生态周报
-- 配置 LLM API key 后解锁完整投研问答
+- **双接入方式**（AI 设置内切换）：
+  - **OpenCode Go 官方接入**：直连官方云端网关 `opencode.ai/zen/go/v1`
+    （OpenAI 兼容），在 opencode.ai/auth 订阅后粘贴 API Key 即用，
+    「获取模型列表」一键选择 GLM / Kimi / DeepSeek 等模型
+  - **OpenAI 兼容**：任意 OpenAI / DeepSeek / 中转站等服务
 
 ### 👤 终端设置
 
@@ -86,6 +107,7 @@
 
 - **聪明钱异动**：关注的大户成交 ≥ $500，或粉丝 ≥ 20 万的 KOL 首买 ≥ $1000
 - **破圈信号**：大众热榜新命中 Web3 关键词
+- **价格提醒**：代币价格到达指定价位或涨跌幅阈值（60s 轮询核对）
 - 全部经指纹去重（上限 300 条保留最新），受推送总开关统一约束
 
 ## 🛠 数据管道
@@ -96,7 +118,8 @@
 | [fomo.family](https://fomo.family) | 7D/30D/全部 跨链大户榜、交易员档案 | REST |
 | [DexScreener](https://dexscreener.com) | 多链 DEX 池子、流动性、报价 | REST |
 | [GoPlus Security](https://gopluslabs.io) | 合约安全审计（貔貅 / 税率 / 权限） | REST |
-| [Binance](https://binance.com) | 主流现货与合约深度报价 | REST |
+| [Binance](https://binance.com) | 主流现货与合约深度报价、价格提醒现价 | REST（现货行情走官方公共镜像 `data-api.binance.vision`） |
+| [OpenCode Go](https://opencode.ai/go) | 投研大脑 LLM（官方云端网关） | OpenAI 兼容 `opencode.ai/zen/go/v1`（Go 订阅 key） |
 | [NewsNow](https://github.com/ourongxing/newsnow) | 中文财经实时快讯 + 大众热榜（破圈监测） | REST（公共实例，可自建） |
 | [SoPilot](https://sopilot.net/zh/hot-tweets) | X（Twitter）Web3 起爆帖监控 | RSS |
 | Web3 RSS | 各公链官方博客与行业媒体 | RSS / OPML |
@@ -124,8 +147,8 @@ lib/
     ├── signal_hub/                # ticker 词典与情报徽章中枢（Pulse）
     ├── token_screener/            # 代币探测器与 GoPlus 安全审计
     ├── crypto_radar/              # 庄家雷达（费率/OI/热度扫描）
-    ├── market/                    # 基准行情总览与币种详情
-    ├── ai_chat/                   # 投研大脑（本地规则引擎，可接 LLM）
+    ├── market/                    # 基准行情总览、币种详情与价格提醒（推送监控）
+    ├── ai_chat/                   # 投研大脑（本地规则引擎，可接 LLM / OpenCode Go）
     ├── subscription/              # 订阅源管理与 OPML
     ├── reader/                    # 阅读器（含首字下沉排版）
     ├── bookmark/ search/ profile/ # 收藏 / 全文检索 / 终端设置
@@ -148,7 +171,7 @@ flutter pub get
 # 2. 生成代码（Riverpod / KV 存储 codegen）
 dart run build_runner build --delete-conflicting-outputs
 
-# 3. 运行测试（107 项）
+# 3. 运行测试（162 项）
 flutter test
 
 # 4. 启动应用

@@ -15,7 +15,7 @@ InfoFlow Terminal：Flutter 构建的链上情报终端。聪明钱实盘 tape�
 flutter pub get                                          # 依赖
 dart run build_runner build --delete-conflicting-outputs  # codegen（riverpod/kv_storage）
 flutter analyze                                          # 静态检查（基线 0 error）
-flutter test                                             # 全量测试（当前 107 项全绿）
+flutter test                                             # 全量测试（当前 152 项全绿）
 flutter run -d emulator-5554                             # 连模拟器开发（r 热重载 / R 热重启）
 flutter build apk --release                              # 出包（build/app/outputs/flutter-apk/）
 ```
@@ -63,12 +63,17 @@ hairline/hairlineStrong(发丝线)、accent(编辑红=唯一强调色)、up/down
 | robinhoodtrenches.com | `smart_money/data/datasources/rht_api.dart` | 9 个端点 + `/ws`；WS 4s 超时降级 2.5s 轮询（复刻上游策略，勿改）；`overview/traders/...` 支持 window=1h/24h/7d/30d/all；tape 行含 `is_stock`；字段可空极多（一律走 `RhtNum` 安全转换） |
 | NewsNow | `feed/data/newsnow_repository.dart` | 公共实例 `newsnow.busiyi.world/api/s?id=`，服务端缓存 ~30min；**cls 响应含未转义控制字符**（先清洗再 jsonDecode）；日期三处：`pubDate`/`extra.date`/`date`（ms 或 ISO）；微博/知乎条目无日期；改解析必须跑 `test/feed/newsnow_repository_test.dart` |
 | SoPilot | `feed/data/rss_sources.dart` | `https://sopilot.net/rss/hottweets`（Web3 起爆帖，约 30min 更新，无 JSON API） |
+| OpenCode Go | `ai_chat/data/ai_config.dart` · `ai_service.dart` · `ai_models.dart` | 官方云端网关 `https://opencode.ai/zen/go/v1`（OpenAI 兼容 chat/completions）；官方要求自报 UA + 每会话稳定 `x-opencode-session` 头（`AiConfig.opencodeSessionId()`）；**免费档模型仅限 opencode 客户端内使用（403）**，外部客户端需 Go 订阅 key；模型列表走 `GET /models`；桌面本地网关（magpie 127.0.0.1:3425/v1）仅限本机客户端，App 不可直连 |
 | GoPlus / DexScreener / Binance | `token_screener/`、`market/`、`crypto_radar/` | 免 key，注意限流（已有轮询间隔勿调小） |
 
 后台告警（`@Riverpod(keepAlive: true)` + Timer，`main.dart` initState 激活）：
-`SmartMoneyAlerts`（60s tape 增量）与 `BreakoutAlerts`（10min 热榜扫描）共用
-`SignalNotifyPref.markSeen` 指纹去重（上限 300 条），受 `signalNotifyPrefProvider`
-总开关约束；**首轮扫描只建基线不推送**。新告警源照此模式加。
+`SmartMoneyAlerts`（60s tape 增量）、`BreakoutAlerts`（10min 热榜扫描）与
+`PriceAlerts`（60s 批量拉现价核对价格提醒规则）共用 `SignalNotifyPref.markSeen`
+指纹去重（上限 300 条，价格分区 `pa`），受 `signalNotifyPrefProvider` 总开关约束；
+**首轮扫描只建基线不推送**（PriceAlerts 规则是显式阈值、无基线问题，启动 5s 后
+即可补推停机期间命中的条件）。新告警源照此模式加。
+Binance 现货行情统一走官方公共镜像 `data-api.binance.vision`（路径/响应与
+`api.binance.com` 完全一致，后者在部分地区/网络被阻——本仓库开发环境实测如此）。
 通知 `payload` 契约：只能传「`/` 开头的应用内路由」或「网页 URL」——URL 由
 `main.dart` 点击回调交系统浏览器，路由经 `notificationRoute` 归一后 `push`；
 勿传其他格式（否则点击通知会落进 404 页）。
