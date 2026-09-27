@@ -96,6 +96,31 @@ class NotificationService {
       payload: payload,
     );
   }
+
+  /// 展示一条价格提醒通知（独立渠道，与信号提醒互不顶掉）。
+  Future<void> showPriceAlert({
+    required String title,
+    required String body,
+    String? payload,
+  }) async {
+    if (!_initialized) await init();
+    await _plugin.show(
+      1002,
+      title,
+      body,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'price_alerts',
+          '价格提醒',
+          channelDescription: '代币价格到达指定价位或涨跌幅阈值时提醒',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(),
+      ),
+      payload: payload,
+    );
+  }
 }
 
 /// 通知 payload 契约：告警方只能传「/ 开头的应用内路由」或「网页 URL」，

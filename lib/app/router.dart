@@ -15,6 +15,7 @@ import 'package:info_flow/features/crypto_radar/presentation/pages/crypto_radar_
 import 'package:info_flow/features/token_screener/presentation/pages/token_screener_page.dart';
 import 'package:info_flow/features/market/presentation/pages/market_overview_page.dart';
 import 'package:info_flow/features/market/presentation/pages/coin_detail_page.dart';
+import 'package:info_flow/features/market/presentation/pages/price_alerts_page.dart';
 import 'package:info_flow/shared/widgets/empty_state.dart';
 import 'package:info_flow/shared/widgets/main_shell.dart';
 
@@ -157,6 +158,21 @@ GoRouter goRouter(Ref ref) {
         name: 'marketOverview',
         pageBuilder: (context, state) =>
             _fadeSlideTransition(state, const MarketOverviewPage()),
+      ),
+      GoRoute(
+        path: '/price-alerts',
+        name: 'priceAlerts',
+        pageBuilder: (context, state) {
+          final symbol = state.uri.queryParameters['symbol'];
+          return _fadeSlideTransition(
+            state,
+            PriceAlertsPage(
+              initialSymbol: (symbol == null || symbol.isEmpty)
+                  ? null
+                  : symbol.toUpperCase(),
+            ),
+          );
+        },
       ),
       GoRoute(
         path: '/coin/:symbol',

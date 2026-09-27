@@ -80,6 +80,11 @@ class ProfilePage extends ConsumerWidget {
                   onTap: () => context.push('/subscription'),
                 ),
                 ProfileRow(
+                  title: '代币价格提醒',
+                  subtitle: '指定价格或涨跌幅触发推送',
+                  onTap: () => context.push('/price-alerts'),
+                ),
+                ProfileRow(
                   title: '链上异动提醒',
                   subtitle: '捕获新异动或巨鲸信号时推送',
                   trailing: Switch(
@@ -147,7 +152,7 @@ class ProfilePage extends ConsumerWidget {
                 ),
                 ProfileRow(
                   title: '关于 InfoFlow Terminal',
-                  value: 'v2.0.0 (On-Chain)',
+                  value: 'v2.1.0 (On-Chain)',
                   onTap: () => _showAboutDialog(context),
                 ),
                 ProfileRow(
@@ -275,7 +280,7 @@ class ProfilePage extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('版本: v2.0.0 (生产级链上版)',
+            Text('版本: v2.1.0 (生产级链上版)',
                 style: Theme.of(ctx).textTheme.bodyMedium),
             const SizedBox(height: 8),
             Text(

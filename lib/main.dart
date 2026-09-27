@@ -13,6 +13,7 @@ import 'app/router.dart';
 import 'core/notifications/notification_service.dart';
 import 'core/storage/kv_storage.dart';
 import 'features/feed/data/breakout_alerts.dart';
+import 'features/market/data/price_alerts.dart';
 import 'features/smart_money/data/smart_money_alerts.dart';
 
 void main() async {
@@ -65,9 +66,11 @@ class _InfoFlowAppState extends ConsumerState<InfoFlowApp> {
   void initState() {
     super.initState();
     // 启动后台告警轮询（keepAlive）：
-    // 聪明钱 60s 增量拉 tape；破圈雷达 10min 扫大众热榜
+    // 聪明钱 60s 增量拉 tape；破圈雷达 10min 扫大众热榜；
+    // 价格提醒 60s 批量拉 Binance 现价核对规则
     ref.read(smartMoneyAlertsProvider);
     ref.read(breakoutAlertsProvider);
+    ref.read(priceAlertsProvider);
 
     // 点击通知栏时按 payload 契约分发：网页链接交系统浏览器，
     // 应用内路由（归一为 / 开头）交 GoRouter push

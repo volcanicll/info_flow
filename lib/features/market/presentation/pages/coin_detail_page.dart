@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../app/theme.dart';
@@ -9,6 +10,7 @@ import '../../../../shared/widgets/icon_btn.dart';
 import '../../../../shared/widgets/section_header.dart';
 import '../../../smart_money/presentation/widgets/token_holders_section.dart';
 import '../../../token_screener/domain/models/onchain_token.dart';
+import '../../data/price_alert_store.dart';
 import '../controllers/coin_detail_controller.dart';
 import '../widgets/coin_detail_widgets.dart';
 
@@ -76,6 +78,10 @@ class _CoinDetailPageState extends ConsumerState<CoinDetailPage> {
     final notifier = ref.read(coinDetailProvider(widget.symbol).notifier);
     final theme = Theme.of(context);
     final c = context.colors;
+    // 该币种有生效中的价格提醒时，铃铛显示为亮起态
+    final hasActiveAlerts = ref.watch(priceAlertStoreProvider).any(
+          (a) => a.symbol == widget.symbol.toUpperCase() && a.enabled,
+        );
 
     ref.listen(coinDetailProvider(widget.symbol), (prev, next) {
       if (prev?.error == null && next.error != null) {
@@ -115,11 +121,21 @@ class _CoinDetailPageState extends ConsumerState<CoinDetailPage> {
                       ],
                     ),
                   ),
+                  IconBtn(
+                    icon: hasActiveAlerts
+                        ? Icons.notifications_active_rounded
+                        : Icons.notifications_none_rounded,
+                    onTap: () => context.push(
+                        '/price-alerts?symbol=${widget.symbol.toUpperCase()}'),
+                  ),
                   if (state.loading)
-                    const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 10),
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
                     )
                   else
                     IconBtn(
