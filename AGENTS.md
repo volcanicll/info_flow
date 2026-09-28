@@ -25,6 +25,32 @@ flutter build apk --release                              # 出包（build/app/ou
 - 已有测试套件在 `test/`，与 `lib/` 镜像；新逻辑请带测试（纯函数优先，见
   `test/notifications/signal_dedup_test.dart`、`test/feed/newsnow_repository_test.dart` 的风格）。
 
+## 版本管理（SemVer，发布时必读）
+
+版本号格式 `MAJOR.MINOR.PATCH+BUILD`（`pubspec.yaml` 的 `version` 字段，
+如 `2.2.0+3`）。**按本次变更的内容与功能定级，不按提交次数或主观感觉**：
+
+| 段位 | 何时递增 | 本仓库示例 |
+|---|---|---|
+| MAJOR | 破坏性变更：数据/配置不兼容迁移、面向用户的能力被移除、架构级重写 | 1.x → 2.0.0（链上版重写） |
+| MINOR | **新增任何面向用户的功能/模块**（哪怕很小） | 2.1.0（价格提醒）→ 2.2.0（通知中心 + 全列表分页） |
+| PATCH | 仅缺陷修复、文案/样式微调，无任何新功能 | 2.2.1（修崩溃/显示错误） |
+| +BUILD | 每次发布 +1，与用户可见版本无关（Android versionCode） | 2.2.0+3 → 2.2.0+4 |
+
+- 判定口诀：**有新功能就 MINOR，只有修复就 PATCH，兼容性破坏才 MAJOR**；
+  拿不准时倾向 MINOR（用户可感知即 MINOR）。一次发布含多类变更时，
+  按其中最高级别取，不叠加跳级。
+- 版本号只在发布提交（`docs(release)`）里变更；日常功能/修复提交不动它。
+- 发布配套（缺一不可，顺序执行）：
+  1. `CHANGELOG.md` 顶部新增 `[x.y.z] - 日期` 条目（Keep a Changelog 格式，
+     分 Added / Changed / Fixed / Notes）
+  2. `pubspec.yaml` 版本号 + build 号
+  3. README 徽章/测试计数等引用同步
+  4. 门禁：`flutter analyze` 0 error + `flutter test` 全绿 +
+     `flutter build apk --release` 出包验证
+  5. `docs(release): vX.Y.Z …` 提交 + `git tag vX.Y.Z`
+  6. 推送 master 与 tag，`gh release create vX.Y.Z`（说明沿用 CHANGELOG 内容）
+
 ## 架构速览
 
 ```
