@@ -11,7 +11,7 @@
 ![Dart](https://img.shields.io/badge/Dart-3.12+-0175C2?logo=dart&logoColor=white)
 ![Chains](https://img.shields.io/badge/Chains-Robinhood%20%7C%20BSC%20%7C%20Base%20%7C%20Solana-success)
 ![Security](https://img.shields.io/badge/Security-GoPlus%20Audited-blue)
-![Tests](https://img.shields.io/badge/Tests-162%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-173%20passing-brightgreen)
 ![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20iOS%20%7C%20Web-lightgrey)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
@@ -108,6 +108,8 @@
 - **聪明钱异动**：关注的大户成交 ≥ $500，或粉丝 ≥ 20 万的 KOL 首买 ≥ $1000
 - **破圈信号**：大众热榜新命中 Web3 关键词
 - **价格提醒**：代币价格到达指定价位或涨跌幅阈值（60s 轮询核对）
+- **应用内通知中心**：每条系统通知同步落应用内收件箱（持久化，上限 50 条），
+  报头铃铛带未读红点，点击条目按 payload 契约直达路由或网页
 - 全部经指纹去重（上限 300 条保留最新），受推送总开关统一约束
 
 ## 🛠 数据管道
@@ -171,7 +173,7 @@ flutter pub get
 # 2. 生成代码（Riverpod / KV 存储 codegen）
 dart run build_runner build --delete-conflicting-outputs
 
-# 3. 运行测试（162 项）
+# 3. 运行测试（173 项）
 flutter test
 
 # 4. 启动应用

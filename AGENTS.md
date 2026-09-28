@@ -15,7 +15,7 @@ InfoFlow Terminal：Flutter 构建的链上情报终端。聪明钱实盘 tape�
 flutter pub get                                          # 依赖
 dart run build_runner build --delete-conflicting-outputs  # codegen（riverpod/kv_storage）
 flutter analyze                                          # 静态检查（基线 0 error）
-flutter test                                             # 全量测试（当前 152 项全绿）
+flutter test                                             # 全量测试（当前 173 项全绿）
 flutter run -d emulator-5554                             # 连模拟器开发（r 热重载 / R 热重启）
 flutter build apk --release                              # 出包（build/app/outputs/flutter-apk/）
 ```
