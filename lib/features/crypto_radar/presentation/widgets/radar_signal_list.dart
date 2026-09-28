@@ -127,6 +127,8 @@ class RadarSignalRow extends ConsumerWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(signal.strategy,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodySmall?.copyWith(color: c.inkSecondary)),
                   if (signal.tags.isNotEmpty) ...[
                     const SizedBox(height: 8),

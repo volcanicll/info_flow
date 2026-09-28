@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../../app/theme.dart';
+import '../../../../shared/widgets/press_scale.dart';
 
 /// 会话输入栏（访谈风）：无圆角气泡，仅底部粗墨线 + 极简发送。
 class ChatInputBar extends StatefulWidget {
@@ -117,8 +119,14 @@ class _SendButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    return GestureDetector(
-      onTap: enabled ? onTap : null,
+    return PressScale(
+      pressedScale: 0.85,
+      onTap: enabled
+          ? () {
+              HapticFeedback.selectionClick();
+              onTap();
+            }
+          : null,
       child: SizedBox(
         width: 40,
         height: 40,

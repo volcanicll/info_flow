@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -8,6 +9,7 @@ import '../../../../shared/widgets/hairline.dart';
 import '../../../../shared/widgets/icon_btn.dart';
 import '../../../../shared/widgets/press_scale.dart';
 import '../../../../shared/widgets/section_header.dart';
+import '../../../../shared/widgets/skeleton_box.dart';
 import '../../../feed/data/newsnow_repository.dart';import '../../data/models/rht_models.dart';
 import '../../data/rht_tape_stream.dart';
 import '../../data/smart_money_signals.dart';
@@ -36,6 +38,7 @@ class SmartMoneyTerminalPage extends ConsumerWidget {
         bottom: false,
         child: RefreshIndicator(
       onRefresh: () async {
+        HapticFeedback.selectionClick();
         await ref.read(smartMoneyProvider.notifier).refresh();
         ref.invalidate(smartMoneyResonanceProvider);
         ref.invalidate(breakoutRadarProvider);
@@ -163,16 +166,21 @@ class _TerminalHero extends StatelessWidget {
                   style: theme.textTheme.labelSmall
                       ?.copyWith(color: c.inkTertiary, letterSpacing: 1.2)),
               const SizedBox(height: 4),
-              Text(
-                o == null ? '加载中…' : signedUsd(o.netPnl),
-                style: AppTheme.mono(theme.textTheme.displayLarge!.copyWith(
-                  color: o == null ? c.inkTertiary : (netUp ? c.up : c.down),
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.5,
-                )),
-              ),
+              if (o == null)
+                const SkeletonBox(width: 240, height: 42)
+              else
+                Text(
+                  signedUsd(o.netPnl),
+                  style: AppTheme.mono(theme.textTheme.displayLarge!.copyWith(
+                    color: netUp ? c.up : c.down,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.5,
+                  )),
+                ),
               const SizedBox(height: 8),
-              if (o != null)
+              if (o == null)
+                const SkeletonBox(width: 240, height: 14)
+              else
                 Row(
                   children: [
                     _HeroStat(label: '胜率', value: '${(o.winRate * 100).toStringAsFixed(0)}%'),
@@ -274,17 +282,17 @@ class _TapeTeaser extends StatelessWidget {
 }
 
 /// 共振预览：最多 3 条；空态一句话说明筛选门槛。
-class _ResonanceTeaser extends StatelessWidget {
+class _ResonanceTeaser extends ConsumerWidget {
   final AsyncValue<List<SmartResonance>> resonance;
 
   const _ResonanceTeaser({required this.resonance});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return resonance.when(
       data: (items) {
         if (items.isEmpty) {
-          return _TeaserPlaceholder(message: '近 2 小时暂无满足共振条件的新币');
+          return const _TeaserPlaceholder(message: '近 2 小时暂无满足共振条件的新币');
         }
         return Column(
           children: [
@@ -292,8 +300,11 @@ class _ResonanceTeaser extends StatelessWidget {
           ],
         );
       },
-      error: (_, _) => _TeaserPlaceholder(message: '共振扫描暂不可用'),
-      loading: () => _TeaserPlaceholder(message: '扫描中…'),
+      error: (_, _) => _TeaserPlaceholder(
+        message: '共振扫描暂不可用',
+        onRetry: () => ref.invalidate(smartMoneyResonanceProvider),
+      ),
+      loading: () => const _TeaserPlaceholder(message: '扫描中…'),
     );
   }
 }
@@ -352,7 +363,10 @@ class _BreakoutSection extends ConsumerWidget {
           const SectionHeader(kicker: 'BREAKOUT RADAR · 破圈信号'),
           async.when(
             loading: () => const _TeaserPlaceholder(message: '扫描微博 / 知乎 / 头条热榜…'),
-            error: (_, _) => const _TeaserPlaceholder(message: '破圈雷达暂不可用'),
+            error: (_, _) => _TeaserPlaceholder(
+              message: '破圈雷达暂不可用',
+              onRetry: () => ref.invalidate(breakoutRadarProvider),
+            ),
             data: (hits) => hits.isEmpty
                 ? const _TeaserPlaceholder(message: '大众热榜暂无 Web3 关键词命中')
                 : Column(
@@ -424,16 +438,40 @@ class _BreakoutRow extends StatelessWidget {
 class _TeaserPlaceholder extends StatelessWidget {
   final String message;
 
-  const _TeaserPlaceholder({required this.message});
+  /// 静默降级区块的重试入口（可选）：一句话占位 + 行内「重试」。
+  final VoidCallback? onRetry;
+
+  const _TeaserPlaceholder({required this.message, this.onRetry});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
-      child: Text(message,
-          style: theme.textTheme.labelSmall
-              ?.copyWith(color: context.colors.inkTertiary)),
+      child: Row(
+        children: [
+          Flexible(
+            child: Text(message,
+                style: theme.textTheme.labelSmall
+                    ?.copyWith(color: context.colors.inkTertiary)),
+          ),
+          if (onRetry != null) ...[
+            const SizedBox(width: 12),
+            PressScale(
+              pressedScale: 0.9,
+              onTap: () {
+                HapticFeedback.selectionClick();
+                onRetry!();
+              },
+              child: Text('重试',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: context.colors.accent,
+                    fontWeight: FontWeight.w700,
+                  )),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

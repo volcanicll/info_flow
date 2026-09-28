@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../shared/widgets/hairline.dart';
+import '../../../../shared/widgets/press_scale.dart';
 import '../../../feed/data/rss_sources.dart';
 
 /// 刊物架卡片：细边框、无阴影，刊名用衬线大字，底部一行订阅态。
@@ -68,12 +69,13 @@ class SourceCard extends StatelessWidget {
             const SizedBox(height: 12),
             const Hairline(),
             const SizedBox(height: 8),
-            GestureDetector(
+            PressScale(
+              pressedScale: 0.92,
+              behavior: HitTestBehavior.opaque,
               onTap: () {
                 HapticFeedback.selectionClick();
                 onToggle();
               },
-              behavior: HitTestBehavior.opaque,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [

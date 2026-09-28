@@ -10,6 +10,7 @@ class PressScale extends StatefulWidget {
   final double pressedScale;
   final Duration duration;
   final bool enabled;
+  final HitTestBehavior? behavior;
 
   const PressScale({
     super.key,
@@ -18,6 +19,7 @@ class PressScale extends StatefulWidget {
     this.pressedScale = 0.96,
     this.duration = const Duration(milliseconds: 120),
     this.enabled = true,
+    this.behavior,
   });
 
   @override
@@ -35,6 +37,7 @@ class _PressScaleState extends State<PressScale> {
       onTapUp: (_) => setState(() => _pressed = false),
       onTapCancel: () => setState(() => _pressed = false),
       onTap: widget.onTap,
+      behavior: widget.behavior,
       child: AnimatedScale(
         scale: _pressed ? widget.pressedScale : 1.0,
         duration: widget.duration,

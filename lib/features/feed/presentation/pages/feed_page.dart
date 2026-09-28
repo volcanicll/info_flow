@@ -1,15 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../app/theme.dart';
+import '../../../../core/notifications/alert_inbox.dart';
+import '../../../../core/notifications/notification_service.dart';
 import '../../../../core/state/library_store.dart';
 import '../../../../shared/widgets/animated_entrance.dart';
 import '../../../../shared/widgets/article_card_shimmer.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/hairline.dart';
+import '../../../../shared/widgets/load_more_footer.dart';
 import '../../../../shared/widgets/press_scale.dart';
 import '../controllers/feed_controller.dart';
+import '../widgets/article_card.dart' show formatArticleTime;
 import '../widgets/article_headline.dart';
 import '../widgets/article_row.dart';
 
@@ -48,6 +54,7 @@ class _FeedPageState extends ConsumerState<FeedPage>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final c = context.colors;
+    final unreadAlerts = ref.watch(alertInboxUnreadProvider);
 
     return Scaffold(
       body: Column(
@@ -70,7 +77,8 @@ class _FeedPageState extends ConsumerState<FeedPage>
                 const Spacer(),
                 _MastheadIcon(
                   icon: Icons.notifications_none_rounded,
-                  onTap: () => _showNotificationsSheet(context),
+                  showDot: unreadAlerts > 0,
+                  onTap: _showNotificationsSheet,
                 ),
                 _MastheadIcon(
                   icon: Icons.search_rounded,
@@ -105,32 +113,72 @@ class _FeedPageState extends ConsumerState<FeedPage>
       ),
     );
   }
+
+  /// 打开通知中心（真实告警收件箱）；关闭时统一清未读。
+  Future<void> _showNotificationsSheet() async {
+    HapticFeedback.selectionClick();
+    await showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: context.colors.paper,
+      isScrollControlled: true,
+      builder: (sheetCtx) => const _NotificationsSheet(),
+    );
+    if (mounted) ref.read(alertInboxProvider.notifier).markAllRead();
+  }
 }
 
-void _showNotificationsSheet(BuildContext context) {
-  showModalBottomSheet(
-    context: context,
-    showDragHandle: true,
-    backgroundColor: context.colors.paper,
-    builder: (ctx) {
-      final theme = Theme.of(ctx);
-      final c = ctx.colors;
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('通知中心', style: theme.textTheme.headlineMedium),
-              const SizedBox(height: 4),
-              Text(
-                '订阅源动态与信号提醒将在此展示',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: c.inkTertiary,
+/// 通知中心：后台告警（聪明钱/破圈/价格提醒）的应用内收件箱。
+/// 条目按时间倒序；点击按 payload 契约跳转（路由或网页）；关闭时清未读。
+class _NotificationsSheet extends ConsumerWidget {
+  const _NotificationsSheet();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final c = context.colors;
+    final entries = ref.watch(alertInboxProvider);
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text('通知中心', style: theme.textTheme.headlineMedium),
                 ),
-              ),
-              const SizedBox(height: 20),
+                if (entries.isNotEmpty)
+                  PressScale(
+                    pressedScale: 0.9,
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      ref.read(alertInboxProvider.notifier).clearAll();
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      child: Text(
+                        '清空',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: c.inkTertiary,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '强信号与价格提醒的历史记录',
+              style: theme.textTheme.bodySmall?.copyWith(color: c.inkTertiary),
+            ),
+            const SizedBox(height: 16),
+            if (entries.isEmpty)
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 28),
@@ -146,39 +194,177 @@ void _showNotificationsSheet(BuildContext context) {
                       color: c.hairlineStrong,
                     ),
                     const SizedBox(height: 12),
-                    Text('暂无新通知', style: theme.textTheme.titleMedium),
+                    Text('暂无通知', style: theme.textTheme.titleMedium),
                     const SizedBox(height: 4),
                     Text(
-                      '强信号提醒将在这里出现',
+                      '命中强信号提醒时会同时出现在这里',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: c.inkTertiary,
                       ),
                     ),
                   ],
                 ),
+              )
+            else
+              Flexible(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.heightOf(context) * 0.55,
+                  ),
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    padding: EdgeInsets.zero,
+                    itemCount: entries.length,
+                    separatorBuilder: (_, _) => const Hairline(),
+                    itemBuilder: (ctx, i) {
+                      final entry = entries[i];
+                      return _NotificationTile(
+                        entry: entry,
+                        onTap: () => _openEntry(ctx, entry),
+                      );
+                    },
+                  ),
+                ),
               ),
-            ],
-          ),
+          ],
         ),
-      );
-    },
-  );
+      ),
+    );
+  }
+
+  /// 按 payload 契约跳转：网页交系统浏览器，应用内路由 push。
+  Future<void> _openEntry(BuildContext sheetCtx, AlertInboxEntry entry) async {
+    HapticFeedback.selectionClick();
+    Navigator.pop(sheetCtx);
+    final payload = entry.payload;
+    if (payload == null || payload.isEmpty) return;
+    final url = notificationExternalUrl(payload);
+    if (url != null) {
+      try {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } catch (_) {
+        // 打不开外链就到此为止，不阻塞
+      }
+      return;
+    }
+    final route = notificationRoute(payload);
+    if (route != null) GoRouter.of(sheetCtx).push(route);
+  }
+}
+
+class _NotificationTile extends StatelessWidget {
+  final AlertInboxEntry entry;
+  final VoidCallback onTap;
+  const _NotificationTile({required this.entry, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final c = context.colors;
+    final isPrice = entry.kind == 'price';
+
+    return PressScale(
+      pressedScale: 0.98,
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 13),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              isPrice
+                  ? Icons.trending_up_rounded
+                  : Icons.bolt_rounded,
+              size: 15,
+              color: entry.read ? c.inkTertiary : c.accent,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      if (!entry.read) ...[
+                        Container(
+                          width: 5,
+                          height: 5,
+                          decoration: BoxDecoration(
+                            color: c.accent,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                      ],
+                      Expanded(
+                        child: Text(
+                          entry.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleSmall,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        formatArticleTime(entry.createdAt),
+                        style: theme.textTheme.labelSmall,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    entry.body,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: c.inkSecondary),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _MastheadIcon extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
-  const _MastheadIcon({required this.icon, required this.onTap});
+  final bool showDot;
+  const _MastheadIcon({required this.icon, required this.onTap, this.showDot = false});
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return PressScale(
       pressedScale: 0.85,
       onTap: onTap,
       child: SizedBox(
         width: 40,
         height: 40,
-        child: Icon(icon, size: 22, color: context.colors.ink),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Center(child: Icon(icon, size: 22, color: c.ink)),
+            if (showDot)
+              Positioned(
+                top: 7,
+                right: 7,
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: c.accent,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: c.paper, width: 1.5),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -247,6 +433,7 @@ class _ArticleList extends ConsumerStatefulWidget {
 class _ArticleListState extends ConsumerState<_ArticleList>
     with AutomaticKeepAliveClientMixin {
   final ScrollController _scrollController = ScrollController();
+  bool _loadingMore = false;
 
   @override
   bool get wantKeepAlive => true;
@@ -267,7 +454,20 @@ class _ArticleListState extends ConsumerState<_ArticleList>
   void _onScroll() {
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
-      ref.read(feedControllerProvider(widget.feedType).notifier).loadMore();
+      _loadMore();
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_loadingMore) return;
+    final notifier =
+        ref.read(feedControllerProvider(widget.feedType).notifier);
+    if (!notifier.hasMore) return;
+    setState(() => _loadingMore = true);
+    try {
+      await notifier.loadMore();
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
     }
   }
 
@@ -286,7 +486,10 @@ class _ArticleListState extends ConsumerState<_ArticleList>
           _UnreadBar(count: unreadCount, onMarkAll: _markAllRead),
         Expanded(
           child: RefreshIndicator(
-            onRefresh: () => notifier.refresh(),
+            onRefresh: () async {
+              HapticFeedback.selectionClick();
+              await notifier.refresh();
+            },
             color: context.colors.accent,
             child: articlesAsync.when(
               loading: () => ListView.builder(
@@ -317,20 +520,15 @@ class _ArticleListState extends ConsumerState<_ArticleList>
                   controller: _scrollController,
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.only(bottom: 16),
-                  itemCount: articles.length + (notifier.hasMore ? 1 : 0),
+                  itemCount: articles.length + 1,
                   separatorBuilder: (_, index) =>
                       index == 0 ? const SizedBox.shrink() : const Hairline(),
                   itemBuilder: (context, index) {
+                    // 页脚：加载中转圈 / 静默占位 / 到底提示（共享组件）
                     if (index == articles.length) {
-                      return const Padding(
-                        padding: EdgeInsets.all(20),
-                        child: Center(
-                          child: SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                        ),
+                      return LoadMoreFooter(
+                        hasMore: notifier.hasMore,
+                        loadingMore: _loadingMore,
                       );
                     }
                     final article = articles[index];
@@ -357,6 +555,7 @@ class _ArticleListState extends ConsumerState<_ArticleList>
   void _markAllRead() {
     final articles = ref.read(feedControllerProvider(widget.feedType)).value;
     if (articles == null || articles.isEmpty) return;
+    HapticFeedback.selectionClick();
     for (final article in articles) {
       ref.read(libraryStoreProvider.notifier).markRead(article.id);
     }

@@ -8,7 +8,15 @@ part 'chat_controller.g.dart';
 class ChatMessage {
   final String text;
   final bool isUser;
-  const ChatMessage({required this.text, required this.isUser});
+
+  /// 生成失败的错误气泡：可点击重试，不参与后续上下文。
+  final bool isError;
+
+  const ChatMessage({
+    required this.text,
+    required this.isUser,
+    this.isError = false,
+  });
 }
 
 /// 会话状态：消息列表 + 是否正在等待 AI 回复。
@@ -37,6 +45,9 @@ const _welcome = ChatMessage(
 );
 
 /// 会话控制器：集中管理消息流与发送态，页面退化为纯 UI。
+///
+/// send/retry 全程兜底异常：任何失败都以错误气泡收尾并复位 sending，
+/// 保证输入框与打字指示不会永久卡在「正在思考…」。
 @riverpod
 class ChatController extends _$ChatController {
   @override
@@ -52,11 +63,50 @@ class ChatController extends _$ChatController {
       sending: true,
     );
 
-    final reply = await ref.read(aiServiceProvider).reply(trimmed);
+    await _request(trimmed);
+  }
+
+  /// 重试最后一条失败的消息：移除错误气泡，重新请求其前面的用户消息。
+  Future<void> retry() async {
+    if (state.sending) return;
+    final msgs = state.messages;
+    if (msgs.isEmpty || msgs.last.isUser || !msgs.last.isError) return;
+
+    String? lastUser;
+    for (final m in msgs.reversed) {
+      if (m.isUser) {
+        lastUser = m.text;
+        break;
+      }
+    }
+    if (lastUser == null) return;
 
     state = state.copyWith(
-      messages: [...state.messages, ChatMessage(text: reply, isUser: false)],
-      sending: false,
+      messages: msgs.sublist(0, msgs.length - 1),
+      sending: true,
     );
+    await _request(lastUser);
+  }
+
+  Future<void> _request(String text) async {
+    try {
+      final reply = await ref.read(aiServiceProvider).reply(text);
+      state = state.copyWith(
+        messages: [...state.messages, ChatMessage(text: reply, isUser: false)],
+        sending: false,
+      );
+    } catch (_) {
+      state = state.copyWith(
+        messages: [
+          ...state.messages,
+          const ChatMessage(
+            isUser: false,
+            isError: true,
+            text: '回复生成失败，请检查网络或稍后重试。',
+          ),
+        ],
+        sending: false,
+      );
+    }
   }
 }

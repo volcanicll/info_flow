@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme.dart';
@@ -8,6 +9,7 @@ import '../../data/ai_models.dart';
 import '../../../feed/presentation/controllers/article_cache.dart';
 import '../../../../shared/widgets/hairline.dart';
 import '../../../../shared/widgets/icon_btn.dart';
+import '../../../../shared/widgets/press_scale.dart';
 import '../controllers/chat_controller.dart';
 import '../widgets/chat_input_bar.dart';
 import '../widgets/chat_message_view.dart';
@@ -185,10 +187,13 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
                         (AiProviderKind.openai, 'OpenAI 兼容'),
                         (AiProviderKind.opencode, 'OpenCode Go'),
                       ])
-                        GestureDetector(
-                          onTap: () =>
-                              setSheetState(() => switchProvider(kind)),
+                        PressScale(
+                          pressedScale: 0.94,
                           behavior: HitTestBehavior.opaque,
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            setSheetState(() => switchProvider(kind));
+                          },
                           child: Padding(
                             padding: const EdgeInsets.only(right: 22),
                             child: Column(
@@ -435,8 +440,12 @@ class _QuickTag extends StatelessWidget {
     final c = context.colors;
     return Padding(
       padding: const EdgeInsets.only(right: 8),
-      child: GestureDetector(
-        onTap: onTap,
+      child: PressScale(
+        pressedScale: 0.94,
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
           decoration: BoxDecoration(

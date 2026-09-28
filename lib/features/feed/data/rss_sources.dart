@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import '../../../app/theme.dart';
+
 /// 订阅源分类（专注于 Web3 与四大核心链/生态）
 enum FeedCategory {
   all('全部'),
@@ -49,11 +51,11 @@ class RssSource {
 class RssSources {
   RssSources._();
 
-  // 专属品牌色
-  static const Color _cSolana = Color(0xFF14F195);
-  static const Color _cBase = Color(0xFF0052FF);
-  static const Color _cBsc = Color(0xFFF3BA2F);
-  static const Color _cRobinhood = Color(0xFF00C805);
+  // 专属品牌色（公链色与 ChainColors 同源，避免双处维护漂移）
+  static const Color _cSolana = ChainColors.solana;
+  static const Color _cBase = ChainColors.base;
+  static const Color _cBsc = ChainColors.bsc;
+  static const Color _cRobinhood = ChainColors.robinhood;
   static const Color _cCoinDesk = Color(0xFF0D1B2A);
   static const Color _cDecrypt = Color(0xFF1B1B1B);
   static const Color _cBlockworks = Color(0xFFFF5200);

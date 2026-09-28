@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../core/state/library_store.dart';
+import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/hairline.dart';
+import '../../../../shared/widgets/press_scale.dart';
 import '../../../feed/domain/entities/article.dart';
 import '../../../feed/presentation/widgets/article_row.dart';
 
@@ -98,8 +100,12 @@ class _SectionTabs extends StatelessWidget {
           final active = controller.index == i;
           return Padding(
             padding: const EdgeInsets.only(right: 24),
-            child: GestureDetector(
-              onTap: () => controller.animateTo(i),
+            child: PressScale(
+              pressedScale: 0.94,
+              onTap: () {
+                HapticFeedback.selectionClick();
+                controller.animateTo(i);
+              },
               behavior: HitTestBehavior.opaque,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -158,11 +164,23 @@ class _DismissibleRow extends ConsumerWidget {
         } else {
           notifier.toggleReadLater(article);
         }
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(filter == BookmarkFilter.all ? '已移除收藏' : '已移出稍后阅读'),
-            duration: const Duration(milliseconds: 1600),
+            duration: const Duration(milliseconds: 3200),
             behavior: SnackBarBehavior.floating,
+            action: SnackBarAction(
+              label: '撤销',
+              onPressed: () {
+                // toggle 语义：再切一次即恢复
+                if (filter == BookmarkFilter.all) {
+                  notifier.toggleBookmark(article);
+                } else {
+                  notifier.toggleReadLater(article);
+                }
+              },
+            ),
           ),
         );
       },
@@ -208,22 +226,20 @@ class _ClippingList extends ConsumerWidget {
     };
 
     if (items.isEmpty) {
+      final isAllTab = filter == BookmarkFilter.all;
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.only(top: 80),
         children: [
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.all(40),
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                Icon(Icons.bookmark_border_rounded, size: 44, color: c.hairlineStrong),
-                const SizedBox(height: 14),
-                Text('剪报集空空如也', style: theme.textTheme.titleLarge),
-                const SizedBox(height: 8),
-                Text('点击文章的收藏按钮，内容会剪存在这里',
-                    textAlign: TextAlign.center, style: theme.textTheme.bodyMedium),
-              ]),
-            ),
+          EmptyState(
+            icon: Icons.bookmark_border_rounded,
+            title: isAllTab ? '剪报集空空如也' : '暂无稍后阅读',
+            description: isAllTab
+                ? '点击文章的收藏按钮，内容会剪存在这里'
+                : '在文章更多菜单里选择「稍后读」，内容会排进这里',
+            actionLabel: isAllTab ? '去情报流逛逛' : null,
+            actionIcon: Icons.arrow_forward_rounded,
+            onAction: isAllTab ? () => context.go('/feed') : null,
           ),
         ],
       );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -96,7 +97,10 @@ class CryptoRadarPage extends ConsumerWidget {
         );
       case ScanStatus.done:
         return RefreshIndicator(
-          onRefresh: notifier.startFullScan,
+          onRefresh: () async {
+            HapticFeedback.selectionClick();
+            await notifier.startFullScan();
+          },
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.only(bottom: 24),

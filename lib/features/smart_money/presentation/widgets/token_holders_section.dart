@@ -5,6 +5,7 @@ import '../../../../app/theme.dart';
 import '../../data/fomo_api_key_store.dart';
 import '../../../../shared/widgets/hairline.dart';
 import '../../../../shared/widgets/section_header.dart';
+import '../../../../shared/widgets/skeleton_box.dart';
 import '../../data/datasources/fomo_api.dart';
 import '../format.dart';
 
@@ -85,8 +86,17 @@ class TokenHoldersSection extends ConsumerWidget {
                     theme.textTheme.labelSmall?.copyWith(color: c.inkTertiary)),
           ),
           loading: () => const Padding(
-            padding: EdgeInsets.fromLTRB(20, 0, 20, 16),
-            child: SizedBox.shrink(),
+            padding: EdgeInsets.fromLTRB(20, 4, 20, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SkeletonBox(height: 12, width: 180),
+                SizedBox(height: 8),
+                SkeletonBox(height: 12, width: 140),
+                SizedBox(height: 8),
+                SkeletonBox(height: 12, width: 160),
+              ],
+            ),
           ),
         ),
       ],

@@ -69,7 +69,7 @@ class _TraderDetailSheetState extends State<_TraderDetailSheet> {
       ),
       decoration: BoxDecoration(
         color: c.paper,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
       ),
       child: d == null
           ? Padding(

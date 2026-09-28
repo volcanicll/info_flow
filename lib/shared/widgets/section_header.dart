@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../app/theme.dart';
 import 'hairline.dart';
+import 'press_scale.dart';
 
 /// 杂志栏目头：小号 kicker（大字距）+ 衬线大标题 + 右侧细线延伸。
 ///
@@ -48,9 +50,15 @@ class SectionHeader extends StatelessWidget {
 
     final resolvedTrailing = trailing ??
         (action != null
-            ? GestureDetector(
+            ? PressScale(
+                pressedScale: 0.92,
                 behavior: HitTestBehavior.opaque,
-                onTap: onAction,
+                onTap: onAction == null
+                    ? null
+                    : () {
+                        HapticFeedback.selectionClick();
+                        onAction!();
+                      },
                 child: Padding(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
@@ -86,7 +94,7 @@ class SectionHeader extends StatelessWidget {
               )
             else
               const Spacer(),
-            if (resolvedTrailing != null) resolvedTrailing,
+            ?resolvedTrailing,
           ],
         ),
       );

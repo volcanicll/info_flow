@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../core/notifications/notification_service.dart';
+import '../../../../shared/widgets/press_scale.dart';
 import '../../../smart_money/data/fomo_api_key_store.dart';
 import '../../../../core/state/library_store.dart';
 import '../../../../core/storage/kv_storage.dart';
@@ -362,10 +364,13 @@ class _ThemeSeg extends ConsumerWidget {
       mainAxisSize: MainAxisSize.min,
       children: options.map((opt) {
         final active = themeMode == opt.$2;
-        return GestureDetector(
-          onTap: () =>
-              ref.read(themeModeProvider.notifier).setThemeMode(opt.$2),
+        return PressScale(
+          pressedScale: 0.94,
           behavior: HitTestBehavior.opaque,
+          onTap: () {
+            HapticFeedback.selectionClick();
+            ref.read(themeModeProvider.notifier).setThemeMode(opt.$2);
+          },
           child: Padding(
             padding: const EdgeInsets.only(left: 14),
             child: Column(

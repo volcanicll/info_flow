@@ -8,7 +8,7 @@ import '../../../../core/state/library_store.dart';
 import '../../../../shared/widgets/press_scale.dart';
 import '../../domain/entities/article.dart';
 
-/// 文章操作栏：点赞 / 评论 / 分享 / 收藏。
+/// 文章操作栏：点赞 / 复制链接 / 分享 / 收藏。
 ///
 /// 杂志风极简墨色图标条，激活态用编辑红/语义色点缀，无底色块。
 class ArticleActions extends ConsumerWidget {
@@ -40,18 +40,28 @@ class ArticleActions extends ConsumerWidget {
         ),
         const SizedBox(width: 18),
         _ActBtn(
-          icon: Icons.mode_comment_outlined,
-          label: '评论',
-          onTap: () => _showCommentSheet(context),
+          icon: Icons.link_rounded,
+          label: '复制链接',
+          onTap: () {
+            HapticFeedback.selectionClick();
+            Clipboard.setData(ClipboardData(text: article.url));
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('链接已复制'), duration: Duration(seconds: 1)),
+            );
+          },
         ),
         const SizedBox(width: 18),
         _ActBtn(
           icon: Icons.ios_share_rounded,
           label: '分享',
-          onTap: () => Share.share(
-            '${article.title}\n${article.url}',
-            subject: article.title,
-          ),
+          onTap: () {
+            HapticFeedback.selectionClick();
+            Share.share(
+              '${article.title}\n${article.url}',
+              subject: article.title,
+            );
+          },
         ),
         const Spacer(),
         _ActBtn(
@@ -125,53 +135,6 @@ class _ActBtn extends StatelessWidget {
       ),
     );
   }
-}
-
-void _showCommentSheet(BuildContext context) {
-  final ctrl = TextEditingController();
-  showModalBottomSheet(
-    context: context,
-    showDragHandle: true,
-    backgroundColor: context.colors.paper,
-    builder: (ctx) => Padding(
-      padding: EdgeInsets.fromLTRB(
-          20, 0, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('发表评论', style: Theme.of(ctx).textTheme.titleLarge),
-          const SizedBox(height: 14),
-          TextField(
-            controller: ctrl,
-            autofocus: true,
-            maxLines: 4,
-            decoration: const InputDecoration(hintText: '写下你的想法…'),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('取消'),
-              ),
-              const SizedBox(width: 8),
-              FilledButton(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('评论功能即将上线')),
-                  );
-                },
-                child: const Text('发送'),
-              ),
-            ],
-          ),
-        ],
-      ),
-    ),
-  );
 }
 
 String _formatCount(int count) {

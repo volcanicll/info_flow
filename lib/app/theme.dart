@@ -49,6 +49,13 @@ class AppTheme {
   static const _radarLight = Color(0xFF8E44AD); // 雷达紫
   static const _radarDark = Color(0xFFB98AE8);
 
+  // ── 公开常量：阅读器纸色等场景需与主题取值同源，避免双处维护漂移 ──
+  static const Color paperLight = _paperLight;
+  static const Color inkLight = _inkLight;
+  static const Color t2Light = _t2Light;
+  static const Color paperDark = _paperDark;
+  static const Color inkDark = _inkDark;
+
   static ThemeData get lightTheme => _build(Brightness.light);
   static ThemeData get darkTheme => _build(Brightness.dark);
 
@@ -128,6 +135,16 @@ class AppTheme {
         color: hair,
         thickness: 0.5,
         space: 0,
+      ),
+
+      // 底部弹层：全站统一纸底、拖拽把手与顶部圆角（覆盖 M3 默认 28px）
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: paper,
+        surfaceTintColor: Colors.transparent,
+        showDragHandle: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
+        ),
       ),
 
       chipTheme: ChipThemeData(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -27,13 +28,17 @@ class ChainPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
+    return PressScale(
+      pressedScale: 0.92,
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
           color: active ? color.withValues(alpha: 0.18) : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(999),
           border: Border.all(
             color: active ? color : context.colors.hairlineStrong,
             width: active ? 1.5 : 1.0,
@@ -147,10 +152,14 @@ class TokenCard extends ConsumerWidget {
                 Expanded(
                   child: Row(
                     children: [
-                      Text(
-                        token.symbol,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
+                      Flexible(
+                        child: Text(
+                          token.symbol,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 6),
@@ -192,21 +201,29 @@ class TokenCard extends ConsumerWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                StatItem(
-                  label: 'DEX',
-                  value: token.dexId?.toUpperCase() ?? 'DEX',
+                Flexible(
+                  child: StatItem(
+                    label: 'DEX',
+                    value: token.dexId?.toUpperCase() ?? 'DEX',
+                  ),
                 ),
-                StatItem(
-                  label: '流动性池',
-                  value: _formatUsd(token.liquidityUsd),
+                Flexible(
+                  child: StatItem(
+                    label: '流动性池',
+                    value: _formatUsd(token.liquidityUsd),
+                  ),
                 ),
-                StatItem(
-                  label: '24h 成交额',
-                  value: _formatUsd(token.volume24h),
+                Flexible(
+                  child: StatItem(
+                    label: '24h 成交额',
+                    value: _formatUsd(token.volume24h),
+                  ),
                 ),
-                StatItem(
-                  label: '24h 买/卖',
-                  value: '${token.txns24hBuys}/${token.txns24hSells}',
+                Flexible(
+                  child: StatItem(
+                    label: '24h 买/卖',
+                    value: '${token.txns24hBuys}/${token.txns24hSells}',
+                  ),
                 ),
               ],
             ),
@@ -293,6 +310,8 @@ class StatItem extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: AppTheme.mono(theme.textTheme.bodySmall!.copyWith(
             fontWeight: FontWeight.w600,
             fontSize: 11,

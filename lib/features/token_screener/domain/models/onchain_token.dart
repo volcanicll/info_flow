@@ -112,13 +112,12 @@ class OnChainToken {
 }
 
 enum SecurityRiskLevel {
-  safe('安全', 0xFF10B981),
-  warning('中危', 0xFFF59E0B),
-  danger('高危/貔貅', 0xFFEF4444);
+  safe('安全'),
+  warning('中危'),
+  danger('高危/貔貅');
 
   final String label;
-  final int colorValue;
-  const SecurityRiskLevel(this.label, this.colorValue);
+  const SecurityRiskLevel(this.label);
 }
 
 /// GoPlus 链上安全审计结果

@@ -21,6 +21,15 @@ class NotificationService {
   /// 网页 URL 交系统浏览器，应用内路由交 GoRouter 跳转。
   static void Function(String payload)? onNotificationTap;
 
+  /// 告警入箱钩子：由应用入口注入，每条系统通知展示时同步写一份到
+  /// 应用内通知中心（AlertInbox），失败不影响通知本身。
+  static void Function({
+    required String kind,
+    required String title,
+    required String body,
+    String? payload,
+  })? onAlertFired;
+
   /// 应用启动时调用；重复调用安全。
   Future<void> init() async {
     if (_initialized) return;
@@ -79,6 +88,7 @@ class NotificationService {
     String? payload,
   }) async {
     if (!_initialized) await init();
+    _record(kind: 'signal', title: title, body: body, payload: payload);
     await _plugin.show(
       1001,
       title,
@@ -104,6 +114,7 @@ class NotificationService {
     String? payload,
   }) async {
     if (!_initialized) await init();
+    _record(kind: 'price', title: title, body: body, payload: payload);
     await _plugin.show(
       1002,
       title,
@@ -120,6 +131,23 @@ class NotificationService {
       ),
       payload: payload,
     );
+  }
+
+  /// 写应用内收件箱（钩子由 main.dart 注入），异常静默不打断通知展示。
+  void _record({
+    required String kind,
+    required String title,
+    required String body,
+    String? payload,
+  }) {
+    try {
+      onAlertFired?.call(
+        kind: kind,
+        title: title,
+        body: body,
+        payload: payload,
+      );
+    } catch (_) {}
   }
 }
 

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme.dart';
 import '../../data/subscription_store.dart';
 import '../../../../shared/widgets/hairline.dart';
 import '../../../../shared/widgets/icon_btn.dart';
+import '../../../../shared/widgets/press_scale.dart';
 import '../../../../shared/widgets/section_header.dart';
 import '../../../feed/data/rss_sources.dart';
 import '../widgets/source_card.dart';
@@ -212,9 +214,13 @@ class _QuickAction extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final c = context.colors;
-    return GestureDetector(
-      onTap: onTap,
+    return PressScale(
+      pressedScale: 0.92,
       behavior: HitTestBehavior.opaque,
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

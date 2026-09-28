@@ -19,14 +19,11 @@ enum RhtTapeConn { connecting, live, polling, offline }
 /// - [resync] 供 App 回前台时调用：断线期间用 since_id 增量补拉，不丢成交。
 class RhtTapeStream {
   RhtTapeStream({
-    required RhtApi api,
-    required void Function(RhtStatus status) onHello,
-    required void Function(List<RhtFill> fills) onFills,
-    required void Function(RhtTapeConn conn) onConn,
-  })  : _api = api,
-        _onHello = onHello,
-        _onFills = onFills,
-        _onConn = onConn;
+    required this._api,
+    required this._onHello,
+    required this._onFills,
+    required this._onConn,
+  });
 
   final RhtApi _api;
   final void Function(RhtStatus) _onHello;

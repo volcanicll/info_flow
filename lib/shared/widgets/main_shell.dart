@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/theme.dart';
@@ -48,10 +49,13 @@ class MainShell extends StatelessWidget {
                 child: _TabButton(
                   item: _tabs[i],
                   active: active,
-                  onTap: () => navigationShell.goBranch(
-                    i,
-                    initialLocation: i == navigationShell.currentIndex,
-                  ),
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    navigationShell.goBranch(
+                      i,
+                      initialLocation: i == navigationShell.currentIndex,
+                    );
+                  },
                 ),
               );
             }),

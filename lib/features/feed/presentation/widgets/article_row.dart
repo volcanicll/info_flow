@@ -132,7 +132,14 @@ class _HighlightedText extends StatelessWidget {
     final c = context.colors;
     final lower = text.toLowerCase();
     final q = query.toLowerCase();
-    if (q.isEmpty) return Text(text, style: style, maxLines: maxLines);
+    if (q.isEmpty) {
+      return Text(
+        text,
+        style: style,
+        maxLines: maxLines,
+        overflow: TextOverflow.ellipsis,
+      );
+    }
 
     final spans = <TextSpan>[];
     var start = 0;

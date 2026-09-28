@@ -5,9 +5,12 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../app/theme.dart';
+import '../../../../shared/widgets/auto_refresh.dart';
+import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/hairline.dart';
 import '../../../../shared/widgets/icon_btn.dart';
 import '../../../../shared/widgets/section_header.dart';
+import '../../../../shared/widgets/skeleton_box.dart';
 import '../../../smart_money/presentation/widgets/token_holders_section.dart';
 import '../../../token_screener/domain/models/onchain_token.dart';
 import '../../data/price_alert_store.dart';
@@ -128,23 +131,16 @@ class _CoinDetailPageState extends ConsumerState<CoinDetailPage> {
                     onTap: () => context.push(
                         '/price-alerts?symbol=${widget.symbol.toUpperCase()}'),
                   ),
-                  if (state.loading)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 10),
-                      child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    )
-                  else
-                    IconBtn(
-                      icon: Icons.refresh_rounded,
-                      onTap: () => notifier.load(
+                  IconBtn(
+                    icon: Icons.refresh_rounded,
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      notifier.load(
                         address: widget.address,
                         chainId: widget.chain,
-                      ),
-                    ),
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
@@ -162,23 +158,48 @@ class _CoinDetailPageState extends ConsumerState<CoinDetailPage> {
   Widget _body(BuildContext context, CoinDetailState state) {
     final theme = Theme.of(context);
     final c = context.colors;
+    Future<void> onReload() => ref
+        .read(coinDetailProvider(widget.symbol).notifier)
+        .load(address: widget.address, chainId: widget.chain);
 
     if (state.price == null && !state.loading && state.error != null) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(state.error ?? '加载数据失败', style: theme.textTheme.bodyMedium),
-            const SizedBox(height: 12),
-            FilledButton.icon(
-              onPressed: () => ref
-                  .read(coinDetailProvider(widget.symbol).notifier)
-                  .load(address: widget.address, chainId: widget.chain),
-              icon: const Icon(Icons.refresh_rounded, size: 18),
-              label: const Text('重试'),
-            ),
-          ],
-        ),
+      return EmptyState(
+        icon: Icons.wifi_off_rounded,
+        title: '加载数据失败',
+        description: state.error ?? '网络连接异常，请检查后重试',
+        actionLabel: '重试',
+        actionIcon: Icons.refresh_rounded,
+        onAction: onReload,
+      );
+    }
+
+    // 首次加载骨架：报价头 + 指标条的杂志版式占位
+    if (state.price == null && state.loading) {
+      return ListView(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+        children: const [
+          SkeletonBox(width: 190, height: 44),
+          SizedBox(height: 12),
+          SkeletonBox(width: 220, height: 14),
+          SizedBox(height: 20),
+          SkeletonBox(
+            height: 84,
+            radius: 4,
+          ),
+        ],
+      );
+    }
+
+    // 拉取完成但无行情（如非 Binance 上架且无链上报价），不再落回「--」占位
+    if (state.price == null && !state.loading) {
+      return EmptyState(
+        icon: Icons.query_stats_rounded,
+        title: '暂无行情数据',
+        description: '该币种可能未上架 Binance 现货，可稍后重试',
+        actionLabel: '重新加载',
+        actionIcon: Icons.refresh_rounded,
+        onAction: onReload,
       );
     }
 
@@ -188,9 +209,19 @@ class _CoinDetailPageState extends ConsumerState<CoinDetailPage> {
     final oct = state.onchainToken;
     final sec = state.security;
 
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 32),
-      children: [
+    return AutoRefresh(
+      interval: const Duration(seconds: 60),
+      onRefresh: onReload,
+      child: RefreshIndicator(
+        onRefresh: () async {
+          HapticFeedback.selectionClick();
+          await onReload();
+        },
+        color: c.accent,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.only(bottom: 32),
+          children: [
         // 报价头部
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
@@ -235,7 +266,7 @@ class _CoinDetailPageState extends ConsumerState<CoinDetailPage> {
                       ),
                       decoration: BoxDecoration(
                         color: _getChainColor(oct.chain).withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(4),
                         border: Border.all(
                           color: _getChainColor(oct.chain),
                           width: 1,
@@ -256,16 +287,17 @@ class _CoinDetailPageState extends ConsumerState<CoinDetailPage> {
               if (oct != null && oct.address.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 InkWell(
-                  onTap: () => _copyAddress(oct.address),
-                  borderRadius: BorderRadius.circular(6),
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    _copyAddress(oct.address);
+                  },
+                  borderRadius: BorderRadius.circular(4),
                   child: Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: theme.brightness == Brightness.light
-                          ? Colors.grey.shade100
-                          : Colors.white10,
-                      borderRadius: BorderRadius.circular(6),
+                      color: c.surface2,
+                      borderRadius: BorderRadius.circular(4),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -337,7 +369,7 @@ class _CoinDetailPageState extends ConsumerState<CoinDetailPage> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 border: Border.all(color: c.hairlineStrong, width: 0.6),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(4),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -378,6 +410,8 @@ class _CoinDetailPageState extends ConsumerState<CoinDetailPage> {
           ),
         ],
       ],
+        ),
+      ),
     );
   }
 

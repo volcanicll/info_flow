@@ -1,24 +1,43 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../shared/widgets/auto_refresh.dart';
+import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/hairline.dart';
 import '../../../../shared/widgets/icon_btn.dart';
 import '../../../../shared/widgets/section_header.dart';
+import '../../../../shared/widgets/skeleton_box.dart';
 import '../widgets/fear_greed_strip.dart';
 import '../controllers/market_overview_controller.dart';
 import '../../domain/models/market_quote.dart';
 
 /// 市场总览：加密主导币 + 恐惧贪婪情绪 + A股/美股/港股，一次拉全。
 ///
-/// 行情数字等宽排版（AppTheme.mono），涨跌用趋势色；下拉刷新。
-class MarketOverviewPage extends ConsumerWidget {
+/// 行情数字等宽排版（AppTheme.mono），涨跌用趋势色；进入即自动加载，
+/// 下拉刷新 + 60s 静默轮询。
+class MarketOverviewPage extends ConsumerStatefulWidget {
   const MarketOverviewPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MarketOverviewPage> createState() =>
+      _MarketOverviewPageState();
+}
+
+class _MarketOverviewPageState extends ConsumerState<MarketOverviewPage> {
+  @override
+  void initState() {
+    super.initState();
+    // 进入即拉取（riverpod 3 约束：build 返回后才可写 state，推迟一拍）
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.read(marketOverviewProvider.notifier).load();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(marketOverviewProvider);
     final notifier = ref.read(marketOverviewProvider.notifier);
     final theme = Theme.of(context);
@@ -86,38 +105,30 @@ class MarketOverviewPage extends ConsumerWidget {
           ),
         );
       case MarketOverviewStatus.error:
-        return Center(
-          child: Padding(
-            padding: const EdgeInsets.all(40),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.error_outline_rounded,
-                    size: 44, color: c.hairlineStrong),
-                const SizedBox(height: 16),
-                Text('加载失败', style: theme.textTheme.titleLarge),
-                const SizedBox(height: 8),
-                Text(state.error ?? '未知错误',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodyMedium),
-                const SizedBox(height: 20),
-                FilledButton.icon(
-                  onPressed: ref.read(marketOverviewProvider.notifier).load,
-                  icon: const Icon(Icons.refresh_rounded, size: 18),
-                  label: const Text('重试'),
-                ),
-              ],
-            ),
-          ),
+        return EmptyState(
+          icon: Icons.wifi_off_rounded,
+          title: '加载失败',
+          description: state.error ?? '网络连接异常，请检查后重试',
+          actionLabel: '重试',
+          actionIcon: Icons.refresh_rounded,
+          onAction: ref.read(marketOverviewProvider.notifier).load,
         );
       case MarketOverviewStatus.done:
       case MarketOverviewStatus.loading:
         final quotes = state.quotes;
+        // 首拉且各区皆空 → 与探测页一致的骨架屏，替代空白正文
+        if (state.status == MarketOverviewStatus.loading &&
+            !quotes.values.any((list) => list.isNotEmpty)) {
+          return const _MarketSkeleton();
+        }
         return AutoRefresh(
           interval: const Duration(seconds: 60),
           onRefresh: ref.read(marketOverviewProvider.notifier).load,
           child: RefreshIndicator(
-            onRefresh: ref.read(marketOverviewProvider.notifier).load,
+            onRefresh: () async {
+              HapticFeedback.selectionClick();
+              await ref.read(marketOverviewProvider.notifier).load();
+            },
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.only(bottom: 32),
@@ -164,6 +175,61 @@ class MarketOverviewPage extends ConsumerWidget {
     final h = t.hour.toString().padLeft(2, '0');
     final m = t.minute.toString().padLeft(2, '0');
     return '$h:$m';
+  }
+}
+
+/// 市场总览首拉骨架：情绪条 + 行情行灰面，与真实版式同构。
+class _MarketSkeleton extends StatelessWidget {
+  const _MarketSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return ListView(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            border: Border.all(color: c.hairline, width: 0.5),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: const Row(
+            children: [
+              SkeletonBox(width: 64, height: 14),
+              Spacer(),
+              SkeletonBox(width: 44, height: 22),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        for (var i = 0; i < 7; i++) ...[
+          const Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SkeletonBox(width: 96, height: 15),
+                    SizedBox(height: 5),
+                    SkeletonBox(width: 56, height: 10.5),
+                  ],
+                ),
+              ),
+              SkeletonBox(width: 84, height: 15),
+              SizedBox(width: 14),
+              SkeletonBox(width: 72, height: 13),
+            ],
+          ),
+          if (i < 6)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 14),
+              child: Hairline(),
+            ),
+        ],
+      ],
+    );
   }
 }
 
@@ -231,10 +297,14 @@ class _QuoteRow extends StatelessWidget {
                 ],
               ),
             ),
-            Text(
-              _formatPrice(quote.price),
-              style: AppTheme.mono(theme.textTheme.titleMedium!
-                  .copyWith(fontWeight: FontWeight.w700)),
+            Flexible(
+              child: Text(
+                _formatPrice(quote.price),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTheme.mono(theme.textTheme.titleMedium!
+                    .copyWith(fontWeight: FontWeight.w700)),
+              ),
             ),
             const SizedBox(width: 14),
             SizedBox(
@@ -257,6 +327,8 @@ class _QuoteRow extends StatelessWidget {
   String _formatPrice(double v) {
     if (v >= 1000) return v.toStringAsFixed(2);
     if (v >= 1) return v.toStringAsFixed(3);
-    return v.toStringAsFixed(5);
+    if (v >= 0.01) return v.toStringAsFixed(5);
+    // 微价币（PEPE 类）保留有效位，避免显示成 0.00000
+    return v.toStringAsFixed(8);
   }
 }

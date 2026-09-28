@@ -42,7 +42,7 @@ class FomoApi {
       for (final k in const ['traders', 'leaderboard', 'data', 'holders', 'results']) {
         if (data[k] is List) return data[k];
       }
-      if (data['error'] != null) throw ServerException();
+      if (data['error'] != null) throw const ServerException();
     }
     return data;
   }

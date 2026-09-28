@@ -18,10 +18,10 @@ class ReaderPaper {
 }
 
 const readerPaperTones = <ReaderPaper>[
-  ReaderPaper(Color(0xFFFAF9F5), Color(0xFF1A1917), Color(0xFF57534E)), // 纸白
+  ReaderPaper(AppTheme.paperLight, AppTheme.inkLight, AppTheme.t2Light), // 纸白
   ReaderPaper(Color(0xFFF5EFE1), Color(0xFF33291B), Color(0xFF6B5D45)), // 暖米
   ReaderPaper(Color(0xFFE9E0CE), Color(0xFF3A2F1C), Color(0xFF6E5F44)), // 陈纸
-  ReaderPaper(Color(0xFF1F1E1C), Color(0xFFEDE9E0), Color(0xFFA8A298)), // 墨夜
+  ReaderPaper(Color(0xFF1F1E1C), AppTheme.inkDark, Color(0xFFA8A298)), // 墨夜
 ];
 
 /// 极简圆形图标按钮（无底色）。

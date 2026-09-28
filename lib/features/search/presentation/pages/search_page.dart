@@ -1,11 +1,16 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme.dart';
+import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/hairline.dart';
+import '../../../../shared/widgets/load_more_footer.dart';
+import '../../../../shared/widgets/press_scale.dart';
+import '../../../feed/domain/entities/article.dart';
 import '../../../feed/presentation/widgets/article_row.dart';
 import '../controllers/search_controller.dart';
 
@@ -152,8 +157,12 @@ class _SearchField extends StatelessWidget {
           const SizedBox(width: 12),
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
-            child: GestureDetector(
-              onTap: onCancel,
+            child: PressScale(
+              pressedScale: 0.92,
+              onTap: () {
+                HapticFeedback.selectionClick();
+                onCancel();
+              },
               child: Text(
                 '取消',
                 style: theme.textTheme.bodyLarge?.copyWith(
@@ -195,34 +204,83 @@ class _FilterRow extends ConsumerWidget {
 }
 
 /// 结果列表：复用信息流目录行，发丝线分隔。
-class _ResultList extends StatelessWidget {
+class _ResultList extends ConsumerStatefulWidget {
   final SearchState state;
   const _ResultList({required this.state});
 
   @override
+  ConsumerState<_ResultList> createState() => _ResultListState();
+}
+
+class _ResultListState extends ConsumerState<_ResultList> {
+  final _listController = ScrollController();
+
+  /// 本地触底分页：结果集为本地一次性过滤，按窗口渐进渲染。
+  static const int _pageSize = 12;
+  int _visibleCount = _pageSize;
+  List<Article>? _lastResults;
+  bool _loadingMore = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _listController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (_listController.position.extentAfter < 200) _loadMore();
+  }
+
+  Future<void> _loadMore() async {
+    final total = widget.state.results.length;
+    if (_loadingMore || _visibleCount >= total) return;
+    setState(() => _loadingMore = true);
+    // 短暂停顿让页脚 spinner 有感知（本地数据无网络延迟）
+    await Future.delayed(const Duration(milliseconds: 200));
+    if (!mounted) return;
+    setState(() {
+      _visibleCount += _pageSize;
+      _loadingMore = false;
+    });
+  }
+
+  @override
+  void dispose() {
+    _listController.removeListener(_onScroll);
+    _listController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final state = widget.state;
     final c = context.colors;
     if (state.results.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(40),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.search_off_rounded, size: 44, color: c.hairlineStrong),
-              const SizedBox(height: 14),
-              Text(
-                '未找到「${state.query.trim()}」',
-                style: theme.textTheme.titleLarge,
-              ),
-              const SizedBox(height: 8),
-              Text('换个关键词试试', style: theme.textTheme.bodyMedium),
-            ],
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(top: 120),
+        children: [
+          EmptyState(
+            icon: Icons.search_off_rounded,
+            title: '未找到「${state.query.trim()}」',
+            description: '换个关键词，或检查是否有错别字',
+            actionLabel: '清除重搜',
+            actionIcon: Icons.refresh_rounded,
+            onAction: () =>
+                ref.read(searchControllerProvider.notifier).clear(),
           ),
-        ),
+        ],
       );
     }
+
+    // 结果集实例变化（新搜索/切过滤）时重置分页窗口
+    if (!identical(state.results, _lastResults)) {
+      _lastResults = state.results;
+      _visibleCount = _pageSize;
+    }
+    final visible = state.results.take(_visibleCount).toList(growable: false);
+    final hasMore = _visibleCount < state.results.length;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -230,7 +288,7 @@ class _ResultList extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
           child: Text(
             '找到 ${state.results.length} 篇相关内容',
-            style: theme.textTheme.bodySmall?.copyWith(color: c.inkTertiary),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: c.inkTertiary),
           ),
         ),
         Padding(
@@ -239,11 +297,18 @@ class _ResultList extends StatelessWidget {
         ),
         Expanded(
           child: ListView.separated(
+            controller: _listController,
             padding: const EdgeInsets.only(bottom: 24),
-            itemCount: state.results.length,
+            itemCount: visible.length + 1,
             separatorBuilder: (_, _) => const Hairline(),
             itemBuilder: (context, index) {
-              final a = state.results[index];
+              if (index == visible.length) {
+                return LoadMoreFooter(
+                  hasMore: hasMore,
+                  loadingMore: _loadingMore,
+                );
+              }
+              final a = visible[index];
               final query = state.query.trim();
               return ArticleRow(
                 article: a,
@@ -297,8 +362,12 @@ class _Suggestions extends ConsumerWidget {
             ),
             const Spacer(),
             if (history.isNotEmpty)
-              GestureDetector(
-                onTap: () => ref.read(searchHistoryProvider.notifier).clear(),
+              PressScale(
+                pressedScale: 0.92,
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  ref.read(searchHistoryProvider.notifier).clear();
+                },
                 child: Text(
                   '清空',
                   style: theme.textTheme.labelLarge?.copyWith(
@@ -348,9 +417,13 @@ class _Letterpress extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final c = context.colors;
-    return GestureDetector(
-      onTap: onTap,
+    return PressScale(
+      pressedScale: 0.94,
       behavior: HitTestBehavior.opaque,
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
       child: Container(
         decoration: BoxDecoration(
           border: Border(
@@ -389,9 +462,13 @@ class _RankTag extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final c = context.colors;
-    return GestureDetector(
-      onTap: onTap,
+    return PressScale(
+      pressedScale: 0.94,
       behavior: HitTestBehavior.opaque,
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [

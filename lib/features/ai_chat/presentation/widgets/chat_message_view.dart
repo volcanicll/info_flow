@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme.dart';
+import '../../../../shared/widgets/press_scale.dart';
 import '../controllers/chat_controller.dart';
 
 /// 单条消息（访谈排版）：
 /// - AI 回复 → 受访者引述块：小号 kicker + 左侧细竖线 + 衬线正文，无气泡底色。
 /// - 用户消息 → 右对齐墨色提问，无气泡底色。
-class ChatMessageView extends StatelessWidget {
+/// - 错误气泡 → 警示色竖线 + 重试入口（点击整条重试）。
+class ChatMessageView extends ConsumerWidget {
   final ChatMessage message;
   const ChatMessageView({super.key, required this.message});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final c = context.colors;
 
@@ -29,6 +33,39 @@ class ChatMessageView extends StatelessWidget {
               style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
             ),
           ],
+        ),
+      );
+    }
+
+    if (message.isError) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 24, right: 24),
+        child: PressScale(
+          pressedScale: 0.98,
+          onTap: () {
+            HapticFeedback.selectionClick();
+            ref.read(chatControllerProvider.notifier).retry();
+          },
+          child: Container(
+            padding: const EdgeInsets.only(left: 14, bottom: 2),
+            decoration: BoxDecoration(
+              border: Border(left: BorderSide(color: c.down, width: 2)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('INFOFLOW AI',
+                    style: theme.textTheme.labelMedium?.copyWith(color: c.inkTertiary)),
+                const SizedBox(height: 6),
+                Text(message.text,
+                    style: theme.textTheme.bodyMedium
+                        ?.copyWith(color: c.inkSecondary)),
+                const SizedBox(height: 6),
+                Text('点击重试',
+                    style: theme.textTheme.labelMedium?.copyWith(color: c.accent)),
+              ],
+            ),
+          ),
         ),
       );
     }

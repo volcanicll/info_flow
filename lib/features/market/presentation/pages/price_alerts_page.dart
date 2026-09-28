@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../shared/widgets/hairline.dart';
 import '../../../../shared/widgets/icon_btn.dart';
+import '../../../../shared/widgets/press_scale.dart';
 import '../../../../shared/widgets/section_header.dart';
 import '../../data/market_repository.dart';
 import '../../data/price_alert_store.dart';
@@ -233,7 +235,7 @@ class _PriceAlertsPageState extends ConsumerState<PriceAlertsPage> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         border: Border.all(color: c.hairlineStrong, width: 0.6),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(4),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -321,9 +323,13 @@ class _KindTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final c = context.colors;
-    return GestureDetector(
-      onTap: onTap,
+    return PressScale(
+      pressedScale: 0.94,
       behavior: HitTestBehavior.opaque,
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

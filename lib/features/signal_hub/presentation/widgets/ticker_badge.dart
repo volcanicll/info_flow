@@ -24,15 +24,15 @@ class TickerBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final brightness = theme.brightness;
-    final neutral = theme.textTheme.bodySmall?.color ?? Colors.grey;
+    final c = context.colors;
+    final neutral = theme.textTheme.bodySmall?.color ?? c.inkTertiary;
     final hasQuote = quote != null;
     final color = !hasQuote
         ? neutral
         : (quote!.changePercent > 0
-            ? AppTheme.up(brightness)
+            ? c.up
             : quote!.changePercent < 0
-                ? AppTheme.down(brightness)
+                ? c.down
                 : neutral);
 
     final priceText = hasQuote ? _formatPrice(quote!.price) : '--';
@@ -47,9 +47,7 @@ class TickerBadge extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
         decoration: BoxDecoration(
           border: Border.all(
-            color: smartMoney
-                ? AppTheme.radar(brightness)
-                : AppTheme.hairStrong(brightness),
+            color: smartMoney ? c.radar : c.hairlineStrong,
             width: smartMoney ? 0.9 : 0.5,
           ),
           borderRadius: BorderRadius.circular(2),
@@ -61,7 +59,7 @@ class TickerBadge extends StatelessWidget {
               Text('◆',
                   style: TextStyle(
                     fontSize: 9,
-                    color: AppTheme.radar(brightness),
+                    color: c.radar,
                   )),
               const SizedBox(width: 4),
             ],

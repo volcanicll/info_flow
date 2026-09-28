@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../app/theme.dart';
 import '../../data/smart_money_watch_store.dart';
 import '../../../../shared/widgets/hairline.dart';
+import '../../../../shared/widgets/load_more_footer.dart';
 import '../../data/datasources/fomo_api.dart';
 import '../../data/models/rht_position.dart';
 import '../../data/models/rht_token.dart';
@@ -561,9 +562,13 @@ class TokenFlowRow extends StatelessWidget {
                                 ?.copyWith(fontWeight: FontWeight.w600)),
                       ),
                       const SizedBox(width: 8),
-                      Text('${flow.traders}位大户 · ${flow.buyers}人买入',
-                          style: theme.textTheme.labelSmall
-                              ?.copyWith(color: c.inkSecondary)),
+                      Flexible(
+                        child: Text('${flow.traders}位大户 · ${flow.buyers}人买入',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.labelSmall
+                                ?.copyWith(color: c.inkSecondary)),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 2),
@@ -603,7 +608,7 @@ class TokenFlowRow extends StatelessWidget {
 }
 
 /// 列表容器：空态/数据行 + 发丝线分隔。
-class PanelList<T> extends StatelessWidget {
+class PanelList<T> extends StatefulWidget {
   final List<T> items;
   final Widget Function(BuildContext, T, int index) itemBuilder;
   final String emptyMessage;
@@ -616,17 +621,73 @@ class PanelList<T> extends StatelessWidget {
   });
 
   @override
+  State<PanelList<T>> createState() => _PanelListState<T>();
+}
+
+class _PanelListState<T> extends State<PanelList<T>> {
+  final _controller = ScrollController();
+
+  /// 本地触底分页：榜单为一次性拉取，按窗口渐进渲染。
+  /// 15s 轮询会换列表实例但不重置窗口（保住滚动位置），
+  /// 仅在列表短于窗口时收敛，避免越界。
+  static const int _pageSize = 20;
+  int _visibleCount = _pageSize;
+  bool _loadingMore = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (_controller.position.extentAfter < 240) _loadMore();
+  }
+
+  Future<void> _loadMore() async {
+    if (_loadingMore || _visibleCount >= widget.items.length) return;
+    setState(() => _loadingMore = true);
+    // 短暂停顿让页脚 spinner 有感知（本地数据无网络延迟）
+    await Future.delayed(const Duration(milliseconds: 150));
+    if (!mounted) return;
+    setState(() {
+      _visibleCount += _pageSize;
+      _loadingMore = false;
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.removeListener(_onScroll);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (items.isEmpty) return PanelPlaceholder(message: emptyMessage);
+    final items = widget.items;
+    if (items.isEmpty) {
+      return PanelPlaceholder(message: widget.emptyMessage);
+    }
+    if (_visibleCount > items.length) _visibleCount = items.length;
+    final visible = items.take(_visibleCount).toList(growable: false);
+    final hasMore = _visibleCount < items.length;
+
     return ListView.separated(
+      controller: _controller,
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.only(bottom: 24),
-      itemCount: items.length,
+      itemCount: visible.length + 1,
       separatorBuilder: (_, _) => Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Hairline(color: context.colors.hairline),
       ),
-      itemBuilder: (context, i) => itemBuilder(context, items[i], i),
+      itemBuilder: (context, i) {
+        if (i == visible.length) {
+          return LoadMoreFooter(hasMore: hasMore, loadingMore: _loadingMore);
+        }
+        return widget.itemBuilder(context, visible[i], i);
+      },
     );
   }
 }

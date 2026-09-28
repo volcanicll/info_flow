@@ -313,7 +313,7 @@ class TapeView extends ConsumerWidget {
         _AssetFilterChips(active: state.assetFilter),
         Expanded(
           child: rows.isEmpty
-              ? PanelPlaceholder(message: '该分流暂无成交')
+              ? const PanelPlaceholder(message: '该分流暂无成交')
               : ListView.separated(
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.only(bottom: 24),

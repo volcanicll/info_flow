@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -10,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'app/theme.dart';
 import 'app/router.dart';
+import 'core/notifications/alert_inbox.dart';
 import 'core/notifications/notification_service.dart';
 import 'core/storage/kv_storage.dart';
 import 'features/feed/data/breakout_alerts.dart';
@@ -71,6 +71,16 @@ class _InfoFlowAppState extends ConsumerState<InfoFlowApp> {
     ref.read(smartMoneyAlertsProvider);
     ref.read(breakoutAlertsProvider);
     ref.read(priceAlertsProvider);
+
+    // 告警入箱：系统通知展示的同时落一份到应用内通知中心
+    NotificationService.onAlertFired = ({required kind, required title, required body, payload}) {
+      ref.read(alertInboxProvider.notifier).add(
+            kind: kind,
+            title: title,
+            body: body,
+            payload: payload,
+          );
+    };
 
     // 点击通知栏时按 payload 契约分发：网页链接交系统浏览器，
     // 应用内路由（归一为 / 开头）交 GoRouter push

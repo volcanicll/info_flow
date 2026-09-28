@@ -13,13 +13,19 @@ class SecurityCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final c = context.colors;
-    final riskColor = Color(security.riskLevel.colorValue);
+    // 风险等级 → 主题语义色（安全=涨绿 / 中危=警示 / 高危=跌红），
+    // 跟随明暗主题，不在 domain 层写死色值。
+    final riskColor = switch (security.riskLevel) {
+      SecurityRiskLevel.safe => c.up,
+      SecurityRiskLevel.warning => c.warn,
+      SecurityRiskLevel.danger => c.down,
+    };
 
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: riskColor.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(4),
         border: Border.all(color: riskColor.withValues(alpha: 0.3), width: 1),
       ),
       child: Column(
@@ -45,10 +51,10 @@ class SecurityCard extends StatelessWidget {
                 ),
                 child: Text(
                   security.riskLevel.label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w800,
-                    color: Colors.white,
+                    color: theme.colorScheme.onPrimary,
                   ),
                 ),
               ),
